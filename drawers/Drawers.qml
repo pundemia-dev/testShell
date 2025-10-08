@@ -128,10 +128,13 @@ Variants {
 
                 }
 
-                // Backgrounds {
-                //     panels: panels
-                //     bar: bar
-                // }
+                Backgrounds {
+                    border_area: scope.border_area 
+                    left_area: scope.left_area
+                    top_area: scope.top_area
+                    right_area: scope.right_area
+                    bottom_area: scope.bottom_area
+                }
             }
 
             PersistentProperties {
@@ -154,13 +157,18 @@ Variants {
             //     panels: panels
             //     bar: bar
 
-            //     Panels {
-            //         id: panels
+                // Panels {
+                //     id: panels
 
-            //         screen: scope.modelData
-            //         visibilities: visibilities
-            //         bar: bar
-            //     }
+                //     screen: scope.modelData
+                //     visibilities: visibilities
+                //     bar: bar
+                //     border_area: scope.border_area 
+                //     left_area: scope.left_area
+                //     top_area: scope.top_area
+                //     right_area: scope.right_area
+                //     bottom_area: scope.bottom_area
+                // }
             // }
         }
     }
