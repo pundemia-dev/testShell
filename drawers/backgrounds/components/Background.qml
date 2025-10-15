@@ -27,6 +27,13 @@ Shape {
     property int mBottom: 0//wrapper.mBottom || 0
     property int vCenterOffset: 0//wrapper.vCenterOffset
     property int hCenterOffset: 0//wrapper.hCenterOffset || 0
+    
+    required property int left_area
+    required property int top_area
+    required property int right_area
+    required property int bottom_area
+
+    property bool excludeBarArea: true
 
     property bool invertBaseRounding: true//wrapper.invertBaseRounding || true
     property int rounding: 20//wrapper.rounding || 0
@@ -51,22 +58,22 @@ Shape {
         strokeWidth: -1
         fillColor: wrapperWidth > 0 && wrapperHeight > 0 ? Colours.palette.m3surface : "transparent"
         startX: {
-            if (root.aLeft) return root.mLeft;
+            if (root.aLeft) return root.mLeft + (root.excludeBarArea ? root.left_area : 0);
             if (root.aHorizontalCenter) return (root.zWidth / 2) - (root.wrapperWidth / 2) + root.hCenterOffset;
-            if (root.aRight) return root.zWidth - root.wrapperWidth - root.mRight;
+            if (root.aRight) return root.zWidth - root.wrapperWidth - root.mRight - (root.excludeBarArea ? root.right_area : 0);
             return 0;
         }
 
         startY: {
             var y;
             if (root.aTop) {
-                y = root.mTop;
+                y = root.mTop + (root.excludeBarArea ? root.top_area : 0);
             } else if (root.aVerticalCenter) {
                 y = (root.zHeight / 2) - (root.wrapperHeight / 2) + root.vCenterOffset;
             } else if (root.aBottom) {
-                y = root.zHeight - root.wrapperHeight - root.mBottom;
+                y = root.zHeight - root.wrapperHeight - root.mBottom - (root.excludeBarArea ? root.bottom_area : 0);
             } else {
-                y = 0;
+                y = root.border_area;
             }
             return y + root.rounding * ((root.invertBaseRounding && (checkAnchors("left") || checkAnchors("left&bottom"))) ? -1 : 1);
         }

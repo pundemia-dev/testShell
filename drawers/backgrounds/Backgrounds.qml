@@ -14,10 +14,6 @@ Item {
     required property int right_area
     required property int bottom_area
     anchors.fill: parent
-    anchors.leftMargin: left_area
-    anchors.topMargin: top_area
-    anchors.rightMargin: right_area
-    anchors.bottomMargin: bottom_area
     
     property ListModel itemsDataModel: ListModel {
         id: itemsDataModel
@@ -66,6 +62,10 @@ Item {
             wrapperWidth: modelData.wrapperWidth
             zWidth: root.width
             zHeight: root.height
+            left_area: root.left_area
+            top_area: root.top_area
+            right_area: root.right_area
+            bottom_area: root.bottom_area
             // required property bool aLeft            
             // required property bool aTop
             // required property bool aRight
