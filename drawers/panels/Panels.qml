@@ -1,10 +1,13 @@
+import QtQuick
+import Quickshell
+import qs.modules.bar
 
 Item {
     id: root
 
     required property ShellScreen screen
     required property PersistentProperties visibilities
-    required property Item bar
+    // required property Item bar
     required property int border_area
     required property int left_area
     required property int top_area
@@ -18,6 +21,7 @@ Item {
     anchors.topMargin: top_area
     anchors.rightMargin: right_area
     anchors.bottomMargin: bottom_area
+
 
     // Osd.Wrapper {
     //     id:

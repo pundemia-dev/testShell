@@ -11,6 +11,8 @@ import "backgrounds"
 import "border"
 import "wallpaper" 
 import "corners"
+import "panels"
+import qs.modules.bar
 
 import qs.config
 import qs.widgets
@@ -157,18 +159,26 @@ Variants {
             //     panels: panels
             //     bar: bar
 
-                // Panels {
-                //     id: panels
+                Panels {
+                    id: panels
 
-                //     screen: scope.modelData
-                //     visibilities: visibilities
-                //     bar: bar
-                //     border_area: scope.border_area 
-                //     left_area: scope.left_area
-                //     top_area: scope.top_area
-                //     right_area: scope.right_area
-                //     bottom_area: scope.bottom_area
-                // }
+                    screen: scope.modelData
+                    visibilities: visibilities
+                    // bar: bar
+                    border_area: scope.border_area 
+                    left_area: scope.left_area
+                    top_area: scope.top_area
+                    right_area: scope.right_area
+                    bottom_area: scope.bottom_area
+                }
+                BarWrapper {
+                    id: bar
+                    anchors.left: !Config.bar.orientation && Config.bar.position ? undefined : parent.left
+                    anchors.top:  Config.bar.orientation && Config.bar.position ? undefined : parent.top
+                    anchors.right: !Config.bar.orientation && !Config.bar.position ? undefined : parent.right
+                    anchors.bottom: Config.bar.orientation && !Config.bar.position ? undefined : parent.bottom
+
+                }
             // }
         }
     }
