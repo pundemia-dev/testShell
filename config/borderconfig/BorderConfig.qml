@@ -1,9 +1,9 @@
 import Quickshell.Io
 
 JsonObject {
-    property bool enabled: false
-    property int thickness: 100
-    property int rounding: 12
+    property bool enabled: true
+    property int thickness: 10
+    property int rounding: 15
     property int minMouseArea: 1
-    property bool fillBar: false
+    property bool fillBar: true
 }

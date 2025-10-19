@@ -7,37 +7,43 @@ import Quickshell
 Shape {
     id: root
 
-    // required property Wrapper wrapper
-    property int wrapperWidth: 150
-    property int wrapperHeight: 50
+    // Content size
+    required property int wrapperWidth
+    required property int wrapperHeight
 
+    // Anchors
+    required property bool aLeft
+    required property bool aRight
+    required property bool aTop
+    required property bool aBottom
+    required property bool aVerticalCenter
+    required property bool aHorizontalCenter
+
+    // Margins & offsets
+    required property int mLeft
+    required property int mRight
+    required property int mTop
+    required property int mBottom
+    required property int vCenterOffset
+    required property int hCenterOffset
+
+    // Base settings
+    required property int rounding
+    required property bool invertBaseRounding
+
+    // Access zone
     required property int zWidth
     required property int zHeight
-
-    property bool aLeft: false
-    property bool aRight: false
-    property bool aTop: false
-    property bool aBottom: false
-    property bool aVerticalCenter: false
-    property bool aHorizontalCenter: false
-
-    property int mLeft: 0//wrapper.mLeft || 0
-    property int mRight: 0//wrapper.mRight || 0
-    property int mTop: 0//wrapper.mTop || 0
-    property int mBottom: 0//wrapper.mBottom || 0
-    property int vCenterOffset: 0//wrapper.vCenterOffset
-    property int hCenterOffset: 0//wrapper.hCenterOffset || 0
     
+    // Exclusions
     required property int left_area
     required property int top_area
     required property int right_area
     required property int bottom_area
 
-    property bool excludeBarArea: true
+    required property bool excludeBarArea
 
-    property bool invertBaseRounding: true//wrapper.invertBaseRounding || true
-    property int rounding: 20//wrapper.rounding || 0
-    property int edgeRounding: 20//wrapper.edgeRounding || 0
+    property int edgeRounding: 20
     
     preferredRendererType: Shape.CurveRenderer
     opacity: Colours.transparency.enabled ? Colours.transparency.base : 1

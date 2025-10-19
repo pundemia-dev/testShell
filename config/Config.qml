@@ -7,6 +7,7 @@ import Quickshell.Io
 import "barconfig"
 import "borderconfig"
 import "cornersconfig"
+import "backgroundsconfig"
 
 Singleton {
     id: root
@@ -14,6 +15,7 @@ Singleton {
     property alias bar: adapter.bar
     property alias border: adapter.border
     property alias corners: adapter.corners
+    property alias backgrounds: adapter.backgrounds
 
     FileView {
         path: `${Paths.stringify(Paths.config)}/shell.json`
@@ -27,6 +29,7 @@ Singleton {
             property BarConfig bar: BarConfig {}
             property BorderConfig border: BorderConfig {}
             property CornersConfig corners: CornersConfig {}
+            property BackgroundsConfig backgrounds: BackgroundsConfig {}
         }
     }
 }

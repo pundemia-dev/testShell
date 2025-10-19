@@ -28,7 +28,7 @@ Variants {
 
         // Shell's mouse area
         readonly property int border_area: Config.border.enabled || Config.border.thickness < 1 ? Config.border.thickness : 0
-        readonly property int bar_area: Config.bar.enabled && !Config.bar.autoHide ? Config.bar.thickness + Config.bar.shortSideMargin : border_area;
+        readonly property int bar_area: Config.bar.enabled && !Config.bar.autoHide ? Config.bar.thickness + Config.bar.longSideMargin: border_area;
         readonly property int left_area: !Config.bar.orientation && !Config.bar.position ? bar_area : border_area;
         readonly property int top_area: Config.bar.orientation && !Config.bar.position ? bar_area : border_area;
         readonly property int right_area: !Config.bar.orientation && Config.bar.position ? bar_area : border_area;
@@ -177,6 +177,8 @@ Variants {
                     anchors.top:  Config.bar.orientation && Config.bar.position ? undefined : parent.top
                     anchors.right: !Config.bar.orientation && !Config.bar.position ? undefined : parent.right
                     anchors.bottom: Config.bar.orientation && !Config.bar.position ? undefined : parent.bottom
+                    screenWidth: scope.modelData.width
+                    screenHeight: scope.modelData.height
 
                 }
             // }
