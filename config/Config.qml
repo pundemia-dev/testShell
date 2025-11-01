@@ -18,6 +18,7 @@ Singleton {
     property alias backgrounds: adapter.backgrounds
 
     FileView {
+        id: fileview
         path: `${Paths.stringify(Paths.config)}/shell.json`
         watchChanges: true
         onFileChanged: reload()

@@ -9,7 +9,7 @@ import QtQuick.Effects
 import "exclusions"
 import "backgrounds"
 import "border"
-import "wallpaper" 
+import "wallpaper"
 import "corners"
 import "panels"
 import qs.modules.bar
@@ -28,11 +28,13 @@ Variants {
 
         // Shell's mouse area
         readonly property int border_area: Config.border.enabled || Config.border.thickness < 1 ? Config.border.thickness : 0
-        readonly property int bar_area: Config.bar.enabled && !Config.bar.autoHide ? Config.bar.thickness + Config.bar.longSideMargin: border_area;
-        readonly property int left_area: !Config.bar.orientation && !Config.bar.position ? bar_area : border_area;
-        readonly property int top_area: Config.bar.orientation && !Config.bar.position ? bar_area : border_area;
-        readonly property int right_area: !Config.bar.orientation && Config.bar.position ? bar_area : border_area;
-        readonly property int bottom_area: Config.bar.orientation && Config.bar.position ? bar_area : border_area;
+        readonly property int bar_area: Config.bar.enabled && !Config.bar.autoHide ? (Math.max((Config.bar.thickness.begin ?? Config.bar.thickness.all ?? 0) + (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0), (Config.bar.thickness.center ?? Config.bar.thickness.all ?? 0) + (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0), (Config.bar.thickness.end ?? Config.bar.thickness.all ?? 0) + (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0))) : border_area
+        readonly property int left_area: !Config.bar.orientation && !Config.bar.position ? bar_area : border_area
+        readonly property int top_area: Config.bar.orientation && !Config.bar.position ? bar_area : border_area
+        readonly property int right_area: !Config.bar.orientation && Config.bar.position ? bar_area : border_area
+        readonly property int bottom_area: Config.bar.orientation && Config.bar.position ? bar_area : border_area
+
+        property var backgroundsManager: BackgroundsManager {}
 
         Exclusions {
             screen: scope.modelData
@@ -51,7 +53,7 @@ Variants {
             // Hyprland settings
             WlrLayershell.exclusionMode: ExclusionMode.Ignore
             WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-            
+
             HyprlandFocusGrab {
                 active: visibilities.launcher || visibilities.session
                 windows: [win]
@@ -60,7 +62,6 @@ Variants {
                     visibilities.session = false;
                 }
             }
-
 
             mask: Region {
                 x: scope.left_area
@@ -119,23 +120,32 @@ Variants {
                 }
 
                 Border {
-                    border_area: scope.border_area 
+                    border_area: scope.border_area
                     left_area: scope.left_area
                     top_area: scope.top_area
                     right_area: scope.right_area
                     bottom_area: scope.bottom_area
                 }
 
-                Corners {
-
-                }
+                Corners {}
 
                 Backgrounds {
-                    border_area: scope.border_area 
+                    manager: scope.backgroundsManager
+                    border_area: scope.border_area
                     left_area: scope.left_area
                     top_area: scope.top_area
                     right_area: scope.right_area
                     bottom_area: scope.bottom_area
+                }
+                BarWrapper {
+                    id: bar
+                    manager: scope.backgroundsManager
+                    anchors.left: !Config.bar.orientation && Config.bar.position ? undefined : parent.left
+                    anchors.top: Config.bar.orientation && Config.bar.position ? undefined : parent.top
+                    anchors.right: !Config.bar.orientation && !Config.bar.position ? undefined : parent.right
+                    anchors.bottom: Config.bar.orientation && !Config.bar.position ? undefined : parent.bottom
+                    screenWidth: scope.modelData.width
+                    screenHeight: scope.modelData.height
                 }
             }
 
@@ -159,28 +169,19 @@ Variants {
             //     panels: panels
             //     bar: bar
 
-                Panels {
-                    id: panels
+            Panels {
+                id: panels
 
-                    screen: scope.modelData
-                    visibilities: visibilities
-                    // bar: bar
-                    border_area: scope.border_area 
-                    left_area: scope.left_area
-                    top_area: scope.top_area
-                    right_area: scope.right_area
-                    bottom_area: scope.bottom_area
-                }
-                BarWrapper {
-                    id: bar
-                    anchors.left: !Config.bar.orientation && Config.bar.position ? undefined : parent.left
-                    anchors.top:  Config.bar.orientation && Config.bar.position ? undefined : parent.top
-                    anchors.right: !Config.bar.orientation && !Config.bar.position ? undefined : parent.right
-                    anchors.bottom: Config.bar.orientation && !Config.bar.position ? undefined : parent.bottom
-                    screenWidth: scope.modelData.width
-                    screenHeight: scope.modelData.height
+                screen: scope.modelData
+                visibilities: visibilities
+                // bar: bar
+                border_area: scope.border_area
+                left_area: scope.left_area
+                top_area: scope.top_area
+                right_area: scope.right_area
+                bottom_area: scope.bottom_area
+            }
 
-                }
             // }
         }
     }

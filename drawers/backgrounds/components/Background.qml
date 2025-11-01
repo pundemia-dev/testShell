@@ -7,9 +7,11 @@ import Quickshell
 Shape {
     id: root
 
+    required property var wrapper
+
     // Content size
-    required property int wrapperWidth
-    required property int wrapperHeight
+    readonly property int wrapperWidth: wrapper?.wrapperWidth ?? 0
+    readonly property int wrapperHeight: wrapper?.wrapperHeight ?? 0
 
     // Anchors
     required property bool aLeft
@@ -20,16 +22,16 @@ Shape {
     required property bool aHorizontalCenter
 
     // Margins & offsets
-    required property int mLeft
-    required property int mRight
-    required property int mTop
-    required property int mBottom
-    required property int vCenterOffset
-    required property int hCenterOffset
+    readonly property int mLeft: wrapper?.mLeft ?? 0
+    readonly property int mRight: wrapper?.mRight ?? 0
+    readonly property int mTop: wrapper?.mTop ?? 0
+    readonly property int mBottom: wrapper?.mBottom ?? 0
+    readonly property int vCenterOffset: wrapper?.vCenterOffset ?? 0
+    readonly property int hCenterOffset: wrapper?.hCenterOffset ?? 0
 
     // Base settings
-    required property int rounding
-    required property bool invertBaseRounding
+    readonly property int rounding: wrapper?.rounding ?? Config.backgrounds.rounding ?? 0
+    readonly property bool invertBaseRounding: wrapper?.invertBaseRounding ?? Config.backgrounds.invertBaseRounding ?? false
 
     // Access zone
     required property int zWidth

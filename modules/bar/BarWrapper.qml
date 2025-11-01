@@ -3,25 +3,29 @@ pragma ComponentBehavior: Bound
 import qs.config
 import Quickshell
 import QtQuick
-import qs.utils 
 
 Item {
     id: root
     required property int screenHeight
     required property int screenWidth
+    required property var manager
 
     Binding on implicitWidth {
         when: Config.bar.orientation
         value: Config.bar.thickness
     }
-    
+
     Binding on implicitHeight {
         when: !Config.bar.orientation
         value: Config.bar.thickness
     }
     // implicitWidth: Config.bar.orientation ? Config.bar.thickness : undefined
     // implicitHeight: Config.bar.orientation ? undefined : Config.bar.thickness
-    
+    function isTotalThickness() {
+        // Возвращаем true, если все три свойства undefined, иначе false
+        return (Config.bar.thickness.begin === undefined && Config.bar.thickness.center === undefined && Config.bar.thickness.end === undefined);
+    }
+
     // Объявляем position как property
     property QtObject position: QtObject {
         // Content size
@@ -47,8 +51,8 @@ Item {
     }
     property QtObject begin: QtObject {
         // Content size
-        property int wrapperWidth: Config.bar.orientation ? 300 : Config.bar.thickness
-        property int wrapperHeight: Config.bar.orientation ? Config.bar.thickness : 300
+        property int wrapperWidth: Config.bar.orientation ? 300 : (isTotalThickness() ? (Config.bar.thickness.all + Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0)) : (Config.bar.thickness.begin ?? Config.bar.thickness.all ?? 0))
+        property int wrapperHeight: Config.bar.orientation ? (isTotalThickness() ? (Config.bar.thickness.all + Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0)) : (Config.bar.thickness.begin ?? Config.bar.thickness.all ?? 0)) : 300
         // Anchors
         property bool aLeft: !(!Config.bar.orientation && Config.bar.position)
         property bool aRight: !Config.bar.orientation && Config.bar.position
@@ -57,12 +61,12 @@ Item {
         property bool aHorizontalCenter: false
         property bool aVerticalCenter: false
         // Margins & offsets
-        property int mLeft: !(!Config.bar.orientation && Config.bar.position) ? (Config.bar.orientation ? Config.bar.shortSideMargin : Config.bar.longSideMargin) : 0
-        property int mRight: !Config.bar.orientation && Config.bar.position ? (Config.bar.orientation ? Config.bar.shortSideMargin : Config.bar.longSideMargin) : 0
-        property int mTop: !(Config.bar.orientation && Config.bar.position) ? (Config.bar.orientation ? Config.bar.longSideMargin : Config.bar.shortSideMargin) : 0
-        property int mBottom: Config.bar.orientation && Config.bar.position ? (Config.bar.longSideMargin ? Config.bar.longSideMargin : Config.bar.shortSideMargin) : 0
+        property int mLeft: !(!Config.bar.orientation && Config.bar.position) ? (Config.bar.orientation ? (Config.bar.shortSideMargin.begin ?? Config.bar.shortSideMargin.all ?? 0) : (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0)) : 0
+        property int mRight: !Config.bar.orientation && Config.bar.position ? (Config.bar.orientation ? (Config.bar.shortSideMargin.begin ?? Config.bar.shortSideMargin.all ?? 0) : (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0)) : 0
+        property int mTop: !(Config.bar.orientation && Config.bar.position) ? (Config.bar.orientation ? (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.shortSideMargin.begin ?? Config.bar.shortSideMargin.all ?? 0)) : 0
+        property int mBottom: Config.bar.orientation && Config.bar.position ? (Config.bar.longSideMargin ? (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.shortSideMargin ?? Config.bar.shortSideMargin ?? 0)) : 0
         // Base settings
-        property int rounding: Config.bar.rounding.begin ?? Config.bar.rounding.all ?? undefined
+        property int rounding: Config.bar.rounding.begin ?? Config.bar.rounding.all ?? 20//undefined
         property bool invertBaseRounding: Config.bar.invertBaseRounding.begin ?? (Config.bar.invertBaseRounding.all ?? undefined)
         // Bar exclusion
         property bool excludeBarArea: false
@@ -71,20 +75,20 @@ Item {
     }
     property QtObject center: QtObject {
         // Content size
-        property int wrapperWidth: Config.bar.orientation ? 250 : Config.bar.thickness
-        property int wrapperHeight: Config.bar.orientation ? Config.bar.thickness : 300
+        property int wrapperWidth: Config.bar.orientation ? 250 : (isTotalThickness() ? (Config.bar.thickness.all + Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0)) : (Config.bar.thickness.center ?? Config.bar.thickness.all ?? 0))
+        property int wrapperHeight: Config.bar.orientation ? (isTotalThickness() ? (Config.bar.thickness.all + Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0)) : (Config.bar.thickness.center ?? Config.bar.thickness.all ?? 0)) : 300
         // Anchors
         property bool aLeft: !Config.bar.orientation && !Config.bar.position
         property bool aRight: !Config.bar.orientation && Config.bar.position
         property bool aTop: Config.bar.orientation && !Config.bar.position
-        property bool aBottom: Config.bar.orientation && Config.bar.position 
+        property bool aBottom: Config.bar.orientation && Config.bar.position
         property bool aHorizontalCenter: Config.bar.orientation
         property bool aVerticalCenter: !Config.bar.orientation
         // Margins & offsets
-        property int mLeft: !Config.bar.orientation && !Config.bar.position ? (Config.bar.orientation ? Config.bar.shortSideMargin : Config.bar.longSideMargin) : 0
-        property int mRight: !Config.bar.orientation && Config.bar.position ? (Config.bar.orientation ? Config.bar.shortSideMargin : Config.bar.longSideMargin) : 0
-        property int mTop: Config.bar.orientation && !Config.bar.position ? (Config.bar.orientation ? Config.bar.longSideMargin : Config.bar.shortSideMargin) : 0
-        property int mBottom: Config.bar.orientation && Config.bar.position ? (Config.bar.longSideMargin ? Config.bar.longSideMargin : Config.bar.shortSideMargin) : 0
+        property int mLeft: !Config.bar.orientation && !Config.bar.position ? (Config.bar.orientation ? (Config.bar.shortSideMargin.center ?? Config.bar.shortSideMargin.all ?? 0) : (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0)) : 0
+        property int mRight: !Config.bar.orientation && Config.bar.position ? (Config.bar.orientation ? (Config.bar.shortSideMargin.center ?? Config.bar.shortSideMargin.all ?? 0) : (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0)) : 0
+        property int mTop: Config.bar.orientation && !Config.bar.position ? (Config.bar.orientation ? (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.shortSideMargin.center ?? Config.bar.shortSideMargin.all ?? 0)) : 0
+        property int mBottom: Config.bar.orientation && Config.bar.position ? (Config.bar.longSideMargin ? (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.shortSideMargin.center ?? Config.bar.shortSideMargin ?? 0)) : 0
         // Base settings
         property int rounding: Config.bar.rounding.center ?? Config.bar.rounding.all ?? undefined
         property bool invertBaseRounding: Config.bar.invertBaseRounding.center ?? Config.bar.invertBaseRounding.all ?? undefined
@@ -95,8 +99,8 @@ Item {
     }
     property QtObject end: QtObject {
         // Content size
-        property int wrapperWidth: Config.bar.orientation ? 300 : Config.bar.thickness
-        property int wrapperHeight: Config.bar.orientation ? Config.bar.thickness : 300
+        property int wrapperWidth: Config.bar.orientation ? 300 : (isTotalThickness() ? (Config.bar.thickness.all + Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0)) : (Config.bar.thickness.end ?? Config.bar.thickness.all ?? 0))
+        property int wrapperHeight: Config.bar.orientation ? (isTotalThickness() ? (Config.bar.thickness.all + Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0)) : (Config.bar.thickness.end ?? Config.bar.thickness.all ?? 0)) : 300
         // Anchors
         property bool aLeft: !Config.bar.orientation && !Config.bar.position
         property bool aRight: !(!Config.bar.orientation && !Config.bar.position)
@@ -105,10 +109,10 @@ Item {
         property bool aHorizontalCenter: false
         property bool aVerticalCenter: false
         // Margins & offsets
-        property int mLeft: !Config.bar.orientation && !Config.bar.position ? (Config.bar.orientation ? Config.bar.shortSideMargin : Config.bar.longSideMargin) : 0
-        property int mRight: !(!Config.bar.orientation && !Config.bar.position) ? (Config.bar.orientation ? Config.bar.shortSideMargin : Config.bar.longSideMargin) : 0
-        property int mTop: Config.bar.orientation && !Config.bar.position ? (Config.bar.orientation ? Config.bar.longSideMargin : Config.bar.shortSideMargin) : 0
-        property int mBottom: !(Config.bar.orientation && !Config.bar.position) ? (Config.bar.longSideMargin ? Config.bar.longSideMargin : Config.bar.shortSideMargin) : 0
+        property int mLeft: !Config.bar.orientation && !Config.bar.position ? (Config.bar.orientation ? (Config.bar.shortSideMargin.end ?? Config.bar.shortSideMargin.all ?? 0) : (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0)) : 0
+        property int mRight: !(!Config.bar.orientation && !Config.bar.position) ? (Config.bar.orientation ? (Config.bar.shortSideMargin.end ?? Config.bar.shortSideMargin.all ?? 0) : (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0)) : 0
+        property int mTop: Config.bar.orientation && !Config.bar.position ? (Config.bar.orientation ? (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.shortSideMargin.end ?? Config.bar.shortSideMargin.all ?? 0)) : 0
+        property int mBottom: !(Config.bar.orientation && !Config.bar.position) ? (Config.bar.longSideMargin ? (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.shortSideMargin.end ?? Config.bar.shortSideMargin.all ?? 0)) : 0
         // Base settings
         property int rounding: Config.bar.rounding.end ?? Config.bar.rounding.all ?? undefined
         property bool invertBaseRounding: Config.bar.invertBaseRounding.end ?? Config.bar.invertBaseRounding.all ?? undefined
@@ -126,21 +130,21 @@ Item {
     Loader {
         id: content
         anchors.fill: parent
-        sourceComponent : Bar {
+        sourceComponent: Bar {
             anchors.fill: parent
         }
-        
+
         onLoaded: {
             console.log("BarWrapper: Loader loaded, calling requestBackground");
             console.log("BarWrapper: position object:", root.position);
             console.log("BarWrapper: position.wrapperWidth:", root.position.wrapperWidth);
             if (Config.bar.separated) {
-                BackgroundsApi.requestBackground(root.begin, true)
-                BackgroundsApi.requestBackground(root.center, true)
-                BackgroundsApi.requestBackground(root.end, true)
+                root.manager.requestBackground(root.begin, true, false);//, false)//, false)
+                root.manager.requestBackground(root.center, true, false);//true, false)
+                root.manager.requestBackground(root.end, true, false);//, false)
                 //console.warn("no background")
-            }else
-                BackgroundsApi.requestBackground(root.position, true);
+            } else
+                root.manager.requestBackground(root.position, true);
         }
     }
 }
@@ -149,14 +153,14 @@ Item {
 // import qs.config
 // import Quickshell
 // import QtQuick
-// import qs.utils 
+// import qs.utils
 
 // Item {
 //     id: root
 
 //     implicitWidth: Config.bar.orientation ? Config.bar.thickness : undefined
 //     implicitHeight: Config.bar.orientation ? undefined : Config.bar.thickness
-    
+
 //     QtObject {
 //         id: position
 //         property bool aLeft: false
