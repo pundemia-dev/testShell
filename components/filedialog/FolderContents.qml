@@ -20,7 +20,7 @@ Item {
 
     StyledRect {
         anchors.fill: parent
-        color: Colours.tPalette.m3surfaceContainer
+        color: Colours.palette.surface_container
 
         layer.enabled: true
         layer.effect: MultiEffect {
@@ -56,14 +56,14 @@ Item {
             MaterialIcon {
                 Layout.alignment: Qt.AlignHCenter
                 text: "scan_delete"
-                color: Colours.palette.m3outline
+                color: Colours.palette.outline
                 font.pointSize: Appearance.font.size.extraLarge * 2
                 font.weight: 500
             }
 
             StyledText {
                 text: qsTr("This folder is empty")
-                color: Colours.palette.m3outline
+                color: Colours.palette.outline
                 font.pointSize: Appearance.font.size.large
                 font.weight: 500
             }
@@ -123,7 +123,7 @@ Item {
             implicitHeight: nonAnimHeight
 
             radius: Appearance.rounding.normal
-            color: Qt.alpha(Colours.tPalette.m3surfaceContainerHighest, GridView.isCurrentItem ? Colours.tPalette.m3surfaceContainerHighest.a : 0)
+            color: Qt.alpha(Colours.palette.surface_container_highest, GridView.isCurrentItem ? Colours.palette.surface_container_highest.a : 0)
             z: GridView.isCurrentItem || implicitHeight !== nonAnimHeight ? 1 : 0
             clip: true
 

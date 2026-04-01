@@ -1,1 +1,4 @@
 .qmmls.ini
+scripts/walltool/*
+!scripts/walltool/src/
+

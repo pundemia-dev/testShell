@@ -8,7 +8,7 @@ import QtQuick.Effects
 
 import "exclusions"
 import "backgrounds"
-import "wallpaper"
+// import "wallpaper"
 import "border"
 import "corners"
 import "panels"
@@ -65,29 +65,29 @@ Variants {
         }
 
         // ── Wallpaper background layer ──────────────────────────────
-        StyledWindow {
-            id: bgWin
+        // StyledWindow {
+        //     id: bgWin
 
-            screen: scope.modelData
-            name: "background"
+        //     screen: scope.modelData
+        //     name: "background"
 
-            WlrLayershell.exclusionMode: ExclusionMode.Ignore
-            WlrLayershell.layer: WlrLayer.Background
-            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        //     WlrLayershell.exclusionMode: ExclusionMode.Ignore
+        //     WlrLayershell.layer: WlrLayer.Background
+        //     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-            color: "black"
+        //     color: "black"
 
-            anchors.top: true
-            anchors.bottom: true
-            anchors.left: true
-            anchors.right: true
+        //     anchors.top: true
+        //     anchors.bottom: true
+        //     anchors.left: true
+        //     anchors.right: true
 
-            mask: Region {}
+        //     mask: Region {}
 
-            Wallpaper {
-                monitorName: scope.modelData.name
-            }
-        }
+        //     // Wallpaper {
+        //     //     monitorName: scope.modelData.name
+        //     // }
+        // }
 
         // ── Main drawers layer ──────────────────────────────────────
         StyledWindow {

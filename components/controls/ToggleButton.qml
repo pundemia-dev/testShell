@@ -41,12 +41,12 @@ StyledRect {
     implicitHeight: toggleBtnIcon.implicitHeight + verticalPadding * 2
 
     radius: toggled || toggleStateLayer.pressed ? Appearance.rounding.small : Math.min(width, height) / 2 * Math.min(1, Appearance.rounding.scale)
-    color: toggled ? Colours.palette[`m3${accent.toLowerCase()}`] : Colours.palette[`m3${accent.toLowerCase()}Container`]
+    color: toggled ? Colours.palette[`${accent.toLowerCase()}`] : Colours.palette[`${accent.toLowerCase()}_container`]
 
     StateLayer {
         id: toggleStateLayer
 
-        color: root.toggled ? Colours.palette[`m3on${root.accent}`] : Colours.palette[`m3on${root.accent}Container`]
+        color: root.toggled ? Colours.palette[`on_${root.accent.toLowerCase()}`] : Colours.palette[`on_${root.accent.toLowerCase()}_container`]
 
         function onClicked(): void {
             root.clicked();
@@ -65,7 +65,7 @@ StyledRect {
             visible: !!text
             fill: root.toggled ? 1 : 0
             text: root.icon
-            color: root.toggled ? Colours.palette[`m3on${root.accent}`] : Colours.palette[`m3on${root.accent}Container`]
+            color: root.toggled ? Colours.palette[`on_${root.accent.toLowerCase()}`] : Colours.palette[`on_${root.accent.toLowerCase()}_container`]
             font.pointSize: root.iconSize
 
             Behavior on fill {
@@ -79,7 +79,7 @@ StyledRect {
 
             sourceComponent: StyledText {
                 text: root.label
-                color: root.toggled ? Colours.palette[`m3on${root.accent}`] : Colours.palette[`m3on${root.accent}Container`]
+                color: root.toggled ? Colours.palette[`on_${root.accent.toLowerCase()}`] : Colours.palette[`on_${root.accent.toLowerCase()}_container`]
             }
         }
     }
@@ -122,4 +122,3 @@ StyledRect {
         Layout.minimumHeight: 0
     }
 }
-

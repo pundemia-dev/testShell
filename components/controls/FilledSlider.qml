@@ -15,7 +15,7 @@ Slider {
     orientation: Qt.Vertical
 
     background: StyledRect {
-        color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+        color: Colours.layer(Colours.palette.surface_container, 2)
         radius: Appearance.rounding.full
 
         StyledRect {
@@ -25,7 +25,7 @@ Slider {
             y: root.handle.y
             implicitHeight: parent.height - y
 
-            color: Colours.palette.m3secondary
+            color: Colours.palette.secondary
             radius: parent.radius
         }
     }
@@ -50,7 +50,7 @@ Slider {
 
             anchors.fill: parent
 
-            color: Colours.palette.m3inverseSurface
+            color: Colours.palette.inverse_surface
             radius: Appearance.rounding.full
 
             MouseArea {
@@ -75,7 +75,7 @@ Slider {
                 }
 
                 text: root.icon
-                color: Colours.palette.m3inverseOnSurface
+                color: Colours.palette.inverse_on_surface
                 anchors.centerIn: parent
 
                 onMovingChanged: anim.restart()

@@ -17,7 +17,7 @@ Slider {
 
             implicitWidth: root.handle.x - root.implicitHeight / 6
 
-            color: Colours.palette.m3primary
+            color: Colours.palette.primary
             radius: Appearance.rounding.full
             topRightRadius: root.implicitHeight / 15
             bottomRightRadius: root.implicitHeight / 15
@@ -32,7 +32,7 @@ Slider {
 
             implicitWidth: parent.width - root.handle.x - root.handle.implicitWidth - root.implicitHeight / 6
 
-            color: Colours.palette.m3surfaceContainerHighest
+            color: Colours.palette.surface_container_highest
             radius: Appearance.rounding.full
             topLeftRadius: root.implicitHeight / 15
             bottomLeftRadius: root.implicitHeight / 15
@@ -45,7 +45,7 @@ Slider {
         implicitWidth: root.implicitHeight / 4.5
         implicitHeight: root.implicitHeight
 
-        color: Colours.palette.m3primary
+        color: Colours.palette.primary
         radius: Appearance.rounding.full
 
         MouseArea {

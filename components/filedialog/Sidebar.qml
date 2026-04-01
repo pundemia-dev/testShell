@@ -14,7 +14,7 @@ StyledRect {
     implicitWidth: Sizes.sidebarWidth
     implicitHeight: inner.implicitHeight + Appearance.padding.normal * 2
 
-    color: Colours.tPalette.m3surfaceContainer
+    color: Colours.palette.surface_container
 
     ColumnLayout {
         id: inner
@@ -30,7 +30,7 @@ StyledRect {
             Layout.topMargin: Appearance.padding.small / 2
             Layout.bottomMargin: Appearance.spacing.normal
             text: qsTr("Files")
-            color: Colours.palette.m3onSurface
+            color: Colours.palette.on_surface
             font.pointSize: Appearance.font.size.larger
             font.bold: true
         }
@@ -48,10 +48,10 @@ StyledRect {
                 implicitHeight: placeInner.implicitHeight + Appearance.padding.normal * 2
 
                 radius: Appearance.rounding.full
-                color: Qt.alpha(Colours.palette.m3secondaryContainer, selected ? 1 : 0)
+                color: Qt.alpha(Colours.palette.secondary_container, selected ? 1 : 0)
 
                 StateLayer {
-                    color: place.selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                    color: place.selected ? Colours.palette.on_secondary_container : Colours.palette.on_surface
 
                     function onClicked(): void {
                         if (place.modelData === "Home")
@@ -90,7 +90,7 @@ StyledRect {
                                 return "video_library";
                             return "folder";
                         }
-                        color: place.selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                        color: place.selected ? Colours.palette.on_secondary_container : Colours.palette.on_surface
                         font.pointSize: Appearance.font.size.large
                         fill: place.selected ? 1 : 0
 
@@ -102,7 +102,7 @@ StyledRect {
                     StyledText {
                         Layout.fillWidth: true
                         text: place.modelData
-                        color: place.selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                        color: place.selected ? Colours.palette.on_secondary_container : Colours.palette.on_surface
                         font.pointSize: Appearance.font.size.normal
                         elide: Text.ElideRight
                     }

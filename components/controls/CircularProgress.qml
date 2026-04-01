@@ -12,8 +12,8 @@ Shape {
     property int strokeWidth: Appearance.padding.smaller
     property int padding: 0
     property int spacing: Appearance.spacing.small
-    property color fgColour: Colours.palette.m3primary
-    property color bgColour: Colours.palette.m3secondaryContainer
+    property color fgColour: Colours.palette.primary
+    property color bgColour: Colours.palette.secondary_container
 
     readonly property real size: Math.min(width, height)
     readonly property real arcRadius: (size - padding - strokeWidth) / 2

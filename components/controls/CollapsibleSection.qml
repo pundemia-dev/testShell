@@ -45,7 +45,7 @@ ColumnLayout {
             }
 
             StyledIcon {
-                text: "expand_more"
+                text: "\uea5f" //"expand_more"
                 rotation: root.expanded ? 180 : 0
                 color: Colours.palette.on_surface_variant
                 font.pointSize: Appearance.font.size.normal

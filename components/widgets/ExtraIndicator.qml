@@ -10,7 +10,7 @@ StyledRect {
     anchors.right: parent.right
     anchors.margins: Appearance.padding.normal
 
-    color: Colours.palette.m3tertiary
+    color: Colours.palette.tertiary
     radius: Appearance.rounding.small
 
     implicitWidth: count.implicitWidth + Appearance.padding.normal * 2
@@ -33,7 +33,7 @@ StyledRect {
         anchors.centerIn: parent
         animate: parent.opacity > 0
         text: qsTr("+%1").arg(parent.extra)
-        color: Colours.palette.m3onTertiary
+        color: Colours.palette.on_tertiary
     }
 
     Behavior on opacity {

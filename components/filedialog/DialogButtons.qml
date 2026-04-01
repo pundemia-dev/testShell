@@ -11,7 +11,7 @@ StyledRect {
 
     implicitHeight: inner.implicitHeight + Appearance.padding.normal * 2
 
-    color: Colours.tPalette.m3surfaceContainer
+    color: Colours.palette.surface_container
 
     RowLayout {
         id: inner
@@ -30,7 +30,7 @@ StyledRect {
             Layout.fillHeight: true
             Layout.rightMargin: Appearance.spacing.normal
 
-            color: Colours.tPalette.m3surfaceContainerHigh
+            color: Colours.palette.surface_container_high
             radius: Appearance.rounding.small
 
             StyledText {
@@ -42,7 +42,7 @@ StyledRect {
         }
 
         StyledRect {
-            color: Colours.tPalette.m3surfaceContainerHigh
+            color: Colours.palette.surface_container_high
             radius: Appearance.rounding.small
 
             implicitWidth: cancelText.implicitWidth + Appearance.padding.normal * 2
@@ -63,12 +63,12 @@ StyledRect {
                 anchors.margins: Appearance.padding.normal
 
                 text: qsTr("Select")
-                color: root.dialog.selectionValid ? Colours.palette.m3onSurface : Colours.palette.m3outline
+                color: root.dialog.selectionValid ? Colours.palette.on_surface : Colours.palette.outline
             }
         }
 
         StyledRect {
-            color: Colours.tPalette.m3surfaceContainerHigh
+            color: Colours.palette.surface_container_high
             radius: Appearance.rounding.small
 
             implicitWidth: cancelText.implicitWidth + Appearance.padding.normal * 2

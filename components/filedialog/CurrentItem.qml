@@ -23,7 +23,7 @@ Item {
             readonly property real roundingY: flatten ? root.implicitHeight / 2 : rounding
 
             strokeWidth: -1
-            fillColor: Colours.tPalette.m3surfaceContainer
+            fillColor: Colours.palette.surface_container
 
             startX: root.implicitWidth
             startY: root.implicitHeight
