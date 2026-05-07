@@ -60,22 +60,6 @@ pub async fn send_and_print(request: &Request, json: bool) -> Result<()> {
                                 .unwrap_or_else(|_| val.to_string())
                         );
                     }
-                    ResponsePayload::WallpaperState(states) => {
-                        for s in states {
-                            println!(
-                                "[{}] {} ({}) mode={} offset=({:.1}, {:.1}) muted={} vol={} paused={}",
-                                s.monitor,
-                                s.path.as_deref().unwrap_or("<none>"),
-                                s.media_type,
-                                s.mode,
-                                s.offset_x,
-                                s.offset_y,
-                                s.muted,
-                                s.volume,
-                                s.paused,
-                            );
-                        }
-                    }
                     ResponsePayload::Monitors(monitors) => {
                         for m in monitors {
                             println!(
@@ -121,18 +105,96 @@ pub async fn send_and_print(request: &Request, json: bool) -> Result<()> {
                             println!("  • {v}");
                         }
                     }
+                    ResponsePayload::ThemeParams(params) => {
+                        println!("mode:               {}", params.mode);
+                        println!("scheme_type:        {}", params.scheme_type);
+                        if let Some(v) = params.contrast {
+                            println!("contrast:           {v}");
+                        }
+                        if let Some(v) = params.source_color_index {
+                            println!("source_color_index: {v}");
+                        }
+                        if let Some(v) = &params.prefer {
+                            println!("prefer:             {v}");
+                        }
+                        if let Some(v) = &params.fallback_color {
+                            println!("fallback_color:     {v}");
+                        }
+                        if let Some(v) = params.opacity {
+                            println!("opacity:            {v}");
+                        }
+                        if let Some(v) = params.lightness_dark {
+                            println!("lightness_dark:     {v}");
+                        }
+                        if let Some(v) = params.lightness_light {
+                            println!("lightness_light:    {v}");
+                        }
+                    }
+                    ResponsePayload::AwwwOpts(opts) => {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(opts)
+                                .unwrap_or_else(|_| format!("{opts:?}"))
+                        );
+                    }
+                    ResponsePayload::SlideshowOpts(opts) => {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(opts)
+                                .unwrap_or_else(|_| format!("{opts:?}"))
+                        );
+                    }
+                    ResponsePayload::ConfigFull(toml_text) => {
+                        print!("{toml_text}");
+                    }
+                    ResponsePayload::MonitorConfigs(entries) => {
+                        if entries.is_empty() {
+                            println!("(no per-monitor overrides configured)");
+                        } else {
+                            for e in entries {
+                                println!("[awww.monitor.\"{}\"]", e.monitor);
+                                let opts = &e.options;
+                                if let Some(v) = &opts.resize           { println!("  resize           = {v}"); }
+                                if let Some(v) = &opts.fill_color       { println!("  fill_color       = {v}"); }
+                                if let Some(v) = &opts.filter           { println!("  filter           = {v}"); }
+                                if let Some(v) = &opts.transition_type  { println!("  transition_type  = {v}"); }
+                                if let Some(v) = opts.transition_step   { println!("  transition_step  = {v}"); }
+                                if let Some(v) = opts.transition_duration { println!("  transition_duration = {v}"); }
+                                if let Some(v) = opts.transition_fps    { println!("  transition_fps   = {v}"); }
+                                if let Some(v) = opts.transition_angle  { println!("  transition_angle = {v}"); }
+                                if let Some(v) = &opts.transition_pos   { println!("  transition_pos   = {v}"); }
+                                if let Some(v) = &opts.transition_bezier { println!("  transition_bezier = {v}"); }
+                                if let Some(v) = &opts.transition_wave  { println!("  transition_wave  = {v}"); }
+                                if let Some(v) = opts.invert_y          { println!("  invert_y         = {v}"); }
+                            }
+                        }
+                    }
+                    ResponsePayload::MonitorOpts(opts) => {
+                        println!("{}", serde_json::to_string_pretty(&opts).unwrap_or_else(|_| format!("{opts:?}")));
+                    }
+                    ResponsePayload::IndexerOpts(info) => {
+                        println!("ai_tagging:  {}", info.ai_tagging);
+                        if info.watch_dirs.is_empty() {
+                            println!("watch_dirs:  (none)");
+                        } else {
+                            for d in &info.watch_dirs {
+                                println!("watch_dirs:  {d}");
+                            }
+                        }
+                    }
+                    ResponsePayload::ThemeAutoOpts(info) => {
+                        println!("sunrise:  {}", info.sunrise);
+                        println!("sunset:   {}", info.sunset);
+                    }
                     ResponsePayload::DaemonStatus(info) => {
                         println!("uptime:      {}s", info.uptime_secs);
                         println!("memory:      {:.1} MiB", info.memory_mb);
-                        println!("monitors:    {}", info.monitors);
                         println!("slideshow:   {}", if info.slideshow_active { "active" } else { "off" });
                         if let Some(interval) = info.slideshow_interval {
                             println!("  interval:  {interval}s");
                         }
-                        println!("ai indexer:  {}", if info.ai_indexing { "running" } else { "idle" });
-                        if info.ai_queue_size > 0 {
-                            println!("  queue:     {} items", info.ai_queue_size);
-                        }
+                        println!("indexing:    {}", if info.indexing { "running" } else { "idle" });
+                        println!("preview:     {}", if info.preview_active { "active" } else { "off" });
                         println!("game mode:   {}", if info.game_mode { "ON" } else { "off" });
                     }
                 }

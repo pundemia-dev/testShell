@@ -1,17 +1,19 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
-// ── Global CLI ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Global CLI
+// ══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Parser)]
 #[command(
     name = "walltool",
     version,
-    about = "Ultimate Wallpaper & Theme Manager",
-    long_about = "Desktop wallpaper combo: Hyprland + Matugen + AI tagging + SQLite search"
+    about = "awww + matugen orchestrator",
+    long_about = "Wallpaper daemon orchestrator: awww for rendering, matugen for Material You themes, SQLite for search"
 )]
 pub struct Cli {
-    /// Format output as JSON (for QML consumption)
+    /// Format output as JSON
     #[arg(short, long, global = true)]
     pub json: bool,
 
@@ -23,7 +25,9 @@ pub struct Cli {
     pub command: Commands,
 }
 
-// ── Top-level commands ──────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Top-level commands
+// ══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -34,7 +38,7 @@ pub enum Commands {
         action: WallpaperAction,
     },
 
-    /// Theme & color scheme management
+    /// Theme & color scheme management (matugen)
     #[command(alias = "th")]
     Theme {
         #[command(subcommand)]
@@ -48,7 +52,7 @@ pub enum Commands {
         action: ConfigAction,
     },
 
-    /// Monitor utilities (Hyprland IPC)
+    /// Monitor utilities
     #[command(alias = "mon")]
     Monitor {
         #[command(subcommand)]
@@ -63,116 +67,230 @@ pub enum Commands {
     },
 }
 
-// ── Shared / flattened option groups ────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Shared option groups (flattened into commands)
+// ══════════════════════════════════════════════════════════════════════════════
 
-#[derive(Debug, Clone, Args)]
-pub struct DisplayOptions {
-    /// Target monitor name (e.g. DP-1). Default: all monitors.
-    #[arg(short, long)]
-    pub monitor: Option<String>,
+/// Options passed directly to `awww img`
+#[derive(Debug, Clone, Default, Args)]
+pub struct AwwwOptions {
+    /// Comma-separated list of outputs (maps to awww -o). Default: all.
+    #[arg(short = 'o', long)]
+    pub outputs: Option<String>,
 
-    /// Display mode
-    #[arg(long, default_value = "fill")]
-    pub mode: DisplayMode,
+    /// awww daemon namespace
+    #[arg(short = 'n', long)]
+    pub namespace: Option<String>,
+
+    /// Resize mode: no, crop, fit, stretch
+    #[arg(long, value_enum)]
+    pub resize: Option<ResizeMode>,
+
+    /// Fill color in hex format (rrggbb or rrggbbaa, # optional)
+    #[arg(long, value_parser = parse_color)]
+    pub fill_color: Option<String>,
+
+    /// Image scaling filter
+    #[arg(long, value_enum)]
+    pub filter: Option<ImageFilter>,
+
+    /// Transition type
+    #[arg(long = "transition-type", value_enum)]
+    pub transition_type: Option<TransitionType>,
+
+    /// Transition step (1-255). Default: 2 for simple, 90 for others
+    #[arg(long = "transition-step", value_parser = clap::value_parser!(u8).range(1..=255))]
+    pub transition_step: Option<u8>,
+
+    /// Transition duration in seconds
+    #[arg(long = "transition-duration")]
+    pub transition_duration: Option<f64>,
+
+    /// Transition FPS (default: 30)
+    #[arg(long = "transition-fps")]
+    pub transition_fps: Option<u32>,
+
+    /// Transition angle in degrees (for wipe/wave)
+    #[arg(long = "transition-angle")]
+    pub transition_angle: Option<f64>,
+
+    /// Transition position (for grow/outer): center, top, left, 0.5,0.5, etc.
+    #[arg(long = "transition-pos")]
+    pub transition_pos: Option<String>,
+
+    /// Bezier curve for fade transition (e.g. .54,0,.34,.99)
+    #[arg(long = "transition-bezier")]
+    pub transition_bezier: Option<String>,
+
+    /// Wave parameters for wave transition (e.g. 20,20)
+    #[arg(long = "transition-wave")]
+    pub transition_wave: Option<String>,
+
+    /// Invert Y in transition-pos
+    #[arg(long = "invert-y")]
+    pub invert_y: bool,
 }
 
-#[derive(Debug, Clone, ValueEnum, Default)]
-pub enum DisplayMode {
-    #[default]
-    Fill,
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum ResizeMode {
+    No,
+    Crop,
     Fit,
-    Center,
     Stretch,
-    Span,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum ImageFilter {
+    Nearest,
+    Bilinear,
+    CatmullRom,
+    Mitchell,
+    Lanczos3,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum TransitionType {
+    None,
+    Simple,
+    Fade,
+    Left,
+    Right,
+    Top,
+    Bottom,
+    Wipe,
+    Wave,
+    Grow,
+    Center,
+    Any,
+    Outer,
+    Random,
+}
+
+/// Parse color: accepts #rrggbb, rrggbb, #rrggbbaa, rrggbbaa → always outputs rrggbbaa
+fn parse_color(s: &str) -> Result<String, String> {
+    let s = s.trim_start_matches('#');
+    match s.len() {
+        6 => {
+            // Validate hex
+            if s.chars().all(|c| c.is_ascii_hexdigit()) {
+                Ok(format!("{s}ff"))
+            } else {
+                Err(format!("invalid hex color: {s}"))
+            }
+        }
+        8 => {
+            if s.chars().all(|c| c.is_ascii_hexdigit()) {
+                Ok(s.to_string())
+            } else {
+                Err(format!("invalid hex color: {s}"))
+            }
+        }
+        _ => Err(format!(
+            "color must be 6 or 8 hex digits (rrggbb or rrggbbaa), got: {s}"
+        )),
+    }
+}
+
+/// Search and filter options (for search, random, slideshow)
+#[derive(Debug, Clone, Default, Args)]
+pub struct SearchOptions {
+    /// Filter by search query (path, tags, color)
+    #[arg(short = 'q', long)]
+    pub query: Option<String>,
+
+    /// Limit results to history entries
+    #[arg(long)]
+    pub history: bool,
+
+    /// Limit results to favorites
+    #[arg(long)]
+    pub favorites: bool,
+
+    /// Include hidden (dot) files
+    #[arg(short = 'i', long = "include-dot")]
+    pub include_dot: bool,
+
+    /// Only hidden (dot) files
+    #[arg(long = "only-dot", conflicts_with = "include_dot")]
+    pub only_dot: bool,
+
+    /// Sort field
+    #[arg(long = "sort-by", value_enum, default_value = "score")]
+    pub sort_by: SortField,
+
+    /// Reverse sort order
+    #[arg(long)]
+    pub reverse: bool,
+
+    /// Max results
+    #[arg(short = 'l', long, default_value_t = 50)]
+    pub limit: usize,
+}
+
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+pub enum SortField {
+    #[default]
+    Score,
+    Time,
+    Name,
+    Color,
+}
+
+/// Matugen-specific options
 #[derive(Debug, Clone, Args)]
-pub struct MediaOptions {
-    /// Mute audio (video / web wallpapers)
-    #[arg(long)]
-    pub mute: bool,
-
-    /// Volume level 0-100
-    #[arg(long, value_parser = clap::value_parser!(u8).range(0..=100))]
-    pub volume: Option<u8>,
-
-    /// Skip Matugen theme generation
-    #[arg(long)]
+pub struct MatugenCliOptions {
+    /// Skip theme generation
+    #[arg(long = "no-theme")]
     pub no_theme: bool,
 }
 
-#[derive(Debug, Clone, Args)]
-pub struct DotfileOptions {
-    /// Include hidden (dot) files and directories
-    #[arg(short = 'i', long)]
-    pub include_dot: bool,
-
-    /// Use ONLY hidden (dot) files and directories
-    #[arg(short = 'o', long, conflicts_with = "include_dot")]
-    pub only_dot: bool,
-}
-
-#[derive(Debug, Clone, ValueEnum)]
-pub enum MediaType {
-    Image,
-    Video,
-    Web,
-    All,
-}
-
-// ── 1. Wallpaper ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  1. Wallpaper commands
+// ══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Subcommand)]
 pub enum WallpaperAction {
-    /// Set wallpaper from file or URL
+    /// Set wallpaper (awww img + matugen + history)
     #[command(alias = "s")]
     Set(WpSetArgs),
+
+    /// Preview mode: start, stop, commit
+    Preview {
+        #[command(subcommand)]
+        action: PreviewAction,
+    },
 
     /// Set random wallpaper from directory
     #[command(alias = "rnd")]
     Random(WpRandomArgs),
 
-    /// Search local wallpaper DB (AI tags, paths, colors)
+    /// Search wallpaper DB
     Search(WpSearchArgs),
 
-    /// Toggle hidden state of a file (add/remove leading dot)
+    /// Toggle hidden state (add/remove leading dot)
     ToggleHidden {
-        /// File path to toggle
         path: String,
     },
 
-    /// Trigger background indexing of a directory
+    /// Per-wallpaper awww options
+    Options {
+        #[command(subcommand)]
+        action: WpOptionsAction,
+    },
+
+    /// Index directory into DB
     Index(WpIndexArgs),
 
-    /// Clear wallpaper (black screen), stop players
-    Clear {
-        /// Target monitor (all if omitted)
-        monitor: Option<String>,
-    },
+    /// Clear screen (awww clear)
+    Clear(WpClearArgs),
 
-    /// Print current wallpaper state
-    #[command(alias = "cur")]
-    Current {
-        /// Target monitor (all if omitted)
-        monitor: Option<String>,
-    },
+    /// Clear awww cache
+    ClearCache,
 
-    /// Resume video / GIF playback
-    Play {
-        monitor: Option<String>,
-    },
+    /// Restore last wallpaper (awww restore)
+    Restore(WpRestoreArgs),
 
-    /// Pause video / GIF playback
-    Pause {
-        monitor: Option<String>,
-    },
-
-    /// Toggle mute on the fly
-    ToggleMute {
-        monitor: Option<String>,
-    },
-
-    /// Wallpaper history navigation
+    /// Wallpaper history
     #[command(alias = "h")]
     History {
         #[command(subcommand)]
@@ -189,14 +307,35 @@ pub enum WallpaperAction {
 
 #[derive(Debug, Args)]
 pub struct WpSetArgs {
-    /// File path or URL
+    /// Image path
     pub path: String,
 
     #[command(flatten)]
-    pub display: DisplayOptions,
+    pub awww: AwwwOptions,
 
     #[command(flatten)]
-    pub media: MediaOptions,
+    pub matugen: MatugenCliOptions,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PreviewAction {
+    /// Start preview (saves backup, doesn't write to history)
+    Start(WpPreviewStartArgs),
+
+    /// Stop preview (restore from backup)
+    Stop,
+
+    /// Commit preview (write to history, clear backup)
+    Commit,
+}
+
+#[derive(Debug, Args)]
+pub struct WpPreviewStartArgs {
+    /// Image path
+    pub path: String,
+
+    #[command(flatten)]
+    pub awww: AwwwOptions,
 }
 
 #[derive(Debug, Args)]
@@ -204,47 +343,58 @@ pub struct WpRandomArgs {
     /// Directory to pick from
     pub dir: PathBuf,
 
-    /// Filter by media type
-    #[arg(short = 't', long = "type")]
-    pub media_type: Option<MediaType>,
-
-    /// Search subdirectories
+    /// Recursive search
     #[arg(short, long)]
     pub recursive: bool,
 
-    /// Filter by AI tags or filename
-    #[arg(short, long)]
-    pub query: Option<String>,
+    #[command(flatten)]
+    pub search: SearchOptions,
 
     #[command(flatten)]
-    pub dots: DotfileOptions,
+    pub awww: AwwwOptions,
 
     #[command(flatten)]
-    pub display: DisplayOptions,
-
-    #[command(flatten)]
-    pub media: MediaOptions,
+    pub matugen: MatugenCliOptions,
 }
 
 #[derive(Debug, Args)]
 pub struct WpSearchArgs {
-    /// Search query (name, AI tags, colors)
+    /// Search query
     pub query: String,
 
-    /// Max results
-    #[arg(short, long, default_value_t = 50)]
-    pub limit: usize,
+    #[command(flatten)]
+    pub search: SearchOptions,
 
-    /// Search within history instead of the index
-    #[arg(long)]
-    pub history: bool,
+    /// Output as JSON
+    #[arg(short, long)]
+    pub json: bool,
+}
 
-    /// Search within favorites instead of the index
-    #[arg(long)]
-    pub favorites: bool,
+#[derive(Debug, Subcommand)]
+pub enum WpOptionsAction {
+    /// Set per-wallpaper options
+    Set(WpOptionsSetArgs),
+
+    /// Get per-wallpaper options
+    Get {
+        /// Wallpaper path (current if omitted)
+        path: Option<String>,
+    },
+
+    /// Clear per-wallpaper options
+    Clear {
+        /// Wallpaper path (current if omitted)
+        path: Option<String>,
+    },
+}
+
+#[derive(Debug, Args)]
+pub struct WpOptionsSetArgs {
+    /// Wallpaper path (current if omitted)
+    pub path: Option<String>,
 
     #[command(flatten)]
-    pub dots: DotfileOptions,
+    pub awww: AwwwOptions,
 }
 
 #[derive(Debug, Args)]
@@ -252,9 +402,35 @@ pub struct WpIndexArgs {
     /// Directory to index
     pub dir: PathBuf,
 
-    /// Re-index files already present in DB
+    /// Re-index existing files
     #[arg(long)]
     pub force: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct WpClearArgs {
+    /// Fill color (rrggbb or rrggbbaa)
+    #[arg(value_parser = parse_color)]
+    pub color: Option<String>,
+
+    /// Outputs (comma-separated)
+    #[arg(short = 'o', long)]
+    pub outputs: Option<String>,
+
+    /// Namespace
+    #[arg(short = 'n', long)]
+    pub namespace: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct WpRestoreArgs {
+    /// Outputs (comma-separated)
+    #[arg(short = 'o', long)]
+    pub outputs: Option<String>,
+
+    /// Namespace
+    #[arg(short = 'n', long)]
+    pub namespace: Option<String>,
 }
 
 // ── 1a. History ─────────────────────────────────────────────────────────────
@@ -268,15 +444,15 @@ pub enum HistoryAction {
         limit: usize,
     },
 
-    /// Go back in history
+    /// Go back (instant transition, no history write)
     #[command(alias = "p")]
     Prev,
 
-    /// Go forward in history
+    /// Go forward
     #[command(alias = "n")]
     Next,
 
-    /// Clear history
+    /// Clear all history
     #[command(alias = "clr")]
     Clear,
 }
@@ -285,7 +461,7 @@ pub enum HistoryAction {
 
 #[derive(Debug, Subcommand)]
 pub enum FavAction {
-    /// Add to favorites (current wallpaper if path omitted)
+    /// Add to favorites (current if path omitted)
     #[command(alias = "a")]
     Add {
         path: Option<PathBuf>,
@@ -294,7 +470,7 @@ pub enum FavAction {
     /// Remove from favorites
     #[command(alias = "rm")]
     Rm {
-        /// Path or DB id
+        /// Path or ID
         target: String,
     },
 
@@ -305,35 +481,44 @@ pub enum FavAction {
         limit: usize,
     },
 
-    /// Set random wallpaper from favorites only
+    /// Random from favorites
     #[command(alias = "sr")]
     SetRandom {
         #[command(flatten)]
-        display: DisplayOptions,
-
-        #[command(flatten)]
-        media: MediaOptions,
+        awww: AwwwOptions,
     },
 }
 
-// ── 2. Theme ────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  2. Theme commands (matugen)
+// ══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Subcommand)]
 pub enum ThemeAction {
-    /// Generate theme from an image without setting it as wallpaper
+    /// Generate theme from image (without setting wallpaper)
     #[command(alias = "gen")]
     Generate {
-        /// Image path
         path: PathBuf,
     },
 
-    /// Dark / light mode control
+    /// Set a single matugen parameter (for QML sliders)
+    Set {
+        /// Parameter name (scheme-type, contrast, lightness-dark, etc.)
+        param: String,
+        /// Parameter value
+        value: String,
+    },
+
+    /// Get current theme state (all parameters as JSON)
+    Get,
+
+    /// Dark/light mode control
     Mode {
         #[command(subcommand)]
         action: ThemeModeAction,
     },
 
-    /// Matugen palette variant
+    /// Palette variant
     Palette {
         #[command(subcommand)]
         action: ThemePaletteAction,
@@ -347,17 +532,17 @@ pub enum ThemeModeAction {
         #[arg(value_enum)]
         mode: ThemeModeValue,
     },
-    /// Toggle between dark and light
+    /// Toggle dark ↔ light
     #[command(alias = "t")]
     Toggle,
-    /// Automatic mode (time-of-day / sunset)
+    /// Auto mode (time-based)
     Auto,
-    /// Print current mode
+    /// Current mode
     #[command(alias = "cur")]
     Current,
 }
 
-#[derive(Debug, Clone, ValueEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum ThemeModeValue {
     Dark,
     Light,
@@ -365,85 +550,262 @@ pub enum ThemeModeValue {
 
 #[derive(Debug, Subcommand)]
 pub enum ThemePaletteAction {
-    /// Set Matugen palette variant
+    /// Set palette variant
     Set {
-        /// e.g. tonal-spot, fidelity, monochrome, rainbow
+        /// scheme-tonal-spot, scheme-fidelity, etc.
         variant: String,
     },
-    /// List available palette variants
+    /// List available variants
     #[command(alias = "ls")]
     List,
-    /// Print current variant
+    /// Current variant
     #[command(alias = "cur")]
     Current,
 }
 
-// ── 3. Config / Profiles ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  3. Config / Profiles
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── ADDITIONS TO cli/mod.rs ──────────────────────────────────────────────────
+// Replace the existing ConfigAction enum with this expanded version.
 
 #[derive(Debug, Subcommand)]
 pub enum ConfigAction {
-    /// Profile management (wallpapers + monitors + theme = 1 snapshot)
+    /// Profile management
     Profile {
         #[command(subcommand)]
         action: ProfileAction,
     },
 
+    // ── awww.defaults ────────────────────────────────────────────────────────
+
+    /// Set awww default option (e.g. resize, transition_type)
+    #[command(name = "set-awww-default", alias = "sad")]
+    SetAwwwDefault {
+        /// Option key: resize | fill_color | filter | transition_type |
+        ///   transition_step | transition_duration | transition_fps |
+        ///   transition_angle | transition_pos | transition_bezier |
+        ///   transition_wave | invert_y
+        key: String,
+        /// Option value
+        value: String,
+    },
+
+    /// Get all awww default options
+    #[command(name = "get-awww-defaults", alias = "gad")]
+    GetAwwwDefaults,
+
+    // ── awww.global ──────────────────────────────────────────────────────────
+
+    /// Set awww global namespace
+    #[command(name = "set-namespace", alias = "sn")]
+    SetNamespace {
+        /// Namespace string (empty string to clear)
+        value: String,
+    },
+
+    /// Get awww global namespace
+    #[command(name = "get-namespace", alias = "gn")]
+    GetNamespace,
+
+    // ── awww.monitor.<name> ──────────────────────────────────────────────────
+
+    /// List monitors with per-monitor config overrides
+    #[command(name = "list-monitors", alias = "lm")]
+    ListMonitorConfigs,
+
+    /// Get per-monitor awww overrides for a specific monitor
+    #[command(name = "get-monitor", alias = "gm")]
+    GetMonitorOptions {
+        /// Monitor name (e.g. DP-1, HDMI-A-1)
+        monitor: String,
+    },
+
+    /// Set a per-monitor awww override option
+    #[command(name = "set-monitor", alias = "sm")]
+    SetMonitorOption {
+        /// Monitor name (e.g. DP-1)
+        monitor: String,
+        /// Option key (same keys as set-awww-default)
+        key: String,
+        /// Option value
+        value: String,
+    },
+
+    /// Remove all per-monitor overrides for a monitor
+    #[command(name = "rm-monitor", alias = "rmm")]
+    RmMonitorOptions {
+        /// Monitor name
+        monitor: String,
+    },
+
+    // ── matugen.defaults ─────────────────────────────────────────────────────
+
+    /// Get all matugen default parameters
+    #[command(name = "get-matugen-defaults", alias = "gmd")]
+    GetMatugenDefaults,
+
+    /// Set a matugen default parameter (persisted to config.toml)
+    #[command(name = "set-matugen-default", alias = "smd")]
+    SetMatugenDefault {
+        /// Parameter: mode | scheme_type | contrast | source_color_index |
+        ///   prefer | fallback_color | opacity | lightness_dark | lightness_light
+        key: String,
+        /// Value (use "null" to clear optional fields)
+        value: String,
+    },
+
+    // ── theme.auto ───────────────────────────────────────────────────────────
+
+    /// Get theme auto-mode schedule (sunrise/sunset)
+    #[command(name = "get-theme-auto", alias = "gta")]
+    GetThemeAuto,
+
+    /// Set theme auto-mode schedule option
+    #[command(name = "set-theme-auto", alias = "sta")]
+    SetThemeAuto {
+        /// Option: sunrise | sunset
+        key: String,
+        /// Time in HH:MM format (e.g. 07:00)
+        value: String,
+    },
+
+    // ── slideshow ────────────────────────────────────────────────────────────
+
+    /// Set slideshow option (e.g. dir, interval, include_hidden)
+    #[command(name = "set-slideshow", alias = "ss")]
+    SetSlideshowOption {
+        /// Option key: dir | interval | include_hidden | only_hidden |
+        ///   only_favorites | text_filter
+        key: String,
+        /// Option value
+        value: String,
+    },
+
+    /// Get all slideshow options
+    #[command(name = "get-slideshow", alias = "gs")]
+    GetSlideshowOptions,
+
+    // ── indexer ──────────────────────────────────────────────────────────────
+
+    /// Get indexer configuration (watch_dirs, ai_tagging)
+    #[command(name = "get-indexer", alias = "gi")]
+    GetIndexer,
+
+    /// Set indexer option
+    #[command(name = "set-indexer", alias = "si")]
+    SetIndexer {
+        /// Option key: ai_tagging | add_watch_dir | rm_watch_dir
+        key: String,
+        /// Option value
+        value: String,
+    },
+
+    // ── full config ──────────────────────────────────────────────────────────
+
+    /// Show entire config as pretty-printed TOML
+    #[command(name = "show", alias = "cat")]
+    Show,
+
     /// Open config.toml in $EDITOR
     Edit,
 }
 
+// #[derive(Debug, Subcommand)]
+// pub enum ConfigAction {
+//     /// Profile management
+//     Profile {
+//         #[command(subcommand)]
+//         action: ProfileAction,
+//     },
+
+//     /// Set awww default option (e.g. resize, transition_type)
+//     #[command(name = "set-awww-default")]
+//     SetAwwwDefault {
+//         /// Option key (resize, filter, transition_type, etc.)
+//         key: String,
+//         /// Option value
+//         value: String,
+//     },
+
+//     /// Get all awww default options
+//     #[command(name = "get-awww-defaults")]
+//     GetAwwwDefaults,
+
+//     /// Set slideshow option (e.g. dir, interval, include_hidden)
+//     #[command(name = "set-slideshow")]
+//     SetSlideshowOption {
+//         /// Option key (dir, interval, include_hidden, only_hidden, only_favorites, text_filter)
+//         key: String,
+//         /// Option value
+//         value: String,
+//     },
+
+//     /// Get all slideshow options
+//     #[command(name = "get-slideshow")]
+//     GetSlideshowOptions,
+
+//     /// Open config.toml in $EDITOR
+//     Edit,
+// }
+
 #[derive(Debug, Subcommand)]
 pub enum ProfileAction {
-    /// Save current state as a named profile
+    /// Save current state
     #[command(alias = "sv")]
     Save { name: String },
 
-    /// Load and apply a saved profile
+    /// Load profile
     #[command(alias = "ld")]
     Load { name: String },
 
-    /// List all profiles
+    /// List profiles
     #[command(alias = "ls")]
     List,
 
-    /// Delete a profile
+    /// Delete profile
     #[command(alias = "rm")]
     Rm { name: String },
 }
 
-// ── 4. Monitor ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  4. Monitor
+// ══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Subcommand)]
 pub enum MonitorAction {
-    /// List monitors: resolution, position, scale
+    /// List monitors (via awww query)
     #[command(alias = "ls")]
     List,
 
-    /// Flash monitor names on screen for 3 seconds
+    /// Identify monitors (awww query + notification)
     Identify,
 }
 
-// ── 5. Daemon ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  5. Daemon
+// ══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Subcommand)]
 pub enum DaemonAction {
-    /// Start daemon (blocking, intended for hyprland.conf exec-once)
+    /// Start daemon (blocking)
     Start,
 
-    /// Send shutdown signal to daemon
+    /// Stop daemon
     Stop,
 
-    /// Print daemon status (uptime, RAM, slideshow, AI indexer)
+    /// Daemon status
     #[command(alias = "st")]
     Status,
 
-    /// Game Mode: pause all video, stop slideshow timers, freeze AI indexer
+    /// Game mode: awww pause + freeze timers
     PauseAll,
 
-    /// Exit Game Mode: resume background activity
+    /// Resume: awww restore (instant transition)
     ResumeAll,
 
-    /// Slideshow management
+    /// Slideshow
     Slideshow {
         #[command(subcommand)]
         action: SlideshowAction,
@@ -452,37 +814,32 @@ pub enum DaemonAction {
 
 #[derive(Debug, Subcommand)]
 pub enum SlideshowAction {
-    /// Start slideshow from a directory
+    /// Start slideshow
     Start(SlideshowStartArgs),
 
     /// Stop slideshow
     Stop {
-        /// Stop only for this monitor (all if omitted)
+        /// Monitor (all if omitted)
         monitor: Option<String>,
     },
 }
 
 #[derive(Debug, Args)]
 pub struct SlideshowStartArgs {
-    /// Directory with wallpapers
+    /// Directory
     pub dir: PathBuf,
 
-    /// Interval in seconds (default 900 = 15 min)
+    /// Interval in seconds (default: 900 = 15 min)
     #[arg(short = 'i', long, default_value_t = 900)]
     pub interval: u64,
 
-    /// Target monitor (all if omitted)
+    /// Target monitor
     #[arg(long)]
     pub monitor: Option<String>,
 
-    /// Filter by media type
-    #[arg(short = 't', long = "type")]
-    pub media_type: Option<MediaType>,
+    #[command(flatten)]
+    pub search: SearchOptions,
 
     #[command(flatten)]
-    pub dots: DotfileOptions,
-
-    /// Filter by AI tags or filename
-    #[arg(short, long)]
-    pub query: Option<String>,
+    pub awww: AwwwOptions,
 }

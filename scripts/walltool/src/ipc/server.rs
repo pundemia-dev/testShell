@@ -119,11 +119,8 @@ async fn handle_connection(
 /// Map a [`Request`] to the appropriate daemon method and return a [`Response`].
 ///
 /// This is the central routing table. Each arm calls into `Daemon` methods
-/// that contain the actual business logic (state management, Hyprland IPC,
-/// Matugen pipeline, SQLite queries, etc.).
-///
-/// During early development, unimplemented commands return a descriptive
-/// `Response::Err` so the CLI doesn't hang silently.
+/// that contain the actual business logic (awww orchestration, Matugen
+/// pipeline, SQLite queries, etc.).
 async fn dispatch(daemon: &Arc<Daemon>, request: Request) -> Response {
     match request {
         // ── Ping ─────────────────────────────────────────────────────
@@ -131,15 +128,19 @@ async fn dispatch(daemon: &Arc<Daemon>, request: Request) -> Response {
 
         // ── Wallpaper ────────────────────────────────────────────────
         Request::WpSet(args) => daemon.handle_wp_set(args).await,
+        Request::WpPreviewStart(args) => daemon.handle_wp_preview_start(args).await,
+        Request::WpPreviewStop => daemon.handle_wp_preview_stop().await,
+        Request::WpPreviewCommit => daemon.handle_wp_preview_commit().await,
         Request::WpRandom(args) => daemon.handle_wp_random(args).await,
         Request::WpSearch(args) => daemon.handle_wp_search(args).await,
         Request::WpIndex(args) => daemon.handle_wp_index(args).await,
-        Request::WpClear { monitor } => daemon.handle_wp_clear(monitor).await,
-        Request::WpCurrent { monitor } => daemon.handle_wp_current(monitor).await,
-        Request::WpPlay { monitor } => daemon.handle_wp_play(monitor).await,
-        Request::WpPause { monitor } => daemon.handle_wp_pause(monitor).await,
-        Request::WpToggleMute { monitor } => daemon.handle_wp_toggle_mute(monitor).await,
+        Request::WpClear(args) => daemon.handle_wp_clear(args).await,
+        Request::WpClearCache => daemon.handle_wp_clear_cache().await,
+        Request::WpRestore(args) => daemon.handle_wp_restore(args).await,
         Request::WpToggleHidden { path } => daemon.handle_wp_toggle_hidden(path).await,
+        Request::WpOptionsSet(args) => daemon.handle_wp_options_set(args).await,
+        Request::WpOptionsGet { path } => daemon.handle_wp_options_get(path).await,
+        Request::WpOptionsClear { path } => daemon.handle_wp_options_clear(path).await,
 
         // ── History ──────────────────────────────────────────────────
         Request::HistoryList { limit } => daemon.handle_history_list(limit).await,
@@ -155,6 +156,8 @@ async fn dispatch(daemon: &Arc<Daemon>, request: Request) -> Response {
 
         // ── Theme ────────────────────────────────────────────────────
         Request::ThemeGenerate { path } => daemon.handle_theme_generate(path).await,
+        Request::ThemeSet { param, value } => daemon.handle_theme_set(param, value).await,
+        Request::ThemeGet => daemon.handle_theme_get().await,
         Request::ThemeModeSet { mode } => daemon.handle_theme_mode_set(mode).await,
         Request::ThemeModeToggle => daemon.handle_theme_mode_toggle().await,
         Request::ThemeModeAuto => daemon.handle_theme_mode_auto().await,
@@ -164,11 +167,32 @@ async fn dispatch(daemon: &Arc<Daemon>, request: Request) -> Response {
         Request::ThemePaletteCurrent => daemon.handle_theme_palette_current().await,
 
         // ── Config / Profiles ────────────────────────────────────────
+        Request::ConfigSetAwwwDefault { key, value } => daemon.handle_config_set_awww_default(key, value).await,
+        Request::ConfigGetAwwwDefaults => daemon.handle_config_get_awww_defaults().await,
+        Request::ConfigSetSlideshowOption { key, value } => daemon.handle_config_set_slideshow_option(key, value).await,
+        Request::ConfigGetSlideshowOptions => daemon.handle_config_get_slideshow_options().await,
         Request::ProfileSave { name } => daemon.handle_profile_save(name).await,
         Request::ProfileLoad { name } => daemon.handle_profile_load(name).await,
         Request::ProfileList => daemon.handle_profile_list().await,
         Request::ProfileRm { name } => daemon.handle_profile_rm(name).await,
         Request::ConfigEdit => daemon.handle_config_edit().await,
+        Request::ConfigShow => daemon.handle_config_show().await,
+        Request::ConfigSetNamespace { value } => daemon.handle_config_set_namespace(value).await,
+        Request::ConfigGetNamespace => daemon.handle_config_get_namespace().await,
+        Request::ConfigListMonitorConfigs => daemon.handle_config_list_monitor_configs().await,
+        Request::ConfigGetMonitorOptions { monitor } => daemon.handle_config_get_monitor_options(monitor).await,
+        Request::ConfigSetMonitorOption { monitor, key, value } => {
+            daemon.handle_config_set_monitor_option(monitor, key, value).await
+        }
+        Request::ConfigRmMonitorOptions { monitor } => daemon.handle_config_rm_monitor_options(monitor).await,
+        Request::ConfigGetMatugenDefaults => daemon.handle_config_get_matugen_defaults().await,
+        Request::ConfigSetMatugenDefault { key, value } => {
+            daemon.handle_config_set_matugen_default(key, value).await
+        }
+        Request::ConfigGetThemeAuto => daemon.handle_config_get_theme_auto().await,
+        Request::ConfigSetThemeAuto { key, value } => daemon.handle_config_set_theme_auto(key, value).await,
+        Request::ConfigGetIndexer => daemon.handle_config_get_indexer().await,
+        Request::ConfigSetIndexer { key, value } => daemon.handle_config_set_indexer(key, value).await,
 
         // ── Monitor ──────────────────────────────────────────────────
         Request::MonitorList => daemon.handle_monitor_list().await,

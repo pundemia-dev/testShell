@@ -144,6 +144,11 @@ impl Db {
                 UNIQUE(wallpaper_id, role)
             );
             CREATE INDEX IF NOT EXISTS idx_palette_wp ON color_palette(wallpaper_id);
+
+            CREATE TABLE IF NOT EXISTS wallpaper_options (
+                path       TEXT    PRIMARY KEY,
+                awww_opts  TEXT    NOT NULL
+            );
             ",
         )
         .context("run migrations")?;
@@ -288,11 +293,19 @@ impl Db {
         let conn = self.conn.lock().unwrap();
 
         let pattern = format!("%{query}%");
-        let unlimited = limit == 0;
 
         // Build SQL dynamically: omit LIMIT clause when unlimited,
         // otherwise over-fetch to compensate for post-query dot-filtering.
-        let base_sql = "SELECT w.id, w.path, w.media_type, w.dominant_color,
+        let fetch_limit: i64 = if limit == 0 {
+            i64::MAX
+        } else if include_dot || only_dot {
+            (limit * 3) as i64
+        } else {
+            (limit * 2) as i64
+        };
+
+        let sql = format!(
+            "SELECT w.id, w.path, w.media_type, w.dominant_color,
                     COALESCE(tag_score, 0.0) + COALESCE(path_score, 0.0) AS score
              FROM wallpapers w
              LEFT JOIN (
@@ -306,31 +319,19 @@ impl Db {
              ) p ON p.id = w.id
              WHERE tag_score IS NOT NULL OR path_score IS NOT NULL
                 OR w.dominant_color LIKE ?1
-             ORDER BY score DESC";
+             ORDER BY score DESC
+             LIMIT {fetch_limit}"
+        );
 
-        let rows: Vec<(i64, String, String, Option<String>, f64)> = if unlimited {
-            let mut stmt = conn.prepare(base_sql).context("prepare search")?;
-            stmt.query_map(params![pattern], |row| {
-                    Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
-                })
-                .context("query search")?
-                .collect::<Result<Vec<_>, _>>()
-                .context("collect search")?
-        } else {
-            let fetch_limit: i64 = if include_dot || only_dot {
-                (limit * 3) as i64
-            } else {
-                (limit * 2) as i64
-            };
-            let sql = format!("{base_sql} LIMIT ?2");
-            let mut stmt = conn.prepare(&sql).context("prepare search")?;
-            stmt.query_map(params![pattern, fetch_limit], |row| {
-                    Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
-                })
-                .context("query search")?
-                .collect::<Result<Vec<_>, _>>()
-                .context("collect search")?
-        };
+        let mut stmt = conn.prepare(&sql).context("prepare search")?;
+        let rows: Vec<(i64, String, String, Option<String>, f64)> = stmt
+            .query_map(params![pattern], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
+            })
+            .context("query search")?
+            .collect::<Result<Vec<_>, _>>()
+            .context("collect search")?;
+        drop(stmt);
 
         // Enrich each result with tags + fav status, applying dot-filter
         let mut results = Vec::with_capacity(rows.len());
@@ -338,7 +339,7 @@ impl Db {
             if !self.passes_dot_filter(&path, include_dot, only_dot) {
                 continue;
             }
-            if !unlimited && results.len() >= limit {
+            if limit > 0 && results.len() >= limit {
                 break;
             }
             let tags = self.get_tags_inner(&conn, id)?;
@@ -363,31 +364,29 @@ impl Db {
         let conn = self.conn.lock().unwrap();
 
         let pattern = format!("%{query}%");
-        let unlimited = limit == 0;
 
-        let base_sql = "SELECT DISTINCT h.path, h.id
+        let sql = if limit == 0 {
+            "SELECT DISTINCT h.path, h.id
              FROM history h
              WHERE h.path LIKE ?1
-             ORDER BY h.id DESC";
-
-        let rows: Vec<(String, i64)> = if unlimited {
-            let mut stmt = conn.prepare(base_sql).context("prepare search_history")?;
-            stmt.query_map(params![pattern], |row| {
-                    Ok((row.get(0)?, row.get(1)?))
-                })
-                .context("query search_history")?
-                .collect::<Result<Vec<_>, _>>()
-                .context("collect search_history")?
+             ORDER BY h.id DESC".to_string()
         } else {
-            let sql = format!("{base_sql} LIMIT ?2");
-            let mut stmt = conn.prepare(&sql).context("prepare search_history")?;
-            stmt.query_map(params![pattern, limit as i64], |row| {
-                    Ok((row.get(0)?, row.get(1)?))
-                })
-                .context("query search_history")?
-                .collect::<Result<Vec<_>, _>>()
-                .context("collect search_history")?
+            format!(
+                "SELECT DISTINCT h.path, h.id
+                 FROM history h
+                 WHERE h.path LIKE ?1
+                 ORDER BY h.id DESC
+                 LIMIT {limit}"
+            )
         };
+
+        let mut stmt = conn.prepare(&sql).context("prepare search_history")?;
+        let rows: Vec<(String, i64)> = stmt
+            .query_map(params![pattern], |row| Ok((row.get(0)?, row.get(1)?)))
+            .context("query search_history")?
+            .collect::<Result<Vec<_>, _>>()
+            .context("collect search_history")?;
+        drop(stmt);
 
         let mut results = Vec::new();
         for (path, id) in rows {
@@ -416,31 +415,29 @@ impl Db {
         let conn = self.conn.lock().unwrap();
 
         let pattern = format!("%{query}%");
-        let unlimited = limit == 0;
 
-        let base_sql = "SELECT f.id, f.path
+        let sql = if limit == 0 {
+            "SELECT f.id, f.path
              FROM favorites f
              WHERE f.path LIKE ?1
-             ORDER BY f.added_at DESC";
-
-        let rows: Vec<(i64, String)> = if unlimited {
-            let mut stmt = conn.prepare(base_sql).context("prepare search_favorites")?;
-            stmt.query_map(params![pattern], |row| {
-                    Ok((row.get(0)?, row.get(1)?))
-                })
-                .context("query search_favorites")?
-                .collect::<Result<Vec<_>, _>>()
-                .context("collect search_favorites")?
+             ORDER BY f.added_at DESC".to_string()
         } else {
-            let sql = format!("{base_sql} LIMIT ?2");
-            let mut stmt = conn.prepare(&sql).context("prepare search_favorites")?;
-            stmt.query_map(params![pattern, limit as i64], |row| {
-                    Ok((row.get(0)?, row.get(1)?))
-                })
-                .context("query search_favorites")?
-                .collect::<Result<Vec<_>, _>>()
-                .context("collect search_favorites")?
+            format!(
+                "SELECT f.id, f.path
+                 FROM favorites f
+                 WHERE f.path LIKE ?1
+                 ORDER BY f.added_at DESC
+                 LIMIT {limit}"
+            )
         };
+
+        let mut stmt = conn.prepare(&sql).context("prepare search_favorites")?;
+        let rows: Vec<(i64, String)> = stmt
+            .query_map(params![pattern], |row| Ok((row.get(0)?, row.get(1)?)))
+            .context("query search_favorites")?
+            .collect::<Result<Vec<_>, _>>()
+            .context("collect search_favorites")?;
+        drop(stmt);
 
         let mut results = Vec::new();
         for (id, path) in rows {
@@ -468,32 +465,31 @@ impl Db {
         let conn = self.conn.lock().unwrap();
 
         let pattern = format!("%{query}%");
-        let unlimited = limit == 0;
 
-        let base_sql = "SELECT DISTINCT h.path, h.id
+        let sql = if limit == 0 {
+            "SELECT DISTINCT h.path, h.id
              FROM history h
              INNER JOIN favorites f ON f.path = h.path
              WHERE h.path LIKE ?1
-             ORDER BY h.id DESC";
-
-        let rows: Vec<(String, i64)> = if unlimited {
-            let mut stmt = conn.prepare(base_sql).context("prepare search_history_favorites")?;
-            stmt.query_map(params![pattern], |row| {
-                    Ok((row.get(0)?, row.get(1)?))
-                })
-                .context("query search_history_favorites")?
-                .collect::<Result<Vec<_>, _>>()
-                .context("collect search_history_favorites")?
+             ORDER BY h.id DESC".to_string()
         } else {
-            let sql = format!("{base_sql} LIMIT ?2");
-            let mut stmt = conn.prepare(&sql).context("prepare search_history_favorites")?;
-            stmt.query_map(params![pattern, limit as i64], |row| {
-                    Ok((row.get(0)?, row.get(1)?))
-                })
-                .context("query search_history_favorites")?
-                .collect::<Result<Vec<_>, _>>()
-                .context("collect search_history_favorites")?
+            format!(
+                "SELECT DISTINCT h.path, h.id
+                 FROM history h
+                 INNER JOIN favorites f ON f.path = h.path
+                 WHERE h.path LIKE ?1
+                 ORDER BY h.id DESC
+                 LIMIT {limit}"
+            )
         };
+
+        let mut stmt = conn.prepare(&sql).context("prepare search_history_favorites")?;
+        let rows: Vec<(String, i64)> = stmt
+            .query_map(params![pattern], |row| Ok((row.get(0)?, row.get(1)?)))
+            .context("query search_history_favorites")?
+            .collect::<Result<Vec<_>, _>>()
+            .context("collect search_history_favorites")?;
+        drop(stmt);
 
         let mut results = Vec::new();
         for (path, id) in rows {
@@ -831,6 +827,40 @@ impl Db {
             .context("rename history")?;
         conn.execute("UPDATE favorites SET path = ?1 WHERE path = ?2", params![new_path, old_path])
             .context("rename favorites")?;
+        Ok(())
+    }
+
+    // ── Per-wallpaper awww options ──────────────────────────────────────
+
+    /// Save per-wallpaper awww options (JSON blob).
+    pub fn set_wallpaper_options(&self, path: &str, opts_json: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO wallpaper_options (path, awww_opts) VALUES (?1, ?2)
+             ON CONFLICT(path) DO UPDATE SET awww_opts = excluded.awww_opts",
+            params![path, opts_json],
+        ).context("set_wallpaper_options")?;
+        Ok(())
+    }
+
+    /// Get per-wallpaper awww options (JSON blob).
+    pub fn get_wallpaper_options(&self, path: &str) -> Result<Option<String>> {
+        let conn = self.conn.lock().unwrap();
+        let result = conn.query_row(
+            "SELECT awww_opts FROM wallpaper_options WHERE path = ?1",
+            params![path],
+            |row| row.get::<_, String>(0),
+        ).optional().context("get_wallpaper_options")?;
+        Ok(result)
+    }
+
+    /// Clear per-wallpaper awww options.
+    pub fn clear_wallpaper_options(&self, path: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM wallpaper_options WHERE path = ?1",
+            params![path],
+        ).context("clear_wallpaper_options")?;
         Ok(())
     }
 }

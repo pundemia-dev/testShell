@@ -21,7 +21,7 @@ use tracing::{debug, error, info, warn};
 use walkdir::WalkDir;
 
 use crate::daemon::Daemon;
-use crate::ipc::{DisplayOpts, MediaOpts, SlideshowStartRequest, WpSetRequest};
+use crate::ipc::{AwwwOpts, SearchOpts, SlideshowStartRequest, WpSetRequest};
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -38,17 +38,11 @@ pub struct SlideshowTask {
     /// Target monitor name, or `None` for all monitors
     pub monitor: Option<String>,
 
-    /// Media type filter (image, video, web, all / None = all)
-    pub media_type: Option<String>,
+    /// Search options
+    pub search: SearchOpts,
 
-    /// Include hidden (dot) files/directories
-    pub include_dot: bool,
-
-    /// Use ONLY hidden (dot) files/directories
-    pub only_dot: bool,
-
-    /// Optional AI tag / filename query filter
-    pub query: Option<String>,
+    /// awww options
+    pub awww: AwwwOpts,
 
     /// Handle to the spawned tokio task so we can abort it
     pub handle: JoinHandle<()>,
@@ -93,20 +87,16 @@ impl SlideshowManager {
         let dir = args.dir.clone();
         let interval = args.interval;
         let monitor = args.monitor.clone();
-        let media_type = args.media_type.clone();
-        let include_dot = args.include_dot;
-        let only_dot = args.only_dot;
-        let query = args.query.clone();
+        let search = args.search.clone();
+        let awww = args.awww.clone();
 
         let handle = tokio::spawn(slideshow_loop(
             daemon,
             dir.clone(),
             interval,
             monitor.clone(),
-            media_type.clone(),
-            include_dot,
-            only_dot,
-            query.clone(),
+            search.clone(),
+            awww.clone(),
             shutdown_rx,
         ));
 
@@ -116,10 +106,8 @@ impl SlideshowManager {
                 dir,
                 interval,
                 monitor,
-                media_type,
-                include_dot,
-                only_dot,
-                query,
+                search,
+                awww,
                 handle,
             },
         );
@@ -179,10 +167,8 @@ async fn slideshow_loop(
     dir: PathBuf,
     interval_secs: u64,
     monitor: Option<String>,
-    media_type: Option<String>,
-    include_dot: bool,
-    only_dot: bool,
-    query: Option<String>,
+    search: SearchOpts,
+    awww: AwwwOpts,
     mut shutdown_rx: broadcast::Receiver<()>,
 ) {
     let key = slideshow_key(monitor.as_deref());
@@ -216,10 +202,9 @@ async fn slideshow_loop(
                 // Pick a random file
                 let picked = match pick_random_file(
                     &dir,
-                    media_type.as_deref(),
-                    include_dot,
-                    only_dot,
-                    query.as_deref(),
+                    search.include_dot,
+                    search.only_dot,
+                    search.query.as_deref(),
                 ).await {
                     Ok(Some(path)) => path,
                     Ok(None) => {
@@ -244,17 +229,13 @@ async fn slideshow_loop(
 
                 // Build a WpSet request and apply it through the daemon
                 let path_str = picked.to_string_lossy().to_string();
+                let mut slide_awww = awww.clone();
+                slide_awww.outputs = monitor.clone();
+
                 let set_args = WpSetRequest {
                     path: path_str,
-                    display: DisplayOpts {
-                        monitor: monitor.clone(),
-                        mode: "fill".into(),
-                    },
-                    media: MediaOpts {
-                        mute: false,
-                        volume: None,
-                        no_theme: false,
-                    },
+                    awww: slide_awww,
+                    no_theme: false,
                 };
 
                 let response = daemon.handle_wp_set(set_args).await;
@@ -281,17 +262,15 @@ async fn slideshow_loop(
 /// the Tokio runtime on large directories.
 async fn pick_random_file(
     dir: &Path,
-    media_type: Option<&str>,
     include_dot: bool,
     only_dot: bool,
     query: Option<&str>,
 ) -> Result<Option<PathBuf>> {
     let dir = dir.to_path_buf();
-    let media_type = media_type.map(String::from);
     let query = query.map(String::from);
 
     tokio::task::spawn_blocking(move || {
-        pick_random_file_sync(&dir, media_type.as_deref(), include_dot, only_dot, query.as_deref())
+        pick_random_file_sync(&dir, include_dot, only_dot, query.as_deref())
     })
     .await
     .context("file picker task panicked")?
@@ -300,7 +279,6 @@ async fn pick_random_file(
 /// Synchronous file scanning + random selection.
 fn pick_random_file_sync(
     dir: &Path,
-    media_type: Option<&str>,
     include_dot: bool,
     only_dot: bool,
     query: Option<&str>,
@@ -343,16 +321,9 @@ fn pick_random_file_sync(
 
         let path = entry.path();
 
-        // Media type filter
-        if let Some(mt) = media_type {
-            if mt != "all" && !matches_media_type(path, mt) {
-                continue;
-            }
-        } else {
-            // No filter specified — only accept known media types
-            if !is_supported_media(path) {
-                continue;
-            }
+        // Only accept known image types (awww supports images only)
+        if !is_supported_media(path) {
+            continue;
         }
 
         // Query filter: simple case-insensitive substring match on filename
@@ -383,56 +354,22 @@ fn pick_random_file_sync(
 // ── Media type helpers ──────────────────────────────────────────────────────
 
 const IMAGE_EXTS: &[&str] = &[
-    "png", "jpg", "jpeg", "webp", "bmp", "tiff", "tif", "avif", "heic", "heif",
+    "png", "jpg", "jpeg", "webp", "bmp", "tiff", "tif", "avif", "heic", "heif", "gif",
 ];
 
-const VIDEO_EXTS: &[&str] = &[
-    "mp4", "mkv", "webm", "avi", "mov", "wmv", "flv", "m4v",
-];
-
-const GIF_EXTS: &[&str] = &["gif"];
-
-const WEB_EXTS: &[&str] = &["glsl", "frag", "html"];
-
-/// Check whether a file's extension matches the requested media type filter.
-/// Public alias for use from `daemon/mod.rs`.
-pub fn matches_media_type_ext(path: &Path, media_type: &str) -> bool {
-    matches_media_type(path, media_type)
-}
-
-/// Check whether a file has a supported media extension (any type).
+/// Check whether a file has a supported media extension (image types for awww).
 /// Public alias for use from `daemon/mod.rs`.
 pub fn is_supported_media_ext(path: &Path) -> bool {
     is_supported_media(path)
 }
 
-fn matches_media_type(path: &Path, media_type: &str) -> bool {
-    let ext = match path.extension().and_then(|e| e.to_str()) {
-        Some(e) => e.to_ascii_lowercase(),
-        None => return false,
-    };
-
-    match media_type {
-        "image" => IMAGE_EXTS.contains(&ext.as_str()),
-        "video" => VIDEO_EXTS.contains(&ext.as_str()) || GIF_EXTS.contains(&ext.as_str()),
-        "web" => WEB_EXTS.contains(&ext.as_str()),
-        "all" => is_supported_media(path),
-        _ => false,
-    }
-}
-
-/// Check whether a file has a supported media extension (any type).
+/// Check whether a file has a supported media extension (image types).
 fn is_supported_media(path: &Path) -> bool {
     let ext = match path.extension().and_then(|e| e.to_str()) {
         Some(e) => e.to_ascii_lowercase(),
         None => return false,
     };
-    let ext_str = ext.as_str();
-
-    IMAGE_EXTS.contains(&ext_str)
-        || VIDEO_EXTS.contains(&ext_str)
-        || GIF_EXTS.contains(&ext_str)
-        || WEB_EXTS.contains(&ext_str)
+    IMAGE_EXTS.contains(&ext.as_str())
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -449,36 +386,11 @@ mod tests {
     use std::path::Path;
 
     #[test]
-    fn test_matches_media_type_image() {
-        assert!(matches_media_type(Path::new("photo.jpg"), "image"));
-        assert!(matches_media_type(Path::new("pic.PNG"), "image"));
-        assert!(matches_media_type(Path::new("art.webp"), "image"));
-        assert!(!matches_media_type(Path::new("clip.mp4"), "image"));
-        assert!(!matches_media_type(Path::new("readme.txt"), "image"));
-    }
-
-    #[test]
-    fn test_matches_media_type_video() {
-        assert!(matches_media_type(Path::new("clip.mp4"), "video"));
-        assert!(matches_media_type(Path::new("anim.gif"), "video"));
-        assert!(matches_media_type(Path::new("movie.MKV"), "video"));
-        assert!(!matches_media_type(Path::new("photo.jpg"), "video"));
-    }
-
-    #[test]
-    fn test_matches_media_type_web() {
-        assert!(matches_media_type(Path::new("shader.glsl"), "web"));
-        assert!(matches_media_type(Path::new("scene.frag"), "web"));
-        assert!(matches_media_type(Path::new("page.html"), "web"));
-        assert!(!matches_media_type(Path::new("photo.jpg"), "web"));
-    }
-
-    #[test]
     fn test_is_supported_media() {
         assert!(is_supported_media(Path::new("a.jpg")));
-        assert!(is_supported_media(Path::new("b.mp4")));
+        assert!(is_supported_media(Path::new("b.png")));
         assert!(is_supported_media(Path::new("c.gif")));
-        assert!(is_supported_media(Path::new("d.glsl")));
+        assert!(is_supported_media(Path::new("d.webp")));
         assert!(!is_supported_media(Path::new("e.txt")));
         assert!(!is_supported_media(Path::new("f.rs")));
         assert!(!is_supported_media(Path::new("noext")));

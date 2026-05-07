@@ -8,14 +8,12 @@
 //!   - On startup (or `--force`), an initial `walkdir` scan pushes every
 //!     supported file into the same channel.
 //!   - A consumer task pulls paths from the channel, runs the processing
-//!     pipeline (media detection → optional ffmpeg frame extraction →
-//!     matugen dominant color → DB upsert), and respects pause/shutdown.
+//!     pipeline (media detection → matugen dominant color → DB upsert),
+//!     and respects pause/shutdown.
 //!
 //! The indexer is designed to run as a long-lived background task inside
 //! the daemon process.
 
-#[cfg(unix)] // added by me
-use libc; // added by me
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -26,7 +24,6 @@ use tokio::sync::{broadcast, mpsc, Notify};
 use tracing::{debug, error, info, warn};
 use walkdir::WalkDir;
 
-use crate::daemon::matugen;
 use crate::db::Db;
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -537,45 +534,9 @@ async fn process_file(db: &Arc<Db>, path: &Path) -> Result<()> {
 //     result.ok().map(|scheme| scheme.source_color)
 // }
 
-async fn extract_color(path: &Path, media_type: &str) -> Option<String> {
-    let image_path: PathBuf = match media_type {
-        "video" | "gif" => {
-            match matugen::extract_first_frame(path).await {
-                Ok(frame) => frame,
-                Err(e) => {
-                    debug!(
-                        "indexer: ffmpeg frame extraction failed for {}: {e}",
-                        path.display()
-                    );
-                    return None;
-                }
-            }
-        }
-        "image" => path.to_path_buf(),
-        _ => return None,
-    };
-
-    // Run matugen to get source_color
-    let opts = matugen::MatugenOptions::default();
-    let result = matugen::generate_scheme(&image_path, &opts).await;
-
-    // Clean up temp frame if we extracted one
-    if media_type == "video" || media_type == "gif" {
-        if let Err(e) = tokio::fs::remove_file(&image_path).await {
-            debug!("indexer: failed to clean up temp frame: {e}");
-        }
-    }
-
-    match result {
-        Ok(scheme) => Some(scheme.source_color),
-        Err(e) => {
-            debug!(
-                "indexer: matugen failed for {}: {e}",
-                path.display()
-            );
-            None
-        }
-    }
+async fn extract_color(_path: &Path, _media_type: &str) -> Option<String> {
+    // Extracted color generation via matugen has been removed during indexing.
+    None
 }
 
 // ── Media type / extension helpers ──────────────────────────────────────────

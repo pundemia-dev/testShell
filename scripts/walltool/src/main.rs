@@ -1,4 +1,5 @@
 mod cli;
+mod config;
 mod daemon;
 mod db;
 mod ipc;
@@ -14,7 +15,8 @@ use std::sync::Arc;
 use cli::*;
 use ipc::client::send_and_print;
 use ipc::{
-    DisplayOpts, MediaOpts, Request, SlideshowStartRequest, WpIndexRequest, WpRandomRequest,
+    AwwwOpts, Request, SearchOpts, SlideshowStartRequest, WpClearRequest, WpIndexRequest,
+    WpOptionsSetRequest, WpPreviewStartRequest, WpRandomRequest, WpRestoreRequest,
     WpSearchRequest, WpSetRequest,
 };
 
@@ -53,15 +55,16 @@ async fn main() -> Result<()> {
 async fn run_daemon() -> Result<()> {
     info!("walltool daemon starting");
 
+    // Ensure awww-daemon is running
+    if let Err(e) = daemon::awww::ensure_daemon_running().await {
+        warn!("failed to start awww-daemon: {e:#}");
+    }
+
     let (shutdown_tx, shutdown_rx) = broadcast::channel::<()>(1);
 
     let daemon = Arc::new(
-        daemon::Daemon::new(shutdown_tx.clone())
-            .context("failed to initialize daemon")?,
+        daemon::Daemon::new(shutdown_tx.clone()).context("failed to initialize daemon")?,
     );
-
-    // ── Initial monitor sync (populate state from Hyprland) ─────────
-    daemon::hyprland::sync_monitors_initial(&daemon).await;
 
     // ── Spawn IPC server ────────────────────────────────────────────
     let server_daemon = Arc::clone(&daemon);
@@ -70,12 +73,6 @@ async fn run_daemon() -> Result<()> {
             tracing::error!("IPC server error: {e:#}");
         }
     });
-
-    // ── Spawn Hyprland event listener for monitor hotplug ───────────
-    let hypr_handle = daemon::hyprland::spawn_hyprland_listener(
-        Arc::clone(&daemon),
-        shutdown_tx.clone(),
-    );
 
     // ── Handle SIGTERM / SIGINT for graceful shutdown ────────────────
     let sig_shutdown_tx = shutdown_tx.clone();
@@ -92,13 +89,7 @@ async fn run_daemon() -> Result<()> {
     });
 
     // ── Wait for the IPC server to finish (blocks until shutdown) ────
-    server_handle
-        .await
-        .context("IPC server task panicked")?;
-
-    // The Hyprland listener is a blocking task — abort it on shutdown
-    hypr_handle.abort();
-    let _ = hypr_handle.await;
+    server_handle.await.context("IPC server task panicked")?;
 
     info!("walltool daemon stopped");
     Ok(())
@@ -112,32 +103,41 @@ fn build_request(command: &Commands) -> Result<Request> {
         Commands::Wallpaper { action } => match action {
             WallpaperAction::Set(args) => Request::WpSet(WpSetRequest {
                 path: args.path.clone(),
-                display: display_opts_from(&args.display),
-                media: media_opts_from(&args.media),
+                awww: awww_opts_from(&args.awww),
+                no_theme: args.matugen.no_theme,
             }),
+
+            WallpaperAction::Preview { action } => match action {
+                PreviewAction::Start(args) => Request::WpPreviewStart(WpPreviewStartRequest {
+                    path: args.path.clone(),
+                    awww: awww_opts_from(&args.awww),
+                }),
+                PreviewAction::Stop => Request::WpPreviewStop,
+                PreviewAction::Commit => Request::WpPreviewCommit,
+            },
 
             WallpaperAction::Random(args) => Request::WpRandom(WpRandomRequest {
                 dir: args.dir.clone(),
-                media_type: args.media_type.as_ref().map(|t| media_type_str(t)),
                 recursive: args.recursive,
-                query: args.query.clone(),
-                include_dot: args.dots.include_dot,
-                only_dot: args.dots.only_dot,
-                display: display_opts_from(&args.display),
-                media: media_opts_from(&args.media),
+                search: search_opts_from(&args.search),
+                awww: awww_opts_from(&args.awww),
+                no_theme: args.matugen.no_theme,
             }),
 
             WallpaperAction::Search(args) => Request::WpSearch(WpSearchRequest {
                 query: args.query.clone(),
-                limit: args.limit,
-                history: args.history,
-                favorites: args.favorites,
-                include_dot: args.dots.include_dot,
-                only_dot: args.dots.only_dot,
+                search: search_opts_from(&args.search),
             }),
 
-            WallpaperAction::ToggleHidden { path } => Request::WpToggleHidden {
-                path: path.clone(),
+            WallpaperAction::ToggleHidden { path } => Request::WpToggleHidden { path: path.clone() },
+
+            WallpaperAction::Options { action } => match action {
+                WpOptionsAction::Set(args) => Request::WpOptionsSet(WpOptionsSetRequest {
+                    path: args.path.clone(),
+                    awww: awww_opts_from(&args.awww),
+                }),
+                WpOptionsAction::Get { path } => Request::WpOptionsGet { path: path.clone() },
+                WpOptionsAction::Clear { path } => Request::WpOptionsClear { path: path.clone() },
             },
 
             WallpaperAction::Index(args) => Request::WpIndex(WpIndexRequest {
@@ -145,25 +145,18 @@ fn build_request(command: &Commands) -> Result<Request> {
                 force: args.force,
             }),
 
-            WallpaperAction::Clear { monitor } => Request::WpClear {
-                monitor: monitor.clone(),
-            },
+            WallpaperAction::Clear(args) => Request::WpClear(WpClearRequest {
+                color: args.color.clone(),
+                outputs: args.outputs.clone(),
+                namespace: args.namespace.clone(),
+            }),
 
-            WallpaperAction::Current { monitor } => Request::WpCurrent {
-                monitor: monitor.clone(),
-            },
+            WallpaperAction::ClearCache => Request::WpClearCache,
 
-            WallpaperAction::Play { monitor } => Request::WpPlay {
-                monitor: monitor.clone(),
-            },
-
-            WallpaperAction::Pause { monitor } => Request::WpPause {
-                monitor: monitor.clone(),
-            },
-
-            WallpaperAction::ToggleMute { monitor } => Request::WpToggleMute {
-                monitor: monitor.clone(),
-            },
+            WallpaperAction::Restore(args) => Request::WpRestore(WpRestoreRequest {
+                outputs: args.outputs.clone(),
+                namespace: args.namespace.clone(),
+            }),
 
             // ── History ──────────────────────────────────────────────
             WallpaperAction::History { action } => match action {
@@ -175,23 +168,21 @@ fn build_request(command: &Commands) -> Result<Request> {
 
             // ── Favorites ────────────────────────────────────────────
             WallpaperAction::Fav { action } => match action {
-                FavAction::Add { path } => Request::FavAdd {
-                    path: path.clone(),
-                },
-                FavAction::Rm { target } => Request::FavRm {
-                    target: target.clone(),
-                },
+                FavAction::Add { path } => Request::FavAdd { path: path.clone() },
+                FavAction::Rm { target } => Request::FavRm { target: target.clone() },
                 FavAction::List { limit } => Request::FavList { limit: *limit },
-                FavAction::SetRandom { display, media } => {
-                    let _ = media; // media opts used internally by daemon
-                    Request::FavSetRandom(display_opts_from(display))
-                }
+                FavAction::SetRandom { awww } => Request::FavSetRandom(awww_opts_from(awww)),
             },
         },
 
         // ── Theme ────────────────────────────────────────────────────
         Commands::Theme { action } => match action {
             ThemeAction::Generate { path } => Request::ThemeGenerate { path: path.clone() },
+            ThemeAction::Set { param, value } => Request::ThemeSet {
+                param: param.clone(),
+                value: value.clone(),
+            },
+            ThemeAction::Get => Request::ThemeGet,
 
             ThemeAction::Mode { action } => match action {
                 ThemeModeAction::Set { mode } => Request::ThemeModeSet {
@@ -222,8 +213,60 @@ fn build_request(command: &Commands) -> Result<Request> {
                 ProfileAction::List => Request::ProfileList,
                 ProfileAction::Rm { name } => Request::ProfileRm { name: name.clone() },
             },
+            ConfigAction::SetAwwwDefault { key, value } => Request::ConfigSetAwwwDefault {
+                key: key.clone(), value: value.clone(),
+            },
+            ConfigAction::GetAwwwDefaults => Request::ConfigGetAwwwDefaults,
+            ConfigAction::SetNamespace { value } => Request::ConfigSetNamespace { value: value.clone() },
+            ConfigAction::GetNamespace => Request::ConfigGetNamespace,
+            ConfigAction::ListMonitorConfigs => Request::ConfigListMonitorConfigs,
+            ConfigAction::GetMonitorOptions { monitor } => Request::ConfigGetMonitorOptions {
+                monitor: monitor.clone(),
+            },
+            ConfigAction::SetMonitorOption { monitor, key, value } => Request::ConfigSetMonitorOption {
+                monitor: monitor.clone(), key: key.clone(), value: value.clone(),
+            },
+            ConfigAction::RmMonitorOptions { monitor } => Request::ConfigRmMonitorOptions {
+                monitor: monitor.clone(),
+            },
+            ConfigAction::GetMatugenDefaults => Request::ConfigGetMatugenDefaults,
+            ConfigAction::SetMatugenDefault { key, value } => Request::ConfigSetMatugenDefault {
+                key: key.clone(), value: value.clone(),
+            },
+            ConfigAction::GetThemeAuto => Request::ConfigGetThemeAuto,
+            ConfigAction::SetThemeAuto { key, value } => Request::ConfigSetThemeAuto {
+                key: key.clone(), value: value.clone(),
+            },
+            ConfigAction::SetSlideshowOption { key, value } => Request::ConfigSetSlideshowOption {
+                key: key.clone(), value: value.clone(),
+            },
+            ConfigAction::GetSlideshowOptions => Request::ConfigGetSlideshowOptions,
+            ConfigAction::GetIndexer => Request::ConfigGetIndexer,
+            ConfigAction::SetIndexer { key, value } => Request::ConfigSetIndexer {
+                key: key.clone(), value: value.clone(),
+            },
+            ConfigAction::Show => Request::ConfigShow,
             ConfigAction::Edit => Request::ConfigEdit,
         },
+        // Commands::Config { action } => match action {
+        //     ConfigAction::Profile { action } => match action {
+        //         ProfileAction::Save { name } => Request::ProfileSave { name: name.clone() },
+        //         ProfileAction::Load { name } => Request::ProfileLoad { name: name.clone() },
+        //         ProfileAction::List => Request::ProfileList,
+        //         ProfileAction::Rm { name } => Request::ProfileRm { name: name.clone() },
+        //     },
+        //     ConfigAction::SetAwwwDefault { key, value } => Request::ConfigSetAwwwDefault {
+        //         key: key.clone(),
+        //         value: value.clone(),
+        //     },
+        //     ConfigAction::GetAwwwDefaults => Request::ConfigGetAwwwDefaults,
+        //     ConfigAction::SetSlideshowOption { key, value } => Request::ConfigSetSlideshowOption {
+        //         key: key.clone(),
+        //         value: value.clone(),
+        //     },
+        //     ConfigAction::GetSlideshowOptions => Request::ConfigGetSlideshowOptions,
+        //     ConfigAction::Edit => Request::ConfigEdit,
+        // },
 
         // ── Monitor ──────────────────────────────────────────────────
         Commands::Monitor { action } => match action {
@@ -233,7 +276,6 @@ fn build_request(command: &Commands) -> Result<Request> {
 
         // ── Daemon ───────────────────────────────────────────────────
         Commands::Daemon { action } => match action {
-            // `Start` is handled before we get here — should be unreachable
             DaemonAction::Start => {
                 bail!("daemon start should have been handled earlier");
             }
@@ -247,10 +289,8 @@ fn build_request(command: &Commands) -> Result<Request> {
                     dir: args.dir.clone(),
                     interval: args.interval,
                     monitor: args.monitor.clone(),
-                    media_type: args.media_type.as_ref().map(|t| media_type_str(t)),
-                    include_dot: args.dots.include_dot,
-                    only_dot: args.dots.only_dot,
-                    query: args.query.clone(),
+                    search: search_opts_from(&args.search),
+                    awww: awww_opts_from(&args.awww),
                 }),
                 SlideshowAction::Stop { monitor } => Request::SlideshowStop {
                     monitor: monitor.clone(),
@@ -264,38 +304,65 @@ fn build_request(command: &Commands) -> Result<Request> {
 
 // ── Conversion helpers ──────────────────────────────────────────────────────
 
-fn display_opts_from(d: &DisplayOptions) -> DisplayOpts {
-    DisplayOpts {
-        monitor: d.monitor.clone(),
-        mode: display_mode_str(&d.mode),
+fn awww_opts_from(a: &AwwwOptions) -> AwwwOpts {
+    AwwwOpts {
+        outputs: a.outputs.clone(),
+        namespace: a.namespace.clone(),
+        resize: a.resize.map(|r| match r {
+            ResizeMode::No => "no",
+            ResizeMode::Crop => "crop",
+            ResizeMode::Fit => "fit",
+            ResizeMode::Stretch => "stretch",
+        }.to_string()),
+        fill_color: a.fill_color.clone(),
+        filter: a.filter.map(|f| match f {
+            ImageFilter::Nearest => "Nearest",
+            ImageFilter::Bilinear => "Bilinear",
+            ImageFilter::CatmullRom => "CatmullRom",
+            ImageFilter::Mitchell => "Mitchell",
+            ImageFilter::Lanczos3 => "Lanczos3",
+        }.to_string()),
+        transition_type: a.transition_type.map(|t| match t {
+            TransitionType::None => "none",
+            TransitionType::Simple => "simple",
+            TransitionType::Fade => "fade",
+            TransitionType::Left => "left",
+            TransitionType::Right => "right",
+            TransitionType::Top => "top",
+            TransitionType::Bottom => "bottom",
+            TransitionType::Wipe => "wipe",
+            TransitionType::Wave => "wave",
+            TransitionType::Grow => "grow",
+            TransitionType::Center => "center",
+            TransitionType::Any => "any",
+            TransitionType::Outer => "outer",
+            TransitionType::Random => "random",
+        }.to_string()),
+        transition_step: a.transition_step,
+        transition_duration: a.transition_duration,
+        transition_fps: a.transition_fps,
+        transition_angle: a.transition_angle,
+        transition_pos: a.transition_pos.clone(),
+        transition_bezier: a.transition_bezier.clone(),
+        transition_wave: a.transition_wave.clone(),
+        invert_y: a.invert_y,
     }
 }
 
-fn media_opts_from(m: &MediaOptions) -> MediaOpts {
-    MediaOpts {
-        mute: m.mute,
-        volume: m.volume,
-        no_theme: m.no_theme,
+fn search_opts_from(s: &SearchOptions) -> SearchOpts {
+    SearchOpts {
+        query: s.query.clone(),
+        history: s.history,
+        favorites: s.favorites,
+        include_dot: s.include_dot,
+        only_dot: s.only_dot,
+        sort_by: match s.sort_by {
+            SortField::Score => "score",
+            SortField::Time => "time",
+            SortField::Name => "name",
+            SortField::Color => "color",
+        }.to_string(),
+        reverse: s.reverse,
+        limit: s.limit,
     }
-}
-
-fn display_mode_str(mode: &DisplayMode) -> String {
-    match mode {
-        DisplayMode::Fill => "fill",
-        DisplayMode::Fit => "fit",
-        DisplayMode::Center => "center",
-        DisplayMode::Stretch => "stretch",
-        DisplayMode::Span => "span",
-    }
-    .into()
-}
-
-fn media_type_str(mt: &MediaType) -> String {
-    match mt {
-        MediaType::Image => "image",
-        MediaType::Video => "video",
-        MediaType::Web => "web",
-        MediaType::All => "all",
-    }
-    .into()
 }
