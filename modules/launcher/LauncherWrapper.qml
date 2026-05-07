@@ -291,7 +291,8 @@ Item {
                             Layout.preferredWidth: flexLayout.hasRightPanel ? flexLayout.activeRightWidth : 0
                             Layout.fillHeight: true
                             visible: flexLayout.hasRightPanel || width > 0
-                            clip: true
+                            // Disable clip when module needs overflow (e.g., for dropdown menus)
+                            clip: !(rightLoader.item && rightLoader.item.needsOverflow)
 
                             Behavior on Layout.preferredWidth {
                                 Anim { duration: Appearance.anim.durations.normal; easing.type: Easing.OutCubic }

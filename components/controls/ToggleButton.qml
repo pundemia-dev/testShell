@@ -59,7 +59,7 @@ StyledRect {
         anchors.centerIn: parent
         spacing: Appearance.spacing.normal
 
-        MaterialIcon {
+        StyledIcon {
             id: toggleBtnIcon
 
             visible: !!text

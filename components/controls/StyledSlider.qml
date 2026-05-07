@@ -7,6 +7,9 @@ import QtQuick.Templates
 Slider {
     id: root
 
+    implicitHeight: 32
+    implicitWidth: 200
+
     background: Item {
         StyledRect {
             anchors.top: parent.top

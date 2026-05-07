@@ -28,7 +28,7 @@ StyledRect {
     color: Colours.layer(Colours.palette.surface_container, 2)
 
     clip: false
-    z: splitButton.menu.implicitHeight > 0 ? expandedZ : 1
+    z: splitButton.expanded ? expandedZ : 1
     opacity: enabled ? 1.0 : 0.5
 
     RowLayout {
