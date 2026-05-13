@@ -1,20 +1,14 @@
-find_package(Qt6 REQUIRED COMPONENTS Core Qml Gui Quick Concurrent Sql Network DBus)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(Qalculate IMPORTED_TARGET libqalculate REQUIRED)
-pkg_check_modules(Pipewire IMPORTED_TARGET libpipewire-0.3 REQUIRED)
-pkg_check_modules(Aubio IMPORTED_TARGET aubio REQUIRED)
-pkg_check_modules(Cava IMPORTED_TARGET cava REQUIRED)
-
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml")
 qt_standard_project_setup(REQUIRES 6.9)
 
 function(qml_module arg_TARGET)
-    cmake_parse_arguments(PARSE_ARGV 1 arg "" "URI" "SOURCES;LIBRARIES")
+    cmake_parse_arguments(PARSE_ARGV 1 arg "" "URI" "SOURCES;QML_FILES;LIBRARIES")
 
     qt_add_qml_module(${arg_TARGET}
         URI ${arg_URI}
-        VERSION ${VERSION}
+        VERSION ${PROJECT_VERSION}
         SOURCES ${arg_SOURCES}
+        QML_FILES ${arg_QML_FILES}
     )
 
     qt_query_qml_module(${arg_TARGET}
@@ -37,23 +31,4 @@ function(qml_module arg_TARGET)
     target_link_libraries(${arg_TARGET} PRIVATE Qt::Core Qt::Qml ${arg_LIBRARIES})
 endfunction()
 
-qml_module(caelestia
-    URI Caelestia
-    SOURCES
-        cutils.hpp cutils.cpp
-        qalculator.hpp qalculator.cpp
-        appdb.hpp appdb.cpp
-        requests.hpp requests.cpp
-        toaster.hpp toaster.cpp
-        imageanalyser.hpp imageanalyser.cpp
-    LIBRARIES
-        Qt::Gui
-        Qt::Quick
-        Qt::Concurrent
-        Qt::Sql
-        PkgConfig::Qalculate
-)
-
-add_subdirectory(Internal)
-add_subdirectory(Models)
-add_subdirectory(Services)
+add_subdirectory(Blobs)

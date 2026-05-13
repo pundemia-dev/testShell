@@ -83,6 +83,13 @@ Item {
         property bool excludeBarArea: false
         // Reusability
         property bool reusable: Config.bar.reusability.all
+        // NEW (Phase B): rails contract — not yet consumed by rendering
+        property string mode: "push"
+        property bool pinned: true
+        property bool reservesSpace: true
+        readonly property int layer: 0
+        property int windowRounding: Config.bar.rounding.all
+        property int invertedJoinRounding: (Config.bar.invertBaseRounding.all ?? false) ? Config.bar.rounding.all : 0
         property Component content: Component {
             StyledRect {
                 color: "green"
@@ -117,6 +124,13 @@ Item {
         property bool excludeBarArea: false
         // Reusability
         property bool reusable: Config.bar.reusability.begin ?? Config.bar.reusability.all ?? undefined
+        // NEW (Phase B): rails contract — not yet consumed by rendering
+        property string mode: "push"
+        property bool pinned: true
+        property bool reservesSpace: true
+        readonly property int layer: 0
+        property int windowRounding: Config.bar.rounding.begin ?? Config.bar.rounding.all ?? 0
+        property int invertedJoinRounding: (Config.bar.invertBaseRounding.begin ?? Config.bar.invertBaseRounding.all ?? false) ? (Config.bar.rounding.begin ?? Config.bar.rounding.all ?? 0) : 0
 
         property Component content: Begin {
             screen: root.screen
@@ -150,6 +164,13 @@ Item {
         property bool excludeBarArea: false
         // Reusability
         property bool reusable: Config.bar.reusability.center ?? Config.bar.reusability.all ?? undefined
+        // NEW (Phase B): rails contract — not yet consumed by rendering
+        property string mode: "push"
+        property bool pinned: true
+        property bool reservesSpace: true
+        readonly property int layer: 0
+        property int windowRounding: Config.bar.rounding.center ?? Config.bar.rounding.all ?? 0
+        property int invertedJoinRounding: (Config.bar.invertBaseRounding.center ?? Config.bar.invertBaseRounding.all ?? false) ? (Config.bar.rounding.center ?? Config.bar.rounding.all ?? 0) : 0
         property Component content: Center {
             screen: root.screen
         }
@@ -182,6 +203,13 @@ Item {
         property bool excludeBarArea: false
         // Reusability
         property bool reusable: Config.bar.reusability.end ?? Config.bar.reusability.all ?? undefined
+        // NEW (Phase B): rails contract — not yet consumed by rendering
+        property string mode: "push"
+        property bool pinned: true
+        property bool reservesSpace: true
+        readonly property int layer: 0
+        property int windowRounding: Config.bar.rounding.end ?? Config.bar.rounding.all ?? 0
+        property int invertedJoinRounding: (Config.bar.invertBaseRounding.end ?? Config.bar.invertBaseRounding.all ?? false) ? (Config.bar.rounding.end ?? Config.bar.rounding.all ?? 0) : 0
         property Component content: End {
             screen: root.screen
         }

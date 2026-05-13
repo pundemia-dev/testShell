@@ -44,6 +44,13 @@ Item {
         property bool excludeBarArea: Config.notifs.excludeBarArea ?? true
         // Reusability
         property bool reusable: false
+        // NEW (Phase B): rails contract — not yet consumed by rendering
+        property string mode: "push"
+        property bool pinned: false
+        property bool reservesSpace: false
+        readonly property int layer: 0
+        property int windowRounding: Config.notifs.rounding >= 0 ? Config.notifs.rounding : (Config.backgrounds.rounding ?? 0)
+        property int invertedJoinRounding: Config.notifs.invertBaseRounding ?? Config.backgrounds.rounding ?? 0
 
         property Component content: NotificationList {}
     }
