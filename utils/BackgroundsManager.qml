@@ -70,8 +70,23 @@ QtObject {
         }
     }
 
-    // Aggregated layer-shell exclusion (consumed by Exclusions.qml in Phase D).
+    // Aggregated layer-shell exclusion per side. Cached as readonly properties
+    // so QML bindings re-evaluate whenever `rails` is reassigned. Consumers
+    // (Drawers.qml, Exclusions.qml) read these directly.
+    readonly property int reservedTop: _computeReservedEdge("top")
+    readonly property int reservedBottom: _computeReservedEdge("bottom")
+    readonly property int reservedLeft: _computeReservedEdge("left")
+    readonly property int reservedRight: _computeReservedEdge("right")
+
     function reservedEdge(side) {
+        if (side === "top") return reservedTop;
+        if (side === "bottom") return reservedBottom;
+        if (side === "left") return reservedLeft;
+        if (side === "right") return reservedRight;
+        return 0;
+    }
+
+    function _computeReservedEdge(side) {
         let sum = 0;
         for (let i = 0; i < 9; i++) {
             for (const entry of rails[i]) {

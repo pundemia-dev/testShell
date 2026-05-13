@@ -37,14 +37,7 @@ Item {
         property var pRight: Config.notifs.paddings.right ?? Config.notifs.paddings.all
         property var pTop: Config.notifs.paddings.top ?? Config.notifs.paddings.all
         property var pBottom: Config.notifs.paddings.bottom ?? Config.notifs.paddings.all
-        // Base settings
-        property var rounding: Config.notifs.rounding >= 0 ? Config.notifs.rounding : undefined
-        property bool invertBaseRounding: Config.notifs.invertBaseRounding ?? false
-        // Bar exclusion
-        property bool excludeBarArea: Config.notifs.excludeBarArea ?? true
-        // Reusability
-        property bool reusable: false
-        // NEW (Phase B): rails contract — not yet consumed by rendering
+        // Rails contract
         property string mode: "push"
         property bool pinned: false
         property bool reservesSpace: false
@@ -61,7 +54,7 @@ Item {
 
         sourceComponent: Item {
             Component.onCompleted: {
-                root.manager.requestBackground(root.content, false, true);
+                root.manager.requestBackground(root.content);
             }
 
             Component.onDestruction: {

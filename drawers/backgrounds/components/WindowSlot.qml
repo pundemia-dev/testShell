@@ -105,7 +105,7 @@ Item {
     readonly property int pTop: wrapper?.pTop ?? Config.backgrounds.paddings.top ?? 0
     readonly property int pRight: wrapper?.pRight ?? Config.backgrounds.paddings.right ?? 0
     readonly property int pBottom: wrapper?.pBottom ?? Config.backgrounds.paddings.bottom ?? 0
-    readonly property int windowRounding: wrapper?.windowRounding ?? wrapper?.rounding ?? Config.backgrounds.rounding ?? 0
+    readonly property int windowRounding: wrapper?.windowRounding ?? Config.backgrounds.rounding ?? 0
     readonly property int effectiveRounding: Math.min(windowRounding, paintedWidth / 2, paintedHeight / 2)
     readonly property string mode: wrapper?.mode ?? "push"
     readonly property bool isPinned: wrapper?.pinned ?? false

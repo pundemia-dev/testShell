@@ -76,14 +76,7 @@ Item {
         property int mBottom: Config.bar.orientation && Config.bar.position ? (Config.bar.longSideMargin ? (Config.bar.longSideMargin.all ?? 0) : (Config.bar.shortSideMargin ?? 0)) : 0
         property int vCenterOffset: 0
         property int hCenterOffset: 0
-        // Base settings
-        property int rounding: Config.bar.rounding.all
-        property bool invertBaseRounding: Config.bar.invertBaseRounding.all
-        // Bar exclusion
-        property bool excludeBarArea: false
-        // Reusability
-        property bool reusable: Config.bar.reusability.all
-        // NEW (Phase B): rails contract — not yet consumed by rendering
+        // Rails contract
         property string mode: "push"
         property bool pinned: true
         property bool reservesSpace: true
@@ -117,14 +110,7 @@ Item {
         property int pRight: !Config.bar.orientation && Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.orientation ? (Config.bar.paddings.begin ?? Config.bar.paddings.all ?? 0) : 0)
         property int pTop: Config.bar.orientation && !Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0) : (!Config.bar.orientation ? (Config.bar.paddings.begin ?? Config.bar.paddings.all ?? 0) : 0)
         property int pBottom: Config.bar.orientation && Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0) : (!Config.bar.orientation ? (Config.bar.paddings.begin ?? Config.bar.paddings.all ?? 0) : 0)
-        // Base settings
-        property int rounding: Config.bar.rounding.begin ?? Config.bar.rounding.all ?? undefined
-        property bool invertBaseRounding: Config.bar.invertBaseRounding.begin ?? (Config.bar.invertBaseRounding.all ?? undefined)
-        // Bar exclusion
-        property bool excludeBarArea: false
-        // Reusability
-        property bool reusable: Config.bar.reusability.begin ?? Config.bar.reusability.all ?? undefined
-        // NEW (Phase B): rails contract — not yet consumed by rendering
+        // Rails contract
         property string mode: "push"
         property bool pinned: true
         property bool reservesSpace: true
@@ -157,14 +143,7 @@ Item {
         property int pRight: !Config.bar.orientation && Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.orientation ? (Config.bar.paddings.center ?? Config.bar.paddings.all ?? 0) : 0)
         property int pTop: Config.bar.orientation && !Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0) : (!Config.bar.orientation ? (Config.bar.paddings.center ?? Config.bar.paddings.all ?? 0) : 0)
         property int pBottom: Config.bar.orientation && Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0) : (!Config.bar.orientation ? (Config.bar.paddings.center ?? Config.bar.paddings.all ?? 0) : 0)
-        // Base settings
-        property int rounding: Config.bar.rounding.center ?? Config.bar.rounding.all ?? undefined
-        property bool invertBaseRounding: Config.bar.invertBaseRounding.center ?? Config.bar.invertBaseRounding.all ?? undefined
-        // Bar exclusion
-        property bool excludeBarArea: false
-        // Reusability
-        property bool reusable: Config.bar.reusability.center ?? Config.bar.reusability.all ?? undefined
-        // NEW (Phase B): rails contract — not yet consumed by rendering
+        // Rails contract
         property string mode: "push"
         property bool pinned: true
         property bool reservesSpace: true
@@ -196,14 +175,7 @@ Item {
         property int pRight: !Config.bar.orientation && Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) : (Config.bar.orientation ? (Config.bar.paddings.end ?? Config.bar.paddings.all ?? 0) : 0)
         property int pTop: Config.bar.orientation && !Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) : (!Config.bar.orientation ? (Config.bar.paddings.end ?? Config.bar.paddings.all ?? 0) : 0)
         property int pBottom: Config.bar.orientation && Config.bar.position && isTotalThickness() ? Math.max(Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0, Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) - (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0) : (!Config.bar.orientation ? (Config.bar.paddings.end ?? Config.bar.paddings.all ?? 0) : 0)
-        // Base settings
-        property int rounding: Config.bar.rounding.end ?? Config.bar.rounding.all ?? undefined
-        property bool invertBaseRounding: Config.bar.invertBaseRounding.end ?? Config.bar.invertBaseRounding.all ?? undefined
-        // Bar exclusion
-        property bool excludeBarArea: false
-        // Reusability
-        property bool reusable: Config.bar.reusability.end ?? Config.bar.reusability.all ?? undefined
-        // NEW (Phase B): rails contract — not yet consumed by rendering
+        // Rails contract
         property string mode: "push"
         property bool pinned: true
         property bool reservesSpace: true
@@ -230,11 +202,11 @@ Item {
 
             Component.onCompleted: {
                 if (Config.bar.separated) {
-                    root.manager.requestBackground(root.begin, true, false);
-                    root.manager.requestBackground(root.center, true, false);
-                    root.manager.requestBackground(root.end, true, false);
+                    root.manager.requestBackground(root.begin);
+                    root.manager.requestBackground(root.center);
+                    root.manager.requestBackground(root.end);
                 } else {
-                    root.manager.requestBackground(root.position, true, false);
+                    root.manager.requestBackground(root.position);
                 }
             }
 

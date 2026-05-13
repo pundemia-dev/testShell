@@ -115,14 +115,7 @@ Item {
         property var pRight: Config.launcher.paddings.right ?? Config.launcher.paddings.all// ?? 0
         property var pTop: Config.launcher.paddings.top ?? Config.launcher.paddings.all// ?? 0
         property var pBottom: Config.launcher.paddings.bottom ?? Config.launcher.paddings.all// ?? 0
-        // Base settings
-        property var rounding: Config.launcher.rounding ?? undefined
-        property bool invertBaseRounding: Config.launcher.invertBaseRounding ?? undefined
-        // Bar exclusion
-        property bool excludeBarArea: true
-        // Reusability
-        property bool reusable: Config.launcher.reusability ?? undefined
-        // NEW (Phase B): rails contract — not yet consumed by rendering
+        // Rails contract
         property string mode: "push"
         property bool pinned: false
         property bool reservesSpace: false
@@ -334,7 +327,7 @@ Item {
             // anchors.fill: parent
 
             Component.onCompleted: {
-                root.manager.requestBackground(root.content, false, true);
+                root.manager.requestBackground(root.content);
             }
 
             Component.onDestruction: {

@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Effects
 
@@ -30,27 +29,19 @@ Variants {
 
         required property ShellScreen modelData
 
-        property bool barVisible: Config.bar.enabled
-
-        Connections {
-            target: VisibilitiesManager
-            function onVisibilityChanged(screen, name, state) {
-                if (screen === scope.modelData && name === "bar") {
-                    scope.barVisible = state;
-                }
-            }
-        }
-
-        // Shell's mouse area
-        readonly property int border_area: Config.border.enabled || Config.border.thickness < 1 ? Config.border.thickness : 0
-        readonly property int bar_area: barVisible && !Config.bar.autoHide ? (Math.max((Config.bar.thickness.begin ?? Config.bar.thickness.all ?? 0) + (Config.bar.longSideMargin.begin ?? Config.bar.longSideMargin.all ?? 0), (Config.bar.thickness.center ?? Config.bar.thickness.all ?? 0) + (Config.bar.longSideMargin.center ?? Config.bar.longSideMargin.all ?? 0), (Config.bar.thickness.end ?? Config.bar.thickness.all ?? 0) + (Config.bar.longSideMargin.end ?? Config.bar.longSideMargin.all ?? 0))) : border_area
-
-        readonly property int left_area: !Config.bar.orientation && !Config.bar.position ? bar_area : border_area
-        readonly property int top_area: Config.bar.orientation && !Config.bar.position ? bar_area : border_area
-        readonly property int right_area: !Config.bar.orientation && Config.bar.position ? bar_area : border_area
-        readonly property int bottom_area: Config.bar.orientation && Config.bar.position ? bar_area : border_area
-
         property var backgroundsManager: BackgroundsManager {}
+
+        // Border thickness (shell-level frame), used as a floor for *_area
+        // when no pinned window reserves space on that side.
+        readonly property int border_area: Config.border.enabled || Config.border.thickness < 1 ? Config.border.thickness : 0
+
+        // Edge offsets driven by pinned+reservesSpace windows on each side
+        // (computed by BackgroundsManager). Fallback to border_area when no
+        // reservation exists, so the screen border still pushes content in.
+        readonly property int left_area: Math.max(backgroundsManager.reservedEdge("left"), border_area)
+        readonly property int top_area: Math.max(backgroundsManager.reservedEdge("top"), border_area)
+        readonly property int right_area: Math.max(backgroundsManager.reservedEdge("right"), border_area)
+        readonly property int bottom_area: Math.max(backgroundsManager.reservedEdge("bottom"), border_area)
         PerMonitorVisibilities {
             id: visibilities
             screen: scope.modelData
@@ -96,15 +87,7 @@ Variants {
             screen: scope.modelData
             name: "drawers"
 
-            // Hyprland settings
             WlrLayershell.exclusionMode: ExclusionMode.Ignore
-            WlrLayershell.keyboardFocus: FocusManager.focusActive ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-
-            HyprlandFocusGrab {
-                active: FocusManager.focusActive
-                windows: [win]
-                onCleared: FocusManager.onGrabCleared()
-            }
 
             mask: Region {
                 x: scope.left_area
@@ -193,6 +176,13 @@ Variants {
                 }
 
             }
+        }
+
+        NiriFocusGrab {
+            active: FocusManager.focusActive
+            window: win
+            screen: scope.modelData
+            onCleared: FocusManager.onGrabCleared()
         }
     }
 }
