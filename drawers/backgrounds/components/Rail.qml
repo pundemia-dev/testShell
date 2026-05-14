@@ -13,6 +13,7 @@ Item {
     required property string anchor
     required property var windows           // alias to manager.rails[railIndex]
     required property BlobGroup group
+    required property Item groupHost        // QQuickItem wrapping group, with layer.enabled
     required property Item contentLayer
     required property int zWidth
     required property int zHeight
@@ -49,6 +50,7 @@ Item {
             layerIdx: index + 1
             railRef: rail
             group: rail.group
+            groupHost: rail.groupHost
             contentLayer: rail.contentLayer
             zWidth: rail.zWidth
             zHeight: rail.zHeight

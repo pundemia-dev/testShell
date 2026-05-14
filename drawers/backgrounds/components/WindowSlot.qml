@@ -1,6 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
+import QtQuick.Shapes
 import Caelestia.Blobs
 import Quickshell
 import qs.config
@@ -22,6 +24,7 @@ Item {
     required property int layerIdx
     required property var railRef
     required property BlobGroup group
+    required property Item groupHost       // QQuickItem-wrapped BlobGroup (for SES mask)
     required property Item contentLayer
     required property int zWidth
     required property int zHeight
@@ -114,10 +117,16 @@ Item {
     readonly property var content: wrapper?.content
 
     // ── Edge offsets ─────────────────────────────────────────────────
-    readonly property int edgeLeft: isPinned ? 0 : left_area
-    readonly property int edgeRight: isPinned ? 0 : right_area
-    readonly property int edgeTop: isPinned ? 0 : top_area
-    readonly property int edgeBottom: isPinned ? 0 : bottom_area
+    // Pinned wrappers paint at the very edge (edge=0). Push-mode non-pinned
+    // wrappers are inset by the reserved area so they don't overlap pinned
+    // wrappers that reserve exclusion zones. Overlay wrappers intentionally
+    // sit *on top of* other wrappers (that's the whole point of overlay),
+    // so they also get edge=0 — otherwise mode:"overlay" would actually
+    // behave as "push offset by reserved area".
+    readonly property int edgeLeft: (isPinned || isOverlay) ? 0 : left_area
+    readonly property int edgeRight: (isPinned || isOverlay) ? 0 : right_area
+    readonly property int edgeTop: (isPinned || isOverlay) ? 0 : top_area
+    readonly property int edgeBottom: (isPinned || isOverlay) ? 0 : bottom_area
 
     // ── Previous sibling on rail ─────────────────────────────────────
     readonly property var prevSlot: railRef ? railRef.prevSlot(layerIdx - 1) : null
@@ -221,29 +230,243 @@ Item {
         function onHeightChanged() { InputManager.refresh(); }
     }
 
-    // ── SDF bg for non-overlay (paints at BlobGroup's z — the bottom layer) ──
+    // ── SDF bg — every wrapper (overlay included) lives in the shared
+    // BlobGroup so adjacent panels merge through the SDF shader (smooth
+    // bubbly join, à la Caelestia dock). Overlay no longer paints a flat
+    // Rectangle in contentLayer; its z-ordering above bar content is
+    // achieved via contentLayer's z=arrivalSeq+0.5 on the content tree.
     BlobRect {
-        group: root.isOverlay ? null : root.group
-        visible: !root.isOverlay
+        group: root.group
         implicitWidth: root.paintedWidth
         implicitHeight: root.paintedHeight
         radius: root.effectiveRounding
         deformScale: 0
     }
 
-    // ── Overlay bg: Rectangle in contentLayer at z=arrivalSeq.
-    // Covers old content (because it lives in the high-z content layer)
-    // while staying below its own content (which uses z=arrivalSeq+0.5).
-    Rectangle {
+    // ── Fade-aura: opaque rounded rect (size = paintedRect, color = bg)
+    // drawn in contentLayer just BELOW this wrapper's content. The aura
+    // hides lower wrappers' content sitting beneath, and along the inner
+    // perimeter a `fadeWidth`-px halo ring linearly fades the bg color
+    // toward transparent — lower content "dissolves" into the bg in that
+    // ring.
+    //
+    // Geometry:
+    //   inner_solid_rect = paintedRect ÷ 2*overlapShrink (shrunk inward)
+    //   halo_ring        = fadeWidth-wide ring outward from inner_solid_rect
+    //   everything       = clipped to paintedRect rounded-shape via mask
+    readonly property int fadeWidth: Math.max(0, Config.backgrounds.fadeWidth ?? 0)
+    readonly property int overlapShrink: Math.max(0, Config.backgrounds.overlapShrink ?? 0)
+    readonly property color _fadeColor: Colours.palette.surface
+    readonly property color _fadeTransparent: Qt.rgba(_fadeColor.r, _fadeColor.g, _fadeColor.b, 0)
+    readonly property int _innerW: Math.max(0, paintedWidth - 2 * overlapShrink)
+    readonly property int _innerH: Math.max(0, paintedHeight - 2 * overlapShrink)
+    readonly property int _innerRadius: Math.max(0, effectiveRounding - overlapShrink)
+
+    // fadeAura is enlarged by `fadeWidth` on every side so halo strips
+    // outside paintedRect (the case when overlapShrink < fadeWidth) don't
+    // get clipped by the FBO. Final shape is clipped via MultiEffect mask
+    // sourced from bgRenderHost's SDF.
+    Item {
+        id: fadeAura
         parent: root.contentLayer
-        visible: root.isOverlay
-        x: root.x
-        y: root.y
-        width: root.paintedWidth
-        height: root.paintedHeight
-        radius: root.effectiveRounding
-        color: Colours.palette.surface
+        visible: root.fadeWidth > 0 || root.overlapShrink > 0
+        x: root.x - root.fadeWidth
+        y: root.y - root.fadeWidth
+        width: root.paintedWidth + 2 * root.fadeWidth
+        height: root.paintedHeight + 2 * root.fadeWidth
         z: root.arrivalSeq
+
+        // Mask = union of ALL bg shapes (bgRenderHost FBO), cropped to the
+        // same region fadeAura covers. Halo can spill into adjacent bgs
+        // that are SDF-merged with this one (e.g. stash glued to bar).
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            maskEnabled: true
+            maskSource: maskShape
+            maskThresholdMin: 0.01
+            maskInverted: false
+        }
+
+        ShaderEffectSource {
+            id: maskShape
+            sourceItem: root.groupHost
+            sourceRect: Qt.rect(root.x - root.fadeWidth,
+                                root.y - root.fadeWidth,
+                                root.paintedWidth + 2 * root.fadeWidth,
+                                root.paintedHeight + 2 * root.fadeWidth)
+            width: root.paintedWidth + 2 * root.fadeWidth
+            height: root.paintedHeight + 2 * root.fadeWidth
+            visible: false
+            live: true
+            hideSource: false
+            recursive: false
+        }
+
+        // Inner solid rect — fully opaque, shrunken by overlapShrink.
+        // Square (no radius) on purpose: rounded clipping is enforced by
+        // the MultiEffect mask (bg SDF). A rounded inner rect would leave
+        // a transparent gap between its rounded contour and bbox corner.
+        Rectangle {
+            x: root.fadeWidth + root.overlapShrink
+            y: root.fadeWidth + root.overlapShrink
+            width: root._innerW
+            height: root._innerH
+            radius: 0
+            color: root._fadeColor
+        }
+
+        // ── Halo ring: 4 strips + 4 corners around inner_solid_rect.
+        // Strip width = fadeWidth, fading from opaque (touching solid) to
+        // transparent (outer halo edge).
+
+        // Top strip
+        Rectangle {
+            x: root.fadeWidth + root.overlapShrink
+            y: root.overlapShrink
+            width: root._innerW
+            height: root.fadeWidth
+            gradient: Gradient {
+                orientation: Gradient.Vertical
+                GradientStop { position: 0; color: root._fadeTransparent }
+                GradientStop { position: 1; color: root._fadeColor }
+            }
+        }
+        // Bottom strip
+        Rectangle {
+            x: root.fadeWidth + root.overlapShrink
+            y: root.fadeWidth + root.overlapShrink + root._innerH
+            width: root._innerW
+            height: root.fadeWidth
+            gradient: Gradient {
+                orientation: Gradient.Vertical
+                GradientStop { position: 0; color: root._fadeColor }
+                GradientStop { position: 1; color: root._fadeTransparent }
+            }
+        }
+        // Left strip
+        Rectangle {
+            x: root.overlapShrink
+            y: root.fadeWidth + root.overlapShrink
+            width: root.fadeWidth
+            height: root._innerH
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: root._fadeTransparent }
+                GradientStop { position: 1; color: root._fadeColor }
+            }
+        }
+        // Right strip
+        Rectangle {
+            x: root.fadeWidth + root.overlapShrink + root._innerW
+            y: root.fadeWidth + root.overlapShrink
+            width: root.fadeWidth
+            height: root._innerH
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: root._fadeColor }
+                GradientStop { position: 1; color: root._fadeTransparent }
+            }
+        }
+
+        // ── 4 corner pieces with RadialGradient.
+        // Each corner is a fadeWidth × fadeWidth Shape whose radial center
+        // is at the corner that touches the inner solid rect. Alpha at the
+        // strip boundary equals the strip's linear alpha at the same point
+        // (radius-based fade in both is equivalent on the boundary line),
+        // so strip↔corner joints are continuous — no visible seams.
+
+        // Top-left — inner anchor at (fw, fw) in shape-local coords
+        Shape {
+            x: root.overlapShrink
+            y: root.overlapShrink
+            width: root.fadeWidth; height: root.fadeWidth
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                fillGradient: RadialGradient {
+                    centerX: root.fadeWidth; centerY: root.fadeWidth
+                    centerRadius: root.fadeWidth
+                    focalX: root.fadeWidth; focalY: root.fadeWidth
+                    focalRadius: 0
+                    GradientStop { position: 0; color: root._fadeColor }
+                    GradientStop { position: 1; color: root._fadeTransparent }
+                }
+                startX: 0; startY: 0
+                PathLine { x: root.fadeWidth; y: 0 }
+                PathLine { x: root.fadeWidth; y: root.fadeWidth }
+                PathLine { x: 0; y: root.fadeWidth }
+                PathLine { x: 0; y: 0 }
+            }
+        }
+        // Top-right — inner anchor at (0, fw)
+        Shape {
+            x: root.fadeWidth + root.overlapShrink + root._innerW
+            y: root.overlapShrink
+            width: root.fadeWidth; height: root.fadeWidth
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                fillGradient: RadialGradient {
+                    centerX: 0; centerY: root.fadeWidth
+                    centerRadius: root.fadeWidth
+                    focalX: 0; focalY: root.fadeWidth
+                    focalRadius: 0
+                    GradientStop { position: 0; color: root._fadeColor }
+                    GradientStop { position: 1; color: root._fadeTransparent }
+                }
+                startX: 0; startY: 0
+                PathLine { x: root.fadeWidth; y: 0 }
+                PathLine { x: root.fadeWidth; y: root.fadeWidth }
+                PathLine { x: 0; y: root.fadeWidth }
+                PathLine { x: 0; y: 0 }
+            }
+        }
+        // Bottom-left — inner anchor at (fw, 0)
+        Shape {
+            x: root.overlapShrink
+            y: root.fadeWidth + root.overlapShrink + root._innerH
+            width: root.fadeWidth; height: root.fadeWidth
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                fillGradient: RadialGradient {
+                    centerX: root.fadeWidth; centerY: 0
+                    centerRadius: root.fadeWidth
+                    focalX: root.fadeWidth; focalY: 0
+                    focalRadius: 0
+                    GradientStop { position: 0; color: root._fadeColor }
+                    GradientStop { position: 1; color: root._fadeTransparent }
+                }
+                startX: 0; startY: 0
+                PathLine { x: root.fadeWidth; y: 0 }
+                PathLine { x: root.fadeWidth; y: root.fadeWidth }
+                PathLine { x: 0; y: root.fadeWidth }
+                PathLine { x: 0; y: 0 }
+            }
+        }
+        // Bottom-right — inner anchor at (0, 0)
+        Shape {
+            x: root.fadeWidth + root.overlapShrink + root._innerW
+            y: root.fadeWidth + root.overlapShrink + root._innerH
+            width: root.fadeWidth; height: root.fadeWidth
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 0
+                fillGradient: RadialGradient {
+                    centerX: 0; centerY: 0
+                    centerRadius: root.fadeWidth
+                    focalX: 0; focalY: 0
+                    focalRadius: 0
+                    GradientStop { position: 0; color: root._fadeColor }
+                    GradientStop { position: 1; color: root._fadeTransparent }
+                }
+                startX: 0; startY: 0
+                PathLine { x: root.fadeWidth; y: 0 }
+                PathLine { x: root.fadeWidth; y: root.fadeWidth }
+                PathLine { x: 0; y: root.fadeWidth }
+                PathLine { x: 0; y: 0 }
+            }
+        }
     }
 
     // ── Content tree (reparented to contentLayer; z=arrivalSeq+0.5 keeps

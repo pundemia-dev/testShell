@@ -27,41 +27,54 @@ Item {
         "bottomLeft", "bottom", "bottomRight"
     ]
 
+    // BlobGroup is a QObject (configuration holder, not a QQuickItem) —
+    // the actual SDF compositing happens in scene-graph nodes attached
+    // to each BlobShape (BlobRect / BlobInvertedRect). To capture the
+    // *union* of all bg shapes as a single texture (for halo masking),
+    // we host all bg-rendering items in `bgRenderHost` Item with
+    // `layer.enabled: true`. That Item's FBO contains the merged SDF.
     BlobGroup {
         id: blobGroup
         color: Colours.palette.surface
         smoothing: 32
     }
 
-    RailBorder {
-        id: railBorder
+    Item {
+        id: bgRenderHost
         anchors.fill: parent
-        group: blobGroup
-        zWidth: root.width
-        zHeight: root.height
-        left_area: root.left_area
-        top_area: root.top_area
-        right_area: root.right_area
-        bottom_area: root.bottom_area
-    }
+        layer.enabled: true
 
-    Repeater {
-        id: rails
-        model: 9
-        delegate: Rail {
-            required property int index
-            railIndex: index
-            anchor: root._anchors[index]
-            windows: root.manager.rails[index]
+        RailBorder {
+            id: railBorder
+            anchors.fill: parent
             group: blobGroup
-            contentLayer: contentLayer
             zWidth: root.width
             zHeight: root.height
             left_area: root.left_area
             top_area: root.top_area
             right_area: root.right_area
             bottom_area: root.bottom_area
-            manager: root.manager
+        }
+
+        Repeater {
+            id: rails
+            model: 9
+            delegate: Rail {
+                required property int index
+                railIndex: index
+                anchor: root._anchors[index]
+                windows: root.manager.rails[index]
+                group: blobGroup
+                groupHost: bgRenderHost
+                contentLayer: contentLayer
+                zWidth: root.width
+                zHeight: root.height
+                left_area: root.left_area
+                top_area: root.top_area
+                right_area: root.right_area
+                bottom_area: root.bottom_area
+                manager: root.manager
+            }
         }
     }
 
