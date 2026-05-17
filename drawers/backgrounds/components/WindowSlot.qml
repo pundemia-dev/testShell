@@ -243,29 +243,60 @@ Item {
         deformScale: 0
     }
 
-    // ── Fade-aura: opaque rounded rect (size = paintedRect, color = bg)
-    // drawn in contentLayer just BELOW this wrapper's content. The aura
-    // hides lower wrappers' content sitting beneath, and along the inner
-    // perimeter a `fadeWidth`-px halo ring linearly fades the bg color
-    // toward transparent — lower content "dissolves" into the bg in that
-    // ring.
+    // ── Fade-aura: opaque inner rect with halo ring OUTSIDE it. Drawn
+    // below this wrapper's content (z=arrivalSeq) and above older
+    // wrappers' content. The SDF-union mask clips everything to the
+    // rounded contour formed by all bgs together — that's the only
+    // thing that can shorten the halo's visible distance (e.g. spilling
+    // past the rounded contour) or extend it (into SDF-merged
+    // neighbours).
     //
-    // Geometry:
-    //   inner_solid_rect = paintedRect ÷ 2*overlapShrink (shrunk inward)
-    //   halo_ring        = fadeWidth-wide ring outward from inner_solid_rect
-    //   everything       = clipped to paintedRect rounded-shape via mask
+    // Layout (centered, symmetric):
+    //                       fadeWidth halo (extends past paintedRect if
+    //                                       overlapShrink < fadeWidth)
+    //          ↓↓
+    //   ┌────────────────────────────┐   ← paintedRect (bg edge)
+    //   │   ┌────────────────────┐   │   ← inner solid edge (α=1)
+    //   │   │ overlapShrink (os) │   │      = paintedRect shrunk by os
+    //   │   │                    │   │
+    //   │   │     inner solid    │   │
+    //   │   │                    │   │
+    //   │   └────────────────────┘   │
+    //   └────────────────────────────┘
+    //
+    //   os = 0       → inner solid = paintedRect, halo entirely OUTSIDE
+    //                  (only visible where SDF-merged neighbours exist).
+    //   os = fw      → halo outer edge exactly at paintedRect's edge.
+    //   os > fw      → halo fully inside paintedRect with a moat to the
+    //                  bg edge.
+    //   os < fw      → halo partly outside paintedRect, mask trims it.
+    //
+    // fadeStrength shapes the alpha ramp via t^(1/strength):
+    //   1.0 = linear, >1 = strong at start (alpha climbs fast near the
+    //   transparent outer edge), <1 = weak at start.
     readonly property int fadeWidth: Math.max(0, Config.backgrounds.fadeWidth ?? 0)
     readonly property int overlapShrink: Math.max(0, Config.backgrounds.overlapShrink ?? 0)
+    readonly property real fadeStrength: Math.max(0.05, Config.backgrounds.fadeStrength ?? 1.0)
     readonly property color _fadeColor: Colours.palette.surface
-    readonly property color _fadeTransparent: Qt.rgba(_fadeColor.r, _fadeColor.g, _fadeColor.b, 0)
     readonly property int _innerW: Math.max(0, paintedWidth - 2 * overlapShrink)
     readonly property int _innerH: Math.max(0, paintedHeight - 2 * overlapShrink)
-    readonly property int _innerRadius: Math.max(0, effectiveRounding - overlapShrink)
+    // Inner-solid origin in fadeAura-local coords. fadeAura is expanded
+    // by fadeWidth on every side, so the inner solid (which is paintedRect
+    // shrunk by overlapShrink) sits at (fw+os, fw+os).
+    readonly property int _innerOff: fadeWidth + overlapShrink
 
-    // fadeAura is enlarged by `fadeWidth` on every side so halo strips
-    // outside paintedRect (the case when overlapShrink < fadeWidth) don't
-    // get clipped by the FBO. Final shape is clipped via MultiEffect mask
-    // sourced from bgRenderHost's SDF.
+    // alpha(t) = t^(1/strength). t=0 → fully transparent (outer edge),
+    // t=1 → fully opaque (inner edge).
+    function _fadeAt(t) {
+        const a = Math.pow(t, 1.0 / root.fadeStrength);
+        return Qt.rgba(root._fadeColor.r, root._fadeColor.g, root._fadeColor.b, a);
+    }
+
+    // fadeAura is expanded by `fadeWidth` on each side so the halo ring
+    // (which sits OUTSIDE the inner solid) is never clipped by the FBO.
+    // Final shape is enforced by the SDF-union mask — halo only paints
+    // where bgs actually exist, so it can extend into SDF-merged
+    // neighbours and is otherwise cropped to the rounded bg contour.
     Item {
         id: fadeAura
         parent: root.contentLayer
@@ -276,9 +307,8 @@ Item {
         height: root.paintedHeight + 2 * root.fadeWidth
         z: root.arrivalSeq
 
-        // Mask = union of ALL bg shapes (bgRenderHost FBO), cropped to the
-        // same region fadeAura covers. Halo can spill into adjacent bgs
-        // that are SDF-merged with this one (e.g. stash glued to bar).
+        // Mask = SDF union of all bgs (bgRenderHost FBO), cropped to the
+        // same region fadeAura covers.
         layer.enabled: true
         layer.effect: MultiEffect {
             maskEnabled: true
@@ -302,13 +332,12 @@ Item {
             recursive: false
         }
 
-        // Inner solid rect — fully opaque, shrunken by overlapShrink.
-        // Square (no radius) on purpose: rounded clipping is enforced by
-        // the MultiEffect mask (bg SDF). A rounded inner rect would leave
-        // a transparent gap between its rounded contour and bbox corner.
+        // Inner solid rect — fully opaque, size = paintedRect shrunk by
+        // overlapShrink on every side, centred over paintedRect. No
+        // radius: rounded clipping comes from the SDF-union mask.
         Rectangle {
-            x: root.fadeWidth + root.overlapShrink
-            y: root.fadeWidth + root.overlapShrink
+            x: root._innerOff
+            y: root._innerOff
             width: root._innerW
             height: root._innerH
             radius: 0
@@ -319,52 +348,88 @@ Item {
         // Strip width = fadeWidth, fading from opaque (touching solid) to
         // transparent (outer halo edge).
 
-        // Top strip
+        // Top strip — sits ABOVE inner solid, gradient transparent→opaque
         Rectangle {
-            x: root.fadeWidth + root.overlapShrink
-            y: root.overlapShrink
+            x: root._innerOff
+            y: root._innerOff - root.fadeWidth
             width: root._innerW
             height: root.fadeWidth
             gradient: Gradient {
                 orientation: Gradient.Vertical
-                GradientStop { position: 0; color: root._fadeTransparent }
-                GradientStop { position: 1; color: root._fadeColor }
+                GradientStop { position: 0.0; color: root._fadeAt(0.0) }
+                GradientStop { position: 0.1; color: root._fadeAt(0.1) }
+                GradientStop { position: 0.2; color: root._fadeAt(0.2) }
+                GradientStop { position: 0.3; color: root._fadeAt(0.3) }
+                GradientStop { position: 0.4; color: root._fadeAt(0.4) }
+                GradientStop { position: 0.5; color: root._fadeAt(0.5) }
+                GradientStop { position: 0.6; color: root._fadeAt(0.6) }
+                GradientStop { position: 0.7; color: root._fadeAt(0.7) }
+                GradientStop { position: 0.8; color: root._fadeAt(0.8) }
+                GradientStop { position: 0.9; color: root._fadeAt(0.9) }
+                GradientStop { position: 1.0; color: root._fadeAt(1.0) }
             }
         }
-        // Bottom strip
+        // Bottom strip — sits BELOW inner solid, gradient opaque→transparent
         Rectangle {
-            x: root.fadeWidth + root.overlapShrink
-            y: root.fadeWidth + root.overlapShrink + root._innerH
+            x: root._innerOff
+            y: root._innerOff + root._innerH
             width: root._innerW
             height: root.fadeWidth
             gradient: Gradient {
                 orientation: Gradient.Vertical
-                GradientStop { position: 0; color: root._fadeColor }
-                GradientStop { position: 1; color: root._fadeTransparent }
+                GradientStop { position: 0.0; color: root._fadeAt(1.0) }
+                GradientStop { position: 0.1; color: root._fadeAt(0.9) }
+                GradientStop { position: 0.2; color: root._fadeAt(0.8) }
+                GradientStop { position: 0.3; color: root._fadeAt(0.7) }
+                GradientStop { position: 0.4; color: root._fadeAt(0.6) }
+                GradientStop { position: 0.5; color: root._fadeAt(0.5) }
+                GradientStop { position: 0.6; color: root._fadeAt(0.4) }
+                GradientStop { position: 0.7; color: root._fadeAt(0.3) }
+                GradientStop { position: 0.8; color: root._fadeAt(0.2) }
+                GradientStop { position: 0.9; color: root._fadeAt(0.1) }
+                GradientStop { position: 1.0; color: root._fadeAt(0.0) }
             }
         }
-        // Left strip
+        // Left strip — sits LEFT of inner solid, gradient transparent→opaque
         Rectangle {
-            x: root.overlapShrink
-            y: root.fadeWidth + root.overlapShrink
+            x: root._innerOff - root.fadeWidth
+            y: root._innerOff
             width: root.fadeWidth
             height: root._innerH
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0; color: root._fadeTransparent }
-                GradientStop { position: 1; color: root._fadeColor }
+                GradientStop { position: 0.0; color: root._fadeAt(0.0) }
+                GradientStop { position: 0.1; color: root._fadeAt(0.1) }
+                GradientStop { position: 0.2; color: root._fadeAt(0.2) }
+                GradientStop { position: 0.3; color: root._fadeAt(0.3) }
+                GradientStop { position: 0.4; color: root._fadeAt(0.4) }
+                GradientStop { position: 0.5; color: root._fadeAt(0.5) }
+                GradientStop { position: 0.6; color: root._fadeAt(0.6) }
+                GradientStop { position: 0.7; color: root._fadeAt(0.7) }
+                GradientStop { position: 0.8; color: root._fadeAt(0.8) }
+                GradientStop { position: 0.9; color: root._fadeAt(0.9) }
+                GradientStop { position: 1.0; color: root._fadeAt(1.0) }
             }
         }
-        // Right strip
+        // Right strip — sits RIGHT of inner solid, gradient opaque→transparent
         Rectangle {
-            x: root.fadeWidth + root.overlapShrink + root._innerW
-            y: root.fadeWidth + root.overlapShrink
+            x: root._innerOff + root._innerW
+            y: root._innerOff
             width: root.fadeWidth
             height: root._innerH
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0; color: root._fadeColor }
-                GradientStop { position: 1; color: root._fadeTransparent }
+                GradientStop { position: 0.0; color: root._fadeAt(1.0) }
+                GradientStop { position: 0.1; color: root._fadeAt(0.9) }
+                GradientStop { position: 0.2; color: root._fadeAt(0.8) }
+                GradientStop { position: 0.3; color: root._fadeAt(0.7) }
+                GradientStop { position: 0.4; color: root._fadeAt(0.6) }
+                GradientStop { position: 0.5; color: root._fadeAt(0.5) }
+                GradientStop { position: 0.6; color: root._fadeAt(0.4) }
+                GradientStop { position: 0.7; color: root._fadeAt(0.3) }
+                GradientStop { position: 0.8; color: root._fadeAt(0.2) }
+                GradientStop { position: 0.9; color: root._fadeAt(0.1) }
+                GradientStop { position: 1.0; color: root._fadeAt(0.0) }
             }
         }
 
@@ -375,10 +440,11 @@ Item {
         // (radius-based fade in both is equivalent on the boundary line),
         // so strip↔corner joints are continuous — no visible seams.
 
-        // Top-left — inner anchor at (fw, fw) in shape-local coords
+        // Top-left — sits at the TL corner outside inner solid.
+        // Radial centre at (fw, fw) = the corner of inner solid.
         Shape {
-            x: root.overlapShrink
-            y: root.overlapShrink
+            x: root._innerOff - root.fadeWidth
+            y: root._innerOff - root.fadeWidth
             width: root.fadeWidth; height: root.fadeWidth
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
@@ -388,8 +454,17 @@ Item {
                     centerRadius: root.fadeWidth
                     focalX: root.fadeWidth; focalY: root.fadeWidth
                     focalRadius: 0
-                    GradientStop { position: 0; color: root._fadeColor }
-                    GradientStop { position: 1; color: root._fadeTransparent }
+                    GradientStop { position: 0.0; color: root._fadeAt(1.0) }
+                    GradientStop { position: 0.1; color: root._fadeAt(0.9) }
+                    GradientStop { position: 0.2; color: root._fadeAt(0.8) }
+                    GradientStop { position: 0.3; color: root._fadeAt(0.7) }
+                    GradientStop { position: 0.4; color: root._fadeAt(0.6) }
+                    GradientStop { position: 0.5; color: root._fadeAt(0.5) }
+                    GradientStop { position: 0.6; color: root._fadeAt(0.4) }
+                    GradientStop { position: 0.7; color: root._fadeAt(0.3) }
+                    GradientStop { position: 0.8; color: root._fadeAt(0.2) }
+                    GradientStop { position: 0.9; color: root._fadeAt(0.1) }
+                    GradientStop { position: 1.0; color: root._fadeAt(0.0) }
                 }
                 startX: 0; startY: 0
                 PathLine { x: root.fadeWidth; y: 0 }
@@ -398,10 +473,11 @@ Item {
                 PathLine { x: 0; y: 0 }
             }
         }
-        // Top-right — inner anchor at (0, fw)
+        // Top-right — sits at the TR corner outside inner solid.
+        // Radial centre at (0, fw) = the corner of inner solid.
         Shape {
-            x: root.fadeWidth + root.overlapShrink + root._innerW
-            y: root.overlapShrink
+            x: root._innerOff + root._innerW
+            y: root._innerOff - root.fadeWidth
             width: root.fadeWidth; height: root.fadeWidth
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
@@ -411,8 +487,17 @@ Item {
                     centerRadius: root.fadeWidth
                     focalX: 0; focalY: root.fadeWidth
                     focalRadius: 0
-                    GradientStop { position: 0; color: root._fadeColor }
-                    GradientStop { position: 1; color: root._fadeTransparent }
+                    GradientStop { position: 0.0; color: root._fadeAt(1.0) }
+                    GradientStop { position: 0.1; color: root._fadeAt(0.9) }
+                    GradientStop { position: 0.2; color: root._fadeAt(0.8) }
+                    GradientStop { position: 0.3; color: root._fadeAt(0.7) }
+                    GradientStop { position: 0.4; color: root._fadeAt(0.6) }
+                    GradientStop { position: 0.5; color: root._fadeAt(0.5) }
+                    GradientStop { position: 0.6; color: root._fadeAt(0.4) }
+                    GradientStop { position: 0.7; color: root._fadeAt(0.3) }
+                    GradientStop { position: 0.8; color: root._fadeAt(0.2) }
+                    GradientStop { position: 0.9; color: root._fadeAt(0.1) }
+                    GradientStop { position: 1.0; color: root._fadeAt(0.0) }
                 }
                 startX: 0; startY: 0
                 PathLine { x: root.fadeWidth; y: 0 }
@@ -421,10 +506,11 @@ Item {
                 PathLine { x: 0; y: 0 }
             }
         }
-        // Bottom-left — inner anchor at (fw, 0)
+        // Bottom-left — sits at the BL corner outside inner solid.
+        // Radial centre at (fw, 0) = the corner of inner solid.
         Shape {
-            x: root.overlapShrink
-            y: root.fadeWidth + root.overlapShrink + root._innerH
+            x: root._innerOff - root.fadeWidth
+            y: root._innerOff + root._innerH
             width: root.fadeWidth; height: root.fadeWidth
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
@@ -434,8 +520,17 @@ Item {
                     centerRadius: root.fadeWidth
                     focalX: root.fadeWidth; focalY: 0
                     focalRadius: 0
-                    GradientStop { position: 0; color: root._fadeColor }
-                    GradientStop { position: 1; color: root._fadeTransparent }
+                    GradientStop { position: 0.0; color: root._fadeAt(1.0) }
+                    GradientStop { position: 0.1; color: root._fadeAt(0.9) }
+                    GradientStop { position: 0.2; color: root._fadeAt(0.8) }
+                    GradientStop { position: 0.3; color: root._fadeAt(0.7) }
+                    GradientStop { position: 0.4; color: root._fadeAt(0.6) }
+                    GradientStop { position: 0.5; color: root._fadeAt(0.5) }
+                    GradientStop { position: 0.6; color: root._fadeAt(0.4) }
+                    GradientStop { position: 0.7; color: root._fadeAt(0.3) }
+                    GradientStop { position: 0.8; color: root._fadeAt(0.2) }
+                    GradientStop { position: 0.9; color: root._fadeAt(0.1) }
+                    GradientStop { position: 1.0; color: root._fadeAt(0.0) }
                 }
                 startX: 0; startY: 0
                 PathLine { x: root.fadeWidth; y: 0 }
@@ -444,10 +539,11 @@ Item {
                 PathLine { x: 0; y: 0 }
             }
         }
-        // Bottom-right — inner anchor at (0, 0)
+        // Bottom-right — sits at the BR corner outside inner solid.
+        // Radial centre at (0, 0) = the corner of inner solid.
         Shape {
-            x: root.fadeWidth + root.overlapShrink + root._innerW
-            y: root.fadeWidth + root.overlapShrink + root._innerH
+            x: root._innerOff + root._innerW
+            y: root._innerOff + root._innerH
             width: root.fadeWidth; height: root.fadeWidth
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
@@ -457,8 +553,17 @@ Item {
                     centerRadius: root.fadeWidth
                     focalX: 0; focalY: 0
                     focalRadius: 0
-                    GradientStop { position: 0; color: root._fadeColor }
-                    GradientStop { position: 1; color: root._fadeTransparent }
+                    GradientStop { position: 0.0; color: root._fadeAt(1.0) }
+                    GradientStop { position: 0.1; color: root._fadeAt(0.9) }
+                    GradientStop { position: 0.2; color: root._fadeAt(0.8) }
+                    GradientStop { position: 0.3; color: root._fadeAt(0.7) }
+                    GradientStop { position: 0.4; color: root._fadeAt(0.6) }
+                    GradientStop { position: 0.5; color: root._fadeAt(0.5) }
+                    GradientStop { position: 0.6; color: root._fadeAt(0.4) }
+                    GradientStop { position: 0.7; color: root._fadeAt(0.3) }
+                    GradientStop { position: 0.8; color: root._fadeAt(0.2) }
+                    GradientStop { position: 0.9; color: root._fadeAt(0.1) }
+                    GradientStop { position: 1.0; color: root._fadeAt(0.0) }
                 }
                 startX: 0; startY: 0
                 PathLine { x: root.fadeWidth; y: 0 }

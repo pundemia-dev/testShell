@@ -14,29 +14,42 @@ JsonObject {
 
     // Per-wrapper opaque rect drawn UNDER this wrapper's content (in
     // contentLayer at z=arrivalSeq, below content at z=arrivalSeq+0.5),
-    // clipped to the bg's rounded-rect shape.
+    // clipped to the SDF union of all bg shapes.
     //
     // Geometry:
-    //   inner_solid_rect = bg_rect shrunk by `overlapShrink` on each side
-    //   halo_ring        = `fadeWidth` px wide gradient from opaque (at
-    //                      inner_solid_rect edge) to transparent, growing
-    //                      outward toward the bg edge
-    //   everything is masked to the bg's rounded shape
+    //   inner_solid = paintedRect shrunk by `overlapShrink` on every
+    //                 side, centred. This is the rectangle the gradient
+    //                 grows OUTWARD from.
+    //   halo ring  = `fadeWidth` px wide, surrounding inner_solid on
+    //                 the OUTSIDE. May extend past paintedRect — the
+    //                 SDF-union mask either trims it (no neighbour) or
+    //                 lets it continue into a neighbouring SDF-merged bg.
     //
-    // Effect: lower wrappers' content under inner_solid_rect is hidden,
-    // and within the halo_ring it linearly dissolves into the bg color.
+    // Special cases:
+    //   overlapShrink = 0       → inner_solid covers the entire bg,
+    //                              halo lives entirely outside; visible
+    //                              only where SDF-merged neighbours
+    //                              exist beyond this bg's edge.
+    //   overlapShrink = fadeWidth → halo's outer edge lands exactly on
+    //                                paintedRect's edge.
+    //   overlapShrink > fadeWidth → halo fully inside paintedRect, with
+    //                                a moat to the bg's edge.
     //
-    // Tuning:
-    //   fadeWidth ≥ overlapShrink → halo is clipped at the bg edge (some
-    //                                fade is "cut off")
-    //   fadeWidth ≤ overlapShrink → halo fully inside bg edge, leaves a
-    //                                visible transparent moat between
-    //                                halo's outer edge and bg edge
-    //   fadeWidth == overlapShrink → halo exactly fills the ring, smooth
-    //
-    // 0 = disabled (no inner_solid_rect drawn at all when both are 0).
+    // Variables:
+    //   fadeWidth      — visible gradient distance (one and only thing
+    //                     that controls how wide the halo is). Only the
+    //                     SDF-union mask can shorten the visible fade.
+    //   overlapShrink  — how much smaller (per side) the inner_solid
+    //                     rect is compared to the bg. Centred.
+    //   fadeStrength   — curve exponent for the gradient alpha ramp.
+    //                     1.0 = linear (default).
+    //                     >1 = "strong at start": alpha climbs quickly
+    //                          near the outer (transparent) edge.
+    //                     <1 = "weak at start": alpha climbs slowly
+    //                          near the outer edge.
     property int fadeWidth: 40
-    property int overlapShrink: 20
+    property int overlapShrink: 15
+    property real fadeStrength: 1.0
 
     component Directions: JsonObject {
         property int left: 0

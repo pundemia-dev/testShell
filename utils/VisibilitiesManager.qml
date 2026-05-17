@@ -2,9 +2,9 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 import qs.components.misc
+import qs.services
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 
 Singleton {
     id: root
@@ -12,8 +12,8 @@ Singleton {
     // Глобальный сигнал об изменении visibility (для любого монитора)
     signal visibilityChanged(ShellScreen screen, string name, bool state)
 
-    // Map: Monitor -> PerMonitorVisibilities
-    property var screens: new Map()
+    // Map: screen.name (string) -> PerMonitorVisibilities
+    property var screens: ({})
 
     // Очередь отложенных запросов (когда visibility запрашивается до регистрации screen)
     property var pendingRequests: []
@@ -26,10 +26,14 @@ Singleton {
         CustomShortcut {}
     }
 
+    function _key(screen) {
+        return screen && screen.name ? screen.name : "";
+    }
+
     // Регистрация per-monitor visibilities
     function load(screen: ShellScreen, visibilities): void {
-        var monitor = Hyprland.monitorFor(screen);
-        screens.set(monitor, visibilities);
+        screens[_key(screen)] = visibilities;
+        screens = screens; // trigger binding
 
         // Обрабатываем отложенные запросы для этого экрана
         processPendingRequests(screen);
@@ -37,19 +41,15 @@ Singleton {
 
     // Обработка отложенных запросов для конкретного экрана
     function processPendingRequests(screen: ShellScreen): void {
-        var monitor = Hyprland.monitorFor(screen);
-        var vis = screens.get(monitor);
+        var vis = screens[_key(screen)];
         if (!vis) return;
 
         var remaining = [];
         for (var i = 0; i < pendingRequests.length; i++) {
             var req = pendingRequests[i];
-            var reqMonitor = Hyprland.monitorFor(req.screen);
-            if (reqMonitor === monitor) {
-                // Выполняем отложенный запрос
+            if (_key(req.screen) === _key(screen)) {
                 vis.addVisibility(req.name, req.shortcut, req.isolated, req.autostart, req.description);
             } else {
-                // Оставляем в очереди для другого экрана
                 remaining.push(req);
             }
         }
@@ -84,31 +84,35 @@ Singleton {
 
     // Удаление per-monitor visibilities
     function unload(screen: ShellScreen): void {
-        screens.delete(Hyprland.monitorFor(screen));
+        delete screens[_key(screen)];
+        screens = screens;
     }
 
-    // Получить visibilities для активного монитора
+    // Получить visibilities для активного монитора (на основе фокуса niri)
     function getForActive(): var {
-        return screens.get(Hyprland.focusedMonitor);
+        const focused = Niri.focusedMonitor;
+        if (focused && screens[focused.name]) {
+            return screens[focused.name];
+        }
+        // Фоллбэк: первый зарегистрированный экран
+        const keys = Object.keys(screens);
+        return keys.length > 0 ? screens[keys[0]] : null;
     }
 
     // Получить visibilities для конкретного экрана
     function getForScreen(screen: ShellScreen): var {
-        return screens.get(Hyprland.monitorFor(screen));
+        return screens[_key(screen)] || null;
     }
 
     // Регистрация глобального шортката (вызывается один раз)
     function registerShortcut(name: string, shortcut: string, description: string): void {
-        // Проверяем, не создан ли уже шорткат
         if (registeredShortcuts[name]) {
             return;
         }
-
         if (shortcut === "") {
             return;
         }
 
-        // Создаём основной шорткат
         var visName = name;
         var mainShortcut = shortcutComponent.createObject(root, {
             name: shortcut,

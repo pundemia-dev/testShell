@@ -14,6 +14,7 @@ import "panels"
 import qs.modules.bar
 import qs.modules.launcher
 import qs.modules.notifications
+import qs.modules.stash
 
 import qs.config
 import qs.components
@@ -173,6 +174,12 @@ Variants {
                     id: notifications
                     manager: scope.backgroundsManager
                     screen: scope.modelData
+                }
+                StashWrapper {
+                    id: stash
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
+                    anchors.fill: parent
                 }
 
             }

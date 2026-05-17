@@ -1,7 +1,6 @@
 pragma Singleton
 
 import qs.config
-import Caelestia
 import Quickshell
 
 Singleton {
@@ -18,13 +17,14 @@ Singleton {
 
     readonly property string imagecache: `${cache}/imagecache`
     readonly property string notifimagecache: `${imagecache}/notifs`
-    readonly property string wallsdir: Quickshell.env("PSHELL_WALLPAPERS_DIR") || absolutePath(Config.paths.wallpaperDir)
+    readonly property string wallsdir: Quickshell.env("PSHELL_WALLPAPERS_DIR") || absolutePath(Config.paths?.wallpaperDir ?? "")
     readonly property string recsdir: Quickshell.env("PSHELL_RECORDINGS_DIR") || `${videos}/Recordings`
     readonly property string libdir: Quickshell.env("PSHELL_LIB_DIR") || "/usr/lib/pShell"
 
     function toLocalFile(path: url): string {
-        path = Qt.resolvedUrl(path);
-        return path.toString() ? CUtils.toLocalFile(path) : "";
+        const resolved = Qt.resolvedUrl(path).toString();
+        if (!resolved) return "";
+        return resolved.startsWith("file://") ? decodeURIComponent(resolved.slice(7)) : resolved;
     }
 
     function absolutePath(path: string): string {

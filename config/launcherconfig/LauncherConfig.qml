@@ -21,8 +21,10 @@ JsonObject {
     property AnchorsData anchors: AnchorsData {
         // top: true
         bottom: true
+        right: true
+        // left: true
         // verticalCenter: true
-        horizontalCenter: true
+        // horizontalCenter: true
     }
     property OffsetsData offsets: OffsetsData {
         verticalCenter: 0

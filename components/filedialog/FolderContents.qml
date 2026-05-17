@@ -6,8 +6,8 @@ import "../images"
 import qs.services
 import qs.config
 import qs.utils
-import Caelestia.Models
 import Quickshell
+import Qt.labs.folderlistmodel
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
@@ -101,21 +101,36 @@ Item {
             flickable: view
         }
 
-        model: FileSystemModel {
-            path: {
-                if (root.dialog.cwd[0] === "Home")
-                    return `${Paths.home}/${root.dialog.cwd.slice(1).join("/")}`;
-                else
-                    return root.dialog.cwd.join("/");
+        model: FolderListModel {
+            id: folderModel
+            folder: {
+                const dir = root.dialog.cwd[0] === "Home"
+                    ? `${Paths.home}/${root.dialog.cwd.slice(1).join("/")}`
+                    : root.dialog.cwd.join("/");
+                return Qt.resolvedUrl("file://" + dir);
             }
-            onPathChanged: view.currentIndex = -1
+            showDirsFirst: true
+            showDotAndDotDot: false
+            showHidden: false
+            onFolderChanged: view.currentIndex = -1
         }
 
         delegate: StyledRect {
             id: item
 
             required property int index
-            required property FileSystemEntry modelData
+            required property string fileName
+            required property url fileURL
+            required property bool fileIsDir
+            required property string fileSuffix
+
+            readonly property var modelData: ({
+                name: fileName,
+                path: fileURL.toString().replace(/^file:\/\//, ""),
+                isDir: fileIsDir,
+                isImage: ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(fileSuffix.toLowerCase()),
+                mimeType: ""
+            })
 
             readonly property real nonAnimHeight: icon.implicitHeight + name.anchors.topMargin + name.implicitHeight + Appearance.padding.normal * 2
 

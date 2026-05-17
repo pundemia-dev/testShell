@@ -10,6 +10,7 @@ import "borderconfig"
 import "cornersconfig"
 import "backgroundsconfig"
 import "notifsconfig"
+import "stashconfig"
 
 Singleton {
     id: root
@@ -20,6 +21,7 @@ Singleton {
     property alias corners: adapter.corners
     property alias backgrounds: adapter.backgrounds
     property alias notifs: adapter.notifs
+    property alias stash: adapter.stash
 
     FileView {
         id: fileview
@@ -38,6 +40,7 @@ Singleton {
             property CornersConfig corners: CornersConfig {}
             property BackgroundsConfig backgrounds: BackgroundsConfig {}
             property NotifsConfig notifs: NotifsConfig {}
+            property StashConfig stash: StashConfig {}
         }
     }
 }

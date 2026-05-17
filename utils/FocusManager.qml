@@ -12,8 +12,7 @@ Singleton {
     // True when at least one module has requested focus
     property bool focusActive: false
 
-    // Emitted when the Hyprland focus grab is cleared (user clicked outside)
-    // Modules should connect to this to clean up their visible state
+    // Emitted when focus is cleared externally; modules should clean up their visible state.
     signal focusCleared()
 
     function requestFocus(name: string): void {
@@ -28,7 +27,6 @@ Singleton {
         focusActive = Object.keys(requests).length > 0;
     }
 
-    // Called by Drawers when HyprlandFocusGrab.onCleared fires
     function onGrabCleared(): void {
         requests = {};
         focusActive = false;

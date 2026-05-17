@@ -94,8 +94,8 @@ Item {
                 return Config.bar.workspaces.numerals[root.index];
 
             // Build display name from workspace name/id
-            const ws = Hypr.workspaces.values.find(w => w.id === root.ws);
-            const wsName = !ws || ws.name == root.ws ? root.ws : ws.name[0];
+            const ws = Niri.workspaces.values.find(w => w.idx === root.ws);
+            const wsName = !ws || !ws.name || ws.name == root.ws ? root.ws : ws.name[0];
             let displayName = wsName.toString();
             if (Config.bar.workspaces.capitalisation.toLowerCase() === "upper")
                 displayName = displayName.toUpperCase();
@@ -175,7 +175,10 @@ Item {
 
             Repeater {
                 model: ScriptModel {
-                    values: Hypr.toplevels.values.filter(c => c.workspace?.id === root.ws)
+                    values: Niri.toplevels.values.filter(c => {
+                        const w = Niri.workspaces.values.find(ww => ww.id === c.workspace_id);
+                        return w && w.idx === root.ws;
+                    })
                 }
 
                 StyledIcon {
@@ -218,7 +221,10 @@ Item {
 
             Repeater {
                 model: ScriptModel {
-                    values: Hypr.toplevels.values.filter(c => c.workspace?.id === root.ws)
+                    values: Niri.toplevels.values.filter(c => {
+                        const w = Niri.workspaces.values.find(ww => ww.id === c.workspace_id);
+                        return w && w.idx === root.ws;
+                    })
                 }
 
                 StyledIcon {

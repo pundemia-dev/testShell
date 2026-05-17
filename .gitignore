@@ -1,4 +1,10 @@
 .qmmls.ini
 scripts/walltool/*
 !scripts/walltool/src/
+!scripts/walltool/Cargo.toml
+!scripts/walltool/Cargo.lock
+
+build/
+temp/
+test_qs/
 

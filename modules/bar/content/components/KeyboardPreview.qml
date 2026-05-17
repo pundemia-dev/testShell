@@ -30,12 +30,12 @@ FlexboxLayout {
         // anchors.horizontalCenter: parent.horizontalCenter
 
         // horizontalAlignment: StyledText.AlignHCenter
-        text: Hypr.capsLock ? Hypr.kbLayout.toUpperCase() : Hypr.kbLayout.toLowerCase()//"en"//Time.format("hh\nmm")
+        text: Niri.capsLock ? Niri.kbLayout.toUpperCase() : Niri.kbLayout.toLowerCase()//"en"//Time.format("hh\nmm")
         font.pointSize: Appearance.font.size.smaller
         font.family: Appearance.font.family.mono
         color: root.colour
         animate: true
-        transform: Translate { y: Hypr.capsLock ? 1 : 0 }
+        transform: Translate { y: Niri.capsLock ? 1 : 0 }
         // anchors.verticalCenterOffset: -2
     }
 }

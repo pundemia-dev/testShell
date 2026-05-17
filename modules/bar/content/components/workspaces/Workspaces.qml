@@ -15,11 +15,18 @@ StyledClippingRect {
     property ShellScreen screen
 
     readonly property bool isHorizontal: Config.bar.orientation
-    readonly property bool onSpecial: (Config.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(screen) : Hypr.focusedMonitor)?.lastIpcObject?.specialWorkspace?.name !== ""
-    readonly property int activeWsId: Config.bar.workspaces.perMonitorWorkspaces ? (Hypr.monitorFor(screen).activeWorkspace?.id ?? 1) : Hypr.activeWsId
+    readonly property bool onSpecial: false
+    readonly property int activeWsId: {
+        if (!Config.bar.workspaces.perMonitorWorkspaces) { const focused = Niri.workspaces.values.find(w => w.is_focused); return focused ? focused.idx : 1; }
+        const mon = Niri.monitorFor(screen);
+        if (!mon) return 1;
+        const ws = Niri.workspaces.values.find(w => w.output === mon.name && w.is_active);
+        return ws ? ws.idx : 1;
+    }
 
-    readonly property var occupied: Hypr.workspaces.values.reduce((acc, curr) => {
-        acc[curr.id] = curr.lastIpcObject.windows > 0;
+    readonly property var occupied: Niri.workspaces.values.reduce((acc, curr) => {
+        // Niri workspace is occupied if it has windows
+        acc[curr.idx] = true; 
         return acc;
     }, {})
     readonly property int groupOffset: Math.floor((activeWsId - 1) / Config.bar.workspaces.shown) * Config.bar.workspaces.shown
@@ -118,10 +125,8 @@ StyledClippingRect {
                 const child = layout.childAt(event.x, event.y);
                 if (!child || child.ws === undefined)
                     return;
-                if (Hypr.activeWsId !== child.ws)
-                    Hypr.dispatch(`workspace ${child.ws}`);
-                else
-                    Hypr.dispatch("togglespecialworkspace special");
+                if (1 !== child.ws)
+                    Niri.dispatch(`focus-workspace ${child.ws}`);
             }
         }
 

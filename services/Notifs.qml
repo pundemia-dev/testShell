@@ -4,7 +4,6 @@ pragma ComponentBehavior: Bound
 import qs.components.misc
 import qs.config
 import qs.utils
-import Caelestia
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
@@ -17,14 +16,6 @@ Singleton {
     readonly property list<Notif> notClosed: list.filter(n => !n.closed)
     readonly property list<Notif> popups: list.filter(n => n.popup)
     property bool dnd: false
-
-    // TODO: wire up DND toggling to a shortcut via VisibilitiesManager
-    onDndChanged: {
-        if (dnd)
-            Toaster.toast(qsTr("Do not disturb enabled"), qsTr("Popup notifications are now disabled"), "do_not_disturb_on");
-        else
-            Toaster.toast(qsTr("Do not disturb disabled"), qsTr("Popup notifications are now enabled"), "do_not_disturb_off");
-    }
 
     onListChanged: {
         if (loaded)
@@ -194,8 +185,10 @@ Singleton {
                         const hash = (h2 >>> 0).toString(16).padStart(8, 0) + (h1 >>> 0).toString(16).padStart(8, 0);
 
                         const cache = `${Paths.notifimagecache}/${hash}.png`;
-                        CUtils.saveItem(this, Qt.resolvedUrl(cache), () => {
-                            notif.image = cache;
+                        this.grabToImage(result => {
+                            if (result && result.saveToFile(cache)) {
+                                notif.image = cache;
+                            }
                             notif.dummyImageLoader.active = false;
                         });
                     }
