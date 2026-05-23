@@ -31,7 +31,7 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
     Q_UNUSED(oldMaterial);
     auto* mat = static_cast<BlobMaterial*>(newMaterial);
     QByteArray* buf = state.uniformData();
-    Q_ASSERT(buf->size() >= 1440);
+    Q_ASSERT(buf->size() >= 1472);
 
     if (state.isMatrixDirty()) {
         const QMatrix4x4 m = state.combinedMatrix();
@@ -72,7 +72,7 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
     // Inverted radius (offset 116)
     memcpy(buf->data() + 116, &mat->m_invertedRadius, 4);
 
-    // Padding at 120-127 (skip)
+    // Padding at 120-127 (skip, std140 alignment for next vec4)
 
     // Inverted outer (offset 128, 16 bytes)
     memcpy(buf->data() + 128, mat->m_invertedOuter, 16);
@@ -80,17 +80,23 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
     // Inverted inner (offset 144, 16 bytes)
     memcpy(buf->data() + 144, mat->m_invertedInner, 16);
 
-    // Rect data (offset 160, each rect = 5 vec4s = 80 bytes)
+    // Zone roundings, packed as two vec4s.
+    // Order: topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left.
+    memcpy(buf->data() + 160, mat->m_zoneRoundings, 16);      // zones 0..3
+    memcpy(buf->data() + 176, mat->m_zoneRoundings + 4, 16);  // zones 4..7
+
+    // Rect data (offset 192, each rect = 5 vec4s = 80 bytes)
     const int count = qMin(mat->m_rectCount, 16);
     for (int i = 0; i < count; ++i) {
         const auto& r = mat->m_rects[i];
-        const int base = 160 + i * 80;
+        const int base = 192 + i * 80;
         // Pack excludeMask into props.x via bit-cast (read in shader with floatBitsToInt)
         float maskAsFloat;
         memcpy(&maskAsFloat, &r.excludeMask, sizeof(float));
         const float d0[4] = { r.cx, r.cy, r.hw, r.hh };
         const float d1[4] = { maskAsFloat, r.offsetX, r.offsetY, r.minEig };
-        const float d3[4] = { r.screenHalfX, r.screenHalfY, 0.0f, 0.0f };
+        // d3.x = screenHalfX, d3.y = screenHalfY, d3.z = zoneIndex (float-encoded, -1 = no zone), d3.w unused
+        const float d3[4] = { r.screenHalfX, r.screenHalfY, static_cast<float>(r.zoneIndex), 0.0f };
         memcpy(buf->data() + base, d0, 16);
         memcpy(buf->data() + base + 16, d1, 16);
         memcpy(buf->data() + base + 32, r.invDeform, 16);

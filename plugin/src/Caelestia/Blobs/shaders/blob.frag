@@ -18,8 +18,27 @@ layout(std140, binding = 0) uniform buf {
     float invertedRadius;
     vec4 invertedOuter;
     vec4 invertedInner;
+    vec4 zoneRoundingsLow;   // zones 0..3 (topLeft, top, topRight, right)
+    vec4 zoneRoundingsHigh;  // zones 4..7 (bottomRight, bottom, bottomLeft, left)
     vec4 rectData[80];
 };
+
+// Look up the per-zone присасывание strength for a given rect's zone.
+// Returns 0.0 if zoneIndex < 0 (no zone — bg does NOT pull the frame).
+// This matches the goal: center-anchored bgs (rail 4) and unzoned defaults
+// don't generate the corner-pull effect anymore.
+float zoneStrength(int zi) {
+    if (zi < 0) return 0.0;
+    if (zi == 0) return zoneRoundingsLow.x;
+    if (zi == 1) return zoneRoundingsLow.y;
+    if (zi == 2) return zoneRoundingsLow.z;
+    if (zi == 3) return zoneRoundingsLow.w;
+    if (zi == 4) return zoneRoundingsHigh.x;
+    if (zi == 5) return zoneRoundingsHigh.y;
+    if (zi == 6) return zoneRoundingsHigh.z;
+    if (zi == 7) return zoneRoundingsHigh.w;
+    return 0.0;
+}
 
 float sdRoundedBox(vec2 p, vec2 center, vec2 halfSize, float radius) {
     vec2 d = abs(p - center) - halfSize + vec2(radius);
@@ -73,8 +92,12 @@ void main() {
         vec4 rect = rectData[i * 5];         // cx, cy, hw, hh
         vec4 props = rectData[i * 5 + 1];    // excludeMask(int bits), offsetX, offsetY, minEig
         vec4 invDm = rectData[i * 5 + 2];    // inverse deform matrix
-        vec4 sh = rectData[i * 5 + 3];       // screenHalfX, screenHalfY, 0, 0
+        vec4 sh = rectData[i * 5 + 3];       // screenHalfX, screenHalfY, zoneIndex(float), unused
         vec4 radii = rectData[i * 5 + 4];    // effective per-corner radii (tr, br, bl, tl)
+
+        // Per-rect zone strength: 0 disables присасывание for this bg entirely.
+        int zi = int(sh.z);
+        float zs = zoneStrength(zi);
 
         // Offset center for asymmetric deformation
         vec2 center = rect.xy + props.yz;
@@ -96,9 +119,10 @@ void main() {
         // Use pre-computed minimum eigenvalue for SDF correction
         d *= max(props.w, 0.01);
 
-        // Scale SDF on the axis facing a nearby border to narrow the smin blend zone
-        // in that direction only, without reducing k (which would cause sharp edges).
-        if (hasInverted != 0) {
+        // Scale SDF on the axis facing a nearby border to narrow the smin blend
+        // zone in that direction only. Gated by zone strength: zs == 0 leaves
+        // scale at 1.0 (no boost, no apparent "pull" toward the frame).
+        if (hasInverted != 0 && zs > 0.0) {
             vec2 screenHalf = sh.xy;
 
             float distY0 = (center.y + screenHalf.y) - (invertedInner.y - invertedInner.w);
@@ -134,7 +158,7 @@ void main() {
             float xWeight = mix(faceX, gradX, t);
             float yWeight = mix(faceY, gradY, t);
 
-            float boost = 3.0;
+            float boost = 3.0 * zs;
             float scale = 1.0 + (xProx * xWeight + yProx * yWeight) * boost;
             d *= scale;
         }
@@ -188,7 +212,14 @@ void main() {
         for (int i = 0; i < rectCount; i++) {
             vec4 rect = rectData[i * 5];
             vec4 sinkProps = rectData[i * 5 + 1];
-            vec2 sinkSh = rectData[i * 5 + 3].xy;
+            vec4 d3 = rectData[i * 5 + 3];
+            vec2 sinkSh = d3.xy;
+            int zi = int(d3.z);
+
+            // Per-zone присасывание enable: zoneStrength = 0 → this bg does
+            // NOT pull the frame's inner edge inward. -1 (no zone) gets 1.0
+            // (legacy unscaled behavior).
+            float zs = zoneStrength(zi);
 
             // Screen-space center (with offset) and pre-computed AABB half-extents
             vec2 ctr = rect.xy + sinkProps.yz;
@@ -225,16 +256,33 @@ void main() {
                 max(leftPen * smoothstep(s, 0.0, vLat) * leftZone,
                     rightPen * smoothstep(s, 0.0, vLat) * rightZone)
             );
-            sinkValue = max(sinkValue, sink);
+            sinkValue = max(sinkValue, sink * zs);
         }
 
         dInner -= sinkValue;
 
         float dFrame = smaxSharpA(dOuter, -dInner, smoothFactor);
 
-        mergedSdf = smin(mergedSdf, dFrame, smoothFactor);
-        if (dFrame < minDist) {
-            owner = -1;
+        // Gate the final union-with-frame by the winning rect's zone strength.
+        // If the closest rect at this pixel has zs == 0, the bg does NOT visually
+        // merge with the frame here — preserving its natural rounded contour.
+        float winnerZs = 1.0;
+        if (owner >= 0) {
+            int wzi = int(rectData[owner * 5 + 3].z);
+            winnerZs = zoneStrength(wzi);
+        }
+        if (winnerZs > 0.0) {
+            mergedSdf = smin(mergedSdf, dFrame, smoothFactor);
+            if (dFrame < minDist) {
+                owner = -1;
+            }
+        } else {
+            // Still resolve frame ownership where the bg has no SDF presence
+            // (so the frame's pixels are owned correctly), without smin-blending.
+            mergedSdf = min(mergedSdf, dFrame);
+            if (dFrame < minDist) {
+                owner = -1;
+            }
         }
     }
 

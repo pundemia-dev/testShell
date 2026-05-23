@@ -9,7 +9,7 @@ JsonObject {
     property int gap: 10
     property string giphyApiKey: ""
     // property int rounding: 10
-    property int invertBaseRounding: 10
+    property int invertBaseRounding: 0
     property bool excludeBareArea: true
     property bool reusability: false
     property var modules: ["AppListModule", "GifListModule", "WallListModule"]
@@ -27,8 +27,9 @@ JsonObject {
         // horizontalCenter: true
     }
     property OffsetsData offsets: OffsetsData {
-        verticalCenter: 0
-        horizontalCenter: 0
+        right: 100
+        // verticalCenter: 0
+        // horizontalCenter: 0
     }
     property PaddingsData paddings: PaddingsData {
 

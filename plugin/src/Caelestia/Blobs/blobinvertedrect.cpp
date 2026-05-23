@@ -121,6 +121,7 @@ QSGNode* BlobInvertedRect::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData
     material->m_invertedRadius = m_cachedInvertedRadius;
     memcpy(material->m_invertedOuter, m_cachedInvertedOuter, sizeof(m_cachedInvertedOuter));
     memcpy(material->m_invertedInner, m_cachedInvertedInner, sizeof(m_cachedInvertedInner));
+    memcpy(material->m_zoneRoundings, m_cachedZoneRoundings, sizeof(m_cachedZoneRoundings));
 
     const int count = static_cast<int>(qMin(m_cachedRects.size(), qsizetype(16)));
     material->m_rectCount = count;
@@ -169,6 +170,15 @@ void BlobInvertedRect::setBorderBottom(qreal v) {
         return;
     m_borderBottom = v;
     emit borderBottomChanged();
+    if (m_group)
+        m_group->markDirty();
+}
+
+void BlobInvertedRect::setZoneRoundings(const QList<qreal>& v) {
+    if (m_zoneRoundings == v)
+        return;
+    m_zoneRoundings = v;
+    emit zoneRoundingsChanged();
     if (m_group)
         m_group->markDirty();
 }

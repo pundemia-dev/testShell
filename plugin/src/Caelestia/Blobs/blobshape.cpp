@@ -213,6 +213,8 @@ void BlobShape::updatePolish() {
             r.screenHalfX = std::abs(a) * r.hw + std::abs(c) * r.hh;
             r.screenHalfY = std::abs(b) * r.hw + std::abs(d) * r.hh;
 
+            r.zoneIndex = other->zoneIndex();
+
             m_cachedRects.append(r);
             rectShapes.append(other);
         }
@@ -242,6 +244,7 @@ void BlobShape::updatePolish() {
     m_cachedInvertedRadius = 0;
     memset(m_cachedInvertedOuter, 0, sizeof(m_cachedInvertedOuter));
     memset(m_cachedInvertedInner, 0, sizeof(m_cachedInvertedInner));
+    for (int z = 0; z < 8; ++z) m_cachedZoneRoundings[z] = 0.0f;
 
     auto* inv = m_group->invertedRect();
     if (inv) {
@@ -282,6 +285,10 @@ void BlobShape::updatePolish() {
             m_cachedInvertedInner[1] = innerCY;
             m_cachedInvertedInner[2] = innerHW;
             m_cachedInvertedInner[3] = innerHH;
+
+            const QList<qreal>& zr = inv->zoneRoundings();
+            for (int z = 0; z < 8; ++z)
+                m_cachedZoneRoundings[z] = (z < zr.size()) ? static_cast<float>(zr.at(z)) : 0.0f;
         }
     }
 
@@ -311,7 +318,11 @@ void BlobShape::updatePolish() {
             fTl = std::min(fTl, cpuSmoothstep(0.0f, smoothFactor, cpuSdBox(cTlX, cTlY, rj.cx, rj.cy, rj.hw, rj.hh)));
         }
 
-        if (m_cachedHasInverted) {
+        // Per-zone gating: only shrink this rect's corner radii toward the
+        // frame's inner edge if its zone enables присасывание (zs > 0).
+        const int zi = ri.zoneIndex;
+        const float zs = (zi >= 0 && zi < 8) ? m_cachedZoneRoundings[zi] : 0.0f;
+        if (m_cachedHasInverted && zs > 0.0f) {
             const float icx = m_cachedInvertedInner[0];
             const float icy = m_cachedInvertedInner[1];
             const float ihw = m_cachedInvertedInner[2];
@@ -380,6 +391,7 @@ QSGNode* BlobShape::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
     material->m_invertedRadius = m_cachedInvertedRadius;
     memcpy(material->m_invertedOuter, m_cachedInvertedOuter, sizeof(m_cachedInvertedOuter));
     memcpy(material->m_invertedInner, m_cachedInvertedInner, sizeof(m_cachedInvertedInner));
+    memcpy(material->m_zoneRoundings, m_cachedZoneRoundings, sizeof(m_cachedZoneRoundings));
 
     const int count = static_cast<int>(qMin(m_cachedRects.size(), qsizetype(16)));
     material->m_rectCount = count;

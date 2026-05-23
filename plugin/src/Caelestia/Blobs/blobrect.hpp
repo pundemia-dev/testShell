@@ -19,6 +19,8 @@ class BlobRect : public BlobShape {
     Q_PROPERTY(qreal bottomLeftRadius READ bottomLeftRadius WRITE setBottomLeftRadius NOTIFY bottomLeftRadiusChanged)
     Q_PROPERTY(
         qreal bottomRightRadius READ bottomRightRadius WRITE setBottomRightRadius NOTIFY bottomRightRadiusChanged)
+    // Zone index 0..7 (TL, T, TR, R, BR, B, BL, L). -1 means "no zone" — no присасывание.
+    Q_PROPERTY(int zoneIndex READ zoneIndex WRITE setZoneIndex NOTIFY zoneIndexChanged)
 
 public:
     explicit BlobRect(QQuickItem* parent = nullptr);
@@ -72,6 +74,10 @@ public:
 
     void setBottomRightRadius(qreal r);
 
+    int zoneIndex() const override { return m_zoneIndex; }
+
+    void setZoneIndex(int i);
+
 signals:
     void stiffnessChanged();
     void dampingChanged();
@@ -81,6 +87,7 @@ signals:
     void topRightRadiusChanged();
     void bottomLeftRadiusChanged();
     void bottomRightRadiusChanged();
+    void zoneIndexChanged();
 
 protected:
     void updatePolish() override;
@@ -114,6 +121,8 @@ private:
     qreal m_topRightRadius = -1;
     qreal m_bottomLeftRadius = -1;
     qreal m_bottomRightRadius = -1;
+
+    int m_zoneIndex = -1;
 
     QList<QPointer<BlobRect>> m_exclude;
 

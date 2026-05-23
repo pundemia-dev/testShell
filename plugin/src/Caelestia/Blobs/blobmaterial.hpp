@@ -17,6 +17,9 @@ struct BlobRectData {
     // Bitmask of indices in this rect's m_cachedRects that mutually exclude (or are excluded by) this rect.
     // Used by the shader to skip smin between excluded pairs.
     int excludeMask = 0;
+    // Zone index 0..7 (topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left).
+    // -1 means "no zone" — bg does NOT participate in inverted-frame sink (no присасывание).
+    int zoneIndex = -1;
 };
 
 class BlobMaterial : public QSGMaterial {
@@ -37,6 +40,10 @@ public:
     float m_invertedRadius = 0;
     float m_invertedOuter[4] = {};
     float m_invertedInner[4] = {};
+    // Per-zone присасывание strength (sink multiplier in fragment shader).
+    // 0 disables sink for bgs in that zone; >0 enables (1.0 = unscaled).
+    // Order: topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left.
+    float m_zoneRoundings[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     BlobRectData m_rects[16] = {};
 };
 

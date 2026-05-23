@@ -7,8 +7,9 @@ import qs.services
 import "components"
 
 // Per-screen background container. One BlobGroup for SDF rendering, one
-// RailBorder (BlobInvertedRect) for the screen-edge frame, and 9 Rails (one
-// per anchor position). Each Rail owns a Repeater over manager.rails[index].
+// BlobInvertedRect for the screen-edge frame with per-zone roundings, and 9
+// Rails (one per anchor position). Each Rail owns a Repeater over
+// manager.rails[index].
 Item {
     id: root
 
@@ -39,21 +40,33 @@ Item {
         smoothing: 32
     }
 
+    // Screen-edge SDF frame. Lives entirely OUTSIDE the visible viewport
+    // (anchors.margins: -marginAbs), so nothing visible is painted by it —
+    // the shader still uses its inverted geometry for per-bg sink. Per-zone
+    // присасывание strengths come from Config.border.zoneRoundings:
+    //   0 = bgs in that zone do NOT pull the frame's inner edge inward
+    //   1 = full sink (legacy unscaled behavior)
+    readonly property int _invertedFrameMargin: 50
+    readonly property int _invertedRadius: (Config.backgrounds.invertBaseRounding ?? false)
+                                            ? (Config.backgrounds.rounding ?? 0)
+                                            : 0
+
     Item {
         id: bgRenderHost
         anchors.fill: parent
         layer.enabled: true
 
-        RailBorder {
-            id: railBorder
+        BlobInvertedRect {
+            id: invertedFrame
             anchors.fill: parent
+            anchors.margins: -root._invertedFrameMargin
             group: blobGroup
-            zWidth: root.width
-            zHeight: root.height
-            left_area: root.left_area
-            top_area: root.top_area
-            right_area: root.right_area
-            bottom_area: root.bottom_area
+            radius: root._invertedRadius
+            borderLeft: root._invertedFrameMargin
+            borderRight: root._invertedFrameMargin
+            borderTop: root._invertedFrameMargin
+            borderBottom: root._invertedFrameMargin
+            zoneRoundings: Config.border.zoneRoundings
         }
 
         Repeater {

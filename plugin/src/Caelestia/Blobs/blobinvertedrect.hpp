@@ -2,6 +2,7 @@
 
 #include "blobshape.hpp"
 
+#include <qlist.h>
 #include <qqmlengine.h>
 
 class BlobInvertedRect : public BlobShape {
@@ -11,6 +12,11 @@ class BlobInvertedRect : public BlobShape {
     Q_PROPERTY(qreal borderRight READ borderRight WRITE setBorderRight NOTIFY borderRightChanged)
     Q_PROPERTY(qreal borderTop READ borderTop WRITE setBorderTop NOTIFY borderTopChanged)
     Q_PROPERTY(qreal borderBottom READ borderBottom WRITE setBorderBottom NOTIFY borderBottomChanged)
+    // Per-zone присасывание strengths (8 floats, padded with 0 if shorter).
+    // Order: topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left.
+    // 0 = disabled (bg in that zone does NOT pull the frame's inner edge inward).
+    // 1 = unscaled (full sink, current default behavior).
+    Q_PROPERTY(QList<qreal> zoneRoundings READ zoneRoundings WRITE setZoneRoundings NOTIFY zoneRoundingsChanged)
 
 public:
     explicit BlobInvertedRect(QQuickItem* parent = nullptr);
@@ -32,11 +38,16 @@ public:
 
     void setBorderBottom(qreal v);
 
+    QList<qreal> zoneRoundings() const { return m_zoneRoundings; }
+
+    void setZoneRoundings(const QList<qreal>& v);
+
 signals:
     void borderLeftChanged();
     void borderRightChanged();
     void borderTopChanged();
     void borderBottomChanged();
+    void zoneRoundingsChanged();
 
 protected:
     bool isInvertedRect() const override { return true; }
@@ -51,4 +62,5 @@ private:
     qreal m_borderRight = 0;
     qreal m_borderTop = 0;
     qreal m_borderBottom = 0;
+    QList<qreal> m_zoneRoundings;
 };

@@ -49,6 +49,10 @@ protected:
 
     virtual bool isExcluded(const BlobShape* /*other*/) const { return false; }
 
+    // Zone index 0..7 for present-day BlobRect; -1 by default (no zone).
+    // BlobRect overrides to expose this as a QML property.
+    virtual int zoneIndex() const { return -1; }
+
     virtual void cornerRadii(float out[4]) const;
 
     virtual void updatePhysics() {}
@@ -76,4 +80,5 @@ protected:
     float m_cachedInvertedRadius = 0;
     float m_cachedInvertedOuter[4] = {};
     float m_cachedInvertedInner[4] = {};
+    float m_cachedZoneRoundings[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 };

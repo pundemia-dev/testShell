@@ -18,6 +18,33 @@ QtObject {
     property var rails: [[], [], [], [], [], [], [], [], []]
     property int _seq: 0
 
+    // Per-arrivalSeq painted geometry of each WindowSlot. Written by
+    // WindowSlot via setSlotRect on every x/y/paintedWidth/paintedHeight
+    // change so BorderZones can use the actual rendered size (vs the
+    // intrinsic wrapperWidth/Height which is 0 for auto-sized wrappers).
+    property var slotRects: ({})
+
+    function setSlotRect(arrivalSeq, x, y, w, h) {
+        if (arrivalSeq === undefined || arrivalSeq === null) return;
+        const cur = slotRects[arrivalSeq];
+        if (cur && cur.x === x && cur.y === y && cur.w === w && cur.h === h) return;
+        const updated = Object.assign({}, slotRects);
+        updated[arrivalSeq] = { x: x, y: y, w: w, h: h };
+        slotRects = updated;
+    }
+
+    function clearSlotRect(arrivalSeq) {
+        if (arrivalSeq === undefined || arrivalSeq === null) return;
+        if (!slotRects[arrivalSeq]) return;
+        const updated = Object.assign({}, slotRects);
+        delete updated[arrivalSeq];
+        slotRects = updated;
+    }
+
+    function slotRectByArrivalSeq(arrivalSeq) {
+        return slotRects[arrivalSeq] ?? null;
+    }
+
     function determineRailIndex(wrapper) {
         const left = wrapper.aLeft ?? false;
         const right = wrapper.aRight ?? false;
@@ -104,5 +131,95 @@ QtObject {
             }
         }
         return sum;
+    }
+
+    // ── Zone system ─────────────────────────────────────────────────
+    //
+    // 8 zones (clockwise from top-left, mirroring screen edges):
+    //   0 = topLeft     1 = top         2 = topRight
+    //   7 = left                        3 = right
+    //   6 = bottomLeft  5 = bottom      4 = bottomRight
+    //
+    // Rails 0..8 (9 entries) map to zones 0..7 (8 entries) — rail 4 (center)
+    // is anchorless and has no zone. zoneForRail(rail) returns -1 for center.
+
+    // rail index → zone index (or -1 for center)
+    readonly property var _railToZone: [
+        0,  // rail 0 topLeft     → zone 0
+        1,  // rail 1 top         → zone 1
+        2,  // rail 2 topRight    → zone 2
+        7,  // rail 3 left        → zone 7
+       -1,  // rail 4 center      → no zone
+        3,  // rail 5 right       → zone 3
+        6,  // rail 6 bottomLeft  → zone 6
+        5,  // rail 7 bottom      → zone 5
+        4   // rail 8 bottomRight → zone 4
+    ]
+    // zone index → rail index
+    readonly property var _zoneToRail: [0, 1, 2, 5, 8, 7, 6, 3]
+
+    function zoneForRail(railIdx) {
+        if (railIdx < 0 || railIdx >= 9) return -1;
+        return _railToZone[railIdx];
+    }
+
+    function railForZone(zoneIdx) {
+        if (zoneIdx < 0 || zoneIdx >= 8) return -1;
+        return _zoneToRail[zoneIdx];
+    }
+
+    function zoneIsCorner(zoneIdx) {
+        return zoneIdx === 0 || zoneIdx === 2 || zoneIdx === 4 || zoneIdx === 6;
+    }
+
+    // Which screen edges does this zone touch? Returns object {top, right, bottom, left}.
+    function zoneSides(zoneIdx) {
+        switch (zoneIdx) {
+            case 0: return { top: true,  right: false, bottom: false, left: true  }; // topLeft
+            case 1: return { top: true,  right: false, bottom: false, left: false }; // top
+            case 2: return { top: true,  right: true,  bottom: false, left: false }; // topRight
+            case 3: return { top: false, right: true,  bottom: false, left: false }; // right
+            case 4: return { top: false, right: true,  bottom: true,  left: false }; // bottomRight
+            case 5: return { top: false, right: false, bottom: true,  left: false }; // bottom
+            case 6: return { top: false, right: false, bottom: true,  left: true  }; // bottomLeft
+            case 7: return { top: false, right: false, bottom: false, left: true  }; // left
+        }
+        return { top: false, right: false, bottom: false, left: false };
+    }
+
+    // Edge-nearest entries of a zone's rail: the layer-1 (first pinned/push) bg
+    // plus all overlay bgs. Returns array of {wrapper, arrivalSeq}, sorted by
+    // arrivalSeq for determinism.
+    function zoneEdgeNearestEntries(zoneIdx) {
+        const r = railForZone(zoneIdx);
+        if (r < 0) return [];
+        const rail = rails[r];
+        if (!rail || rail.length === 0) return [];
+
+        const pinned = rail.filter(e => e.wrapper && e.wrapper.pinned)
+                           .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
+        const push = rail.filter(e => e.wrapper && !e.wrapper.pinned
+                                       && (e.wrapper.mode ?? "push") !== "overlay")
+                         .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
+        const overlay = rail.filter(e => e.wrapper && !e.wrapper.pinned
+                                          && e.wrapper.mode === "overlay")
+                            .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
+
+        const layer1 = pinned.length > 0 ? [pinned[0]]
+                                          : (push.length > 0 ? [push[0]] : []);
+        return layer1.concat(overlay);
+    }
+
+    // The "topmost" edge-nearest entry — used to derive MouseArea thickness
+    // from its edge-facing margin. Preference order:
+    //   1. The latest overlay (highest arrivalSeq among overlays), if any
+    //   2. The layer-1 entry (pinned/push), if any
+    // Returns null when the zone is empty.
+    function zoneTopmostEntry(zoneIdx) {
+        const entries = zoneEdgeNearestEntries(zoneIdx);
+        if (entries.length === 0) return null;
+        const overlays = entries.filter(e => e.wrapper && e.wrapper.mode === "overlay");
+        if (overlays.length > 0) return overlays[overlays.length - 1];
+        return entries[0];
     }
 }

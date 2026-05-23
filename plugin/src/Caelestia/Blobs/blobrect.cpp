@@ -156,6 +156,15 @@ void BlobRect::setBottomRightRadius(qreal r) {
     }
 }
 
+void BlobRect::setZoneIndex(int i) {
+    if (m_zoneIndex != i) {
+        m_zoneIndex = i;
+        emit zoneIndexChanged();
+        if (m_group)
+            m_group->markDirty();
+    }
+}
+
 void BlobRect::cornerRadii(float out[4]) const {
     const auto maxR = static_cast<float>(std::min(width(), height())) * 0.5f;
     const auto base = std::min(static_cast<float>(m_radius), maxR);

@@ -235,12 +235,17 @@ Item {
     // bubbly join, à la Caelestia dock). Overlay no longer paints a flat
     // Rectangle in contentLayer; its z-ordering above bar content is
     // achieved via contentLayer's z=arrivalSeq+0.5 on the content tree.
+    //
+    // zoneIndex propagates the wrapper's rail-derived zone (0..7 or -1 for
+    // center) to the shader, which uses per-zone roundings to enable/disable
+    // присасывание per bg.
     BlobRect {
         group: root.group
         implicitWidth: root.paintedWidth
         implicitHeight: root.paintedHeight
         radius: root.effectiveRounding
         deformScale: 0
+        zoneIndex: root.manager ? root.manager.zoneForRail(root.railRef ? root.railRef.railIndex : -1) : -1
     }
 
     // ── Fade-aura: opaque inner rect with halo ring OUTSIDE it. Drawn
@@ -617,6 +622,21 @@ Item {
         }
     }
 
+    // Publish painted geometry to manager so BorderZones can read the actual
+    // rendered size of this slot (wrapperWidth/Height in the contract may be
+    // 0 for auto-sized wrappers — manager-driven slot rects are the source
+    // of truth for layout computations downstream).
+    readonly property var _publishSlotRect: {
+        if (manager && manager.setSlotRect) {
+            manager.setSlotRect(arrivalSeq, x, y, paintedWidth, paintedHeight);
+        }
+        return null;
+    }
+
     Component.onCompleted: InputManager.addRegion(inputRegion)
-    Component.onDestruction: InputManager.removeRegion(inputRegion)
+    Component.onDestruction: {
+        InputManager.removeRegion(inputRegion);
+        if (manager && manager.clearSlotRect)
+            manager.clearSlotRect(arrivalSeq);
+    }
 }

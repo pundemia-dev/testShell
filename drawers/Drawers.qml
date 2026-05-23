@@ -130,14 +130,6 @@ Variants {
                     shadowColor: Qt.alpha(Colours.palette.shadow, 0.7)
                 }
 
-                Border {
-                    border_area: scope.border_area
-                    left_area: scope.left_area
-                    top_area: scope.top_area
-                    right_area: scope.right_area
-                    bottom_area: scope.bottom_area
-                }
-
                 Corners {}
 
                 Backgrounds {
@@ -180,6 +172,17 @@ Variants {
                     manager: scope.backgroundsManager
                     screen: scope.modelData
                     anchors.fill: parent
+                }
+
+                // Border zone strips + visible chrome — last so MouseAreas
+                // sit above all wrapper content in z-order.
+                Borders {
+                    manager: scope.backgroundsManager
+                    border_area: scope.border_area
+                    left_area: scope.left_area
+                    top_area: scope.top_area
+                    right_area: scope.right_area
+                    bottom_area: scope.bottom_area
                 }
 
             }
