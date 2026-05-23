@@ -12,6 +12,9 @@ Convention: the markdown filename matches the config namespace
 - [`backgrounds.md`](./backgrounds.md) — `Config.backgrounds`:
   rails-system geometry (rounding, margins, paddings) and the
   per-wrapper **fade-aura** halo.
+- [`border.md`](./border.md) — `Config.border`: visible chrome
+  + the 8-zone interaction surface + per-zone SDF присасывание
+  (`zoneRoundings`).
 - [`stash.md`](./stash.md) — `Config.stash`: file tray + LocalSend
   share panel — storage, hover/drag-trigger, three-state view,
   drop-zone chooser, dashed-border styling.
