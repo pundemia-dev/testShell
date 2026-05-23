@@ -32,16 +32,35 @@ Item {
 
     // Strip-hover dedup: cursor entering ANY of the 1-2 strips of this zone
     // counts as a single rail hover. Transitions from 0 → 1 strip hovered
-    // fires the InteractionManager.fireHover; 1 → 0 just decrements.
+    // fires fireHover and publishes stripHovered=true; 1 → 0 publishes
+    // stripHovered=false.
     property int _stripsHovered: 0
+    property int _stripsDragOver: 0
 
     function _stripEnter() {
         _stripsHovered++;
-        if (_stripsHovered === 1) InteractionManager.fireHover(rail);
+        if (_stripsHovered === 1) {
+            InteractionManager._setStripHovered(rail, true);
+            InteractionManager.fireHover(rail);
+        }
     }
 
     function _stripExit() {
         if (_stripsHovered > 0) _stripsHovered--;
+        if (_stripsHovered === 0) InteractionManager._setStripHovered(rail, false);
+    }
+
+    function _dropEnter() {
+        _stripsDragOver++;
+        if (_stripsDragOver === 1) {
+            InteractionManager._setStripDragOver(rail, true);
+            InteractionManager.fireDrop(rail);
+        }
+    }
+
+    function _dropExit() {
+        if (_stripsDragOver > 0) _stripsDragOver--;
+        if (_stripsDragOver === 0) InteractionManager._setStripDragOver(rail, false);
     }
 
     // ── Side flags (which screen edges this zone touches) ────────────
@@ -234,34 +253,124 @@ Item {
     }
 
     // ── Strip prefab ────────────────────────────────────────────────
-    // Each visible strip (1 for side zone, 2 for corner zone) carries the
-    // same set of input handlers wired to InteractionManager:
-    //   - hover (dedup via zone's _stripsHovered counter)
-    //   - click (advances stack)
-    //   - slide (press inside, drag out → fires once per gesture)
-    //   - drop (DragEvent with file/text payload)
+    //
+    // Resize-union semantics: while cursor is inside the strip and the
+    // strip's target geometry changes (e.g. because a bg in the zone is
+    // physics-shrinking), the strip's RENDERED rect (`displayRect`) stays
+    // expanded to the union(previousDisplay, newTarget). The union
+    // collapses back to the live target only when one of:
+    //   - cursor enters the new target rect specifically
+    //   - cursor exits the union entirely
+    //
+    // Without this, the strip would shrink out from under a stationary
+    // cursor, causing onExited → close → bg removed → strip back to default
+    // → cursor enters again → reopen → loop.
     component InteractionStrip: Rectangle {
         id: strip
+        required property int targetX
+        required property int targetY
+        required property int targetWidth
+        required property int targetHeight
         color: root._debugColor
 
-        DropArea {
-            anchors.fill: parent
-            onEntered: InteractionManager.fireDrop(root.rail)
+        // Live display rect — bound through (x/y/width/height) so the
+        // visible Rectangle AND its MouseArea/DropArea bounds follow it.
+        property int _dx: targetX
+        property int _dy: targetY
+        property int _dw: targetWidth
+        property int _dh: targetHeight
+        x: _dx
+        y: _dy
+        width: _dw
+        height: _dh
+
+        function _snapToTarget() {
+            _dx = targetX; _dy = targetY;
+            _dw = targetWidth; _dh = targetHeight;
         }
 
-        MouseArea {
-            id: strip_mouse
-            anchors.fill: parent
-            hoverEnabled: true
+        function _expandToTarget() {
+            const x0 = Math.min(_dx, targetX);
+            const y0 = Math.min(_dy, targetY);
+            const x1 = Math.max(_dx + _dw, targetX + targetWidth);
+            const y1 = Math.max(_dy + _dh, targetY + targetHeight);
+            _dx = x0; _dy = y0;
+            _dw = x1 - x0; _dh = y1 - y0;
+        }
+
+        function _resyncOnTargetChange() {
+            // Expand if cursor (hover OR drag) is inside the strip's current
+            // display rect. HoverHandler reports hover state without blocking
+            // underlying handlers; DropArea reports drag state.
+            if (strip_hover.hovered || strip_drop.containsDrag)
+                _expandToTarget();
+            else
+                _snapToTarget();
+        }
+        onTargetXChanged:      _resyncOnTargetChange()
+        onTargetYChanged:      _resyncOnTargetChange()
+        onTargetWidthChanged:  _resyncOnTargetChange()
+        onTargetHeightChanged: _resyncOnTargetChange()
+
+        function _maybeCollapseFromCursor(localX, localY) {
+            // If cursor/drag entered the live TARGET rect specifically (a
+            // subset of the held display), collapse the union — old hold is
+            // no longer needed.
+            const ax = localX + strip._dx;
+            const ay = localY + strip._dy;
+            if (ax >= strip.targetX
+                    && ax < strip.targetX + strip.targetWidth
+                    && ay >= strip.targetY
+                    && ay < strip.targetY + strip.targetHeight) {
+                strip._snapToTarget();
+            }
+        }
+
+        // Hover via HoverHandler — does NOT block underlying handlers (the
+        // WindowSlot envelope's HoverHandler must still fire while cursor
+        // is on this strip, so the seam between strip and bg is gap-free).
+        HoverHandler {
+            id: strip_hover
             cursorShape: Qt.PointingHandCursor
+            onHoveredChanged: {
+                if (hovered) root._stripEnter();
+                else {
+                    root._stripExit();
+                    if (!strip_drop.containsDrag) strip._snapToTarget();
+                }
+            }
+        }
+
+        // Drag tracking + slide hint position.
+        DropArea {
+            id: strip_drop
+            anchors.fill: parent
+            onEntered: root._dropEnter()
+            onExited: {
+                root._dropExit();
+                strip._snapToTarget();
+            }
+            onPositionChanged: drag => strip._maybeCollapseFromCursor(drag.x, drag.y)
+        }
+
+        // Cursor position tracker for resize-union collapse.
+        readonly property point _hoverPos: strip_hover.point.position
+        on_HoverPosChanged: {
+            if (strip_hover.hovered)
+                strip._maybeCollapseFromCursor(_hoverPos.x, _hoverPos.y);
+        }
+
+        // Press / click / slide — MouseArea WITHOUT hoverEnabled so it does
+        // not consume hover events away from the envelope's HoverHandler.
+        MouseArea {
+            id: strip_click
+            anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+            hoverEnabled: false
 
             property bool _slideArmed: false
 
-            onEntered: root._stripEnter()
-            onExited: root._stripExit()
             onClicked: InteractionManager.fireClick(root.rail)
-
             onPressed: { _slideArmed = true; }
             onReleased: { _slideArmed = false; }
             onCanceled: { _slideArmed = false; }
@@ -280,33 +389,33 @@ Item {
     // ── Strips ───────────────────────────────────────────────────────
     InteractionStrip {
         visible: root.touchTop
-        x: root._topStripX
-        y: 0
-        width: root._topStripW
-        height: root._topStripH
+        targetX: root._topStripX
+        targetY: 0
+        targetWidth: root._topStripW
+        targetHeight: root._topStripH
     }
 
     InteractionStrip {
         visible: root.touchRight
-        x: root.zWidth - root._rightStripW
-        y: root._rightStripY
-        width: root._rightStripW
-        height: root._rightStripH
+        targetX: root.zWidth - root._rightStripW
+        targetY: root._rightStripY
+        targetWidth: root._rightStripW
+        targetHeight: root._rightStripH
     }
 
     InteractionStrip {
         visible: root.touchBottom
-        x: root._botStripX
-        y: root.zHeight - root._botStripH
-        width: root._botStripW
-        height: root._botStripH
+        targetX: root._botStripX
+        targetY: root.zHeight - root._botStripH
+        targetWidth: root._botStripW
+        targetHeight: root._botStripH
     }
 
     InteractionStrip {
         visible: root.touchLeft
-        x: 0
-        y: root._leftStripY
-        width: root._leftStripW
-        height: root._leftStripH
+        targetX: 0
+        targetY: root._leftStripY
+        targetWidth: root._leftStripW
+        targetHeight: root._leftStripH
     }
 }

@@ -62,7 +62,19 @@ Item {
 
     // View state: dropping a file into the trigger strip or directly onto
     // this content area pivots from "file tray" to "pick a drop zone".
-    property bool _localDragging: false
+    //
+    // _localDragging is the OR of containsDrag across every drop-receiving
+    // surface in the panel: the outer drag tracker plus the two inner tiles
+    // (filesDrop and sendDrop). This is critical — Qt routes drag events
+    // to the topmost DropArea, so when the drag moves from the outer into
+    // a tile, the outer fires onExited and would otherwise drop _localDragging
+    // to false mid-drag. Binding to containsDrag of all three keeps it true
+    // for the whole duration the drag is anywhere inside the panel.
+    readonly property bool _localDragging:
+        outerDropTracker.containsDrag
+        || (typeof filesDrop !== "undefined" && filesDrop.containsDrag)
+        || (typeof sendDrop !== "undefined" && sendDrop.containsDrag)
+    on_LocalDraggingChanged: root.stash.notePanelDragging(_localDragging)
     readonly property bool _dragging: (root.stash.incomingDrag ?? false) || _localDragging
 
     readonly property bool _showZones:  _dragging && lsState === "idle"
@@ -90,15 +102,14 @@ Item {
         onHoveredChanged: root.stash.notePanelHover(hovered)
     }
 
-    // Outer drag tracker — keeps `_dragging` true across the seam between
-    // the trigger strip leaving and an inner zone receiving the drag. Does
-    // not accept drops itself; inner DropAreas handle that.
+    // Outer drag tracker — only consulted via its `containsDrag` property
+    // (see _localDragging binding above). Drag events still route to the
+    // topmost DropArea, but containsDrag of the tile DropAreas keeps
+    // _localDragging asserted while the drag is anywhere in the panel.
     DropArea {
+        id: outerDropTracker
         anchors.fill: parent
         keys: ["text/uri-list"]
-        onEntered: root._localDragging = true
-        onExited:  root._localDragging = false
-        onDropped: root._localDragging = false
     }
 
     // ── LocalSend state ────────────────────────────────────────────
@@ -273,8 +284,6 @@ Item {
                         root.dropPath(decodeURIComponent(url.replace("file://", "")))
                     }
                     drop.accept()
-                    root._localDragging = false
-                    root.stash.noteIncomingDrag(false)
                 }
             }
         }
@@ -318,8 +327,6 @@ Item {
                 onDropped: drop => {
                     const paths = root.pathsFromDrop(drop)
                     drop.accept()
-                    root._localDragging = false
-                    root.stash.noteIncomingDrag(false)
                     if (paths.length > 0) root.sendDroppedFiles(paths)
                 }
             }

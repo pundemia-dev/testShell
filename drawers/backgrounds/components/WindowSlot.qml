@@ -358,6 +358,95 @@ Item {
         intersection: Intersection.Subtract
     }
 
+    // ── Slot hover/drag tracking ─────────────────────────────────────
+    //
+    // ONE invisible "envelope" Item covering the bounding box of the slot's
+    // EVENTUAL rect + adjacent bridges (gap-to-edge / gap-to-prev). Carries
+    // HoverHandler + DropArea. Critical: envelope geometry must NOT depend
+    // on the animated paintedWidth/Height, because at open time those are
+    // 0 and grow over hundreds of ms — during that window the envelope
+    // would otherwise have no area and never report hovered=true.
+    //
+    // Stable rect: use lastTargetWidth/Height (the latest non-zero target,
+    // updated synchronously when content loads) → so the envelope already
+    // covers where the bg WILL be once animation completes.
+    readonly property int _envStableW: Math.max(paintedWidth, lastTargetWidth, targetWrapperWidth)
+    readonly property int _envStableH: Math.max(paintedHeight, lastTargetHeight, targetWrapperHeight)
+    function _envStablePos() {
+        let sx, sy;
+        if (aHCenter && !aLeft && !aRight) sx = (zWidth / 2) - (_envStableW / 2) + hCenterOffset;
+        else if (aLeft) sx = mLeft + edgeLeft;
+        else if (aRight) sx = zWidth - _envStableW - mRight - edgeRight;
+        else sx = root.x;
+
+        if (aVCenter && !aTop && !aBottom) sy = (zHeight / 2) - (_envStableH / 2) + vCenterOffset;
+        else if (aTop) sy = mTop + edgeTop;
+        else if (aBottom) sy = zHeight - _envStableH - mBottom - edgeBottom;
+        else sy = root.y;
+        return Qt.point(sx, sy);
+    }
+
+    readonly property rect _slotEnvelopeRect: {
+        // Stable slot rect (from target dimensions).
+        const sp = _envStablePos();
+        const sw = _envStableW;
+        const sh = _envStableH;
+        // Union with current animated rect — in case animation overshoots.
+        let xMin = Math.min(sp.x, root.x);
+        let yMin = Math.min(sp.y, root.y);
+        let xMax = Math.max(sp.x + sw, root.x + root.paintedWidth);
+        let yMax = Math.max(sp.y + sh, root.y + root.paintedHeight);
+        // Add adjacent bridges using STABLE position so they're correct from
+        // the first frame too. Bridges extend to the screen edge for layer-1
+        // anchored sides, and toward prev for layer-2+.
+        if (!isOverlay && layerIdx <= 1) {
+            if (aTop && sp.y > 0)                          yMin = Math.min(yMin, 0);
+            if (aBottom && (sp.y + sh) < zHeight)          yMax = Math.max(yMax, zHeight);
+            if (aLeft && sp.x > 0)                         xMin = Math.min(xMin, 0);
+            if (aRight && (sp.x + sw) < zWidth)            xMax = Math.max(xMax, zWidth);
+        } else if (!isOverlay && layerIdx > 1 && prevSlot) {
+            // Layer-2+: bridge toward prev (existing _bridge*Rect logic uses
+            // animated geometry; we approximate using prev's stable bounds
+            // would be complex — just include prevSlot's current rect).
+            xMin = Math.min(xMin, prevSlot.x);
+            yMin = Math.min(yMin, prevSlot.y);
+            xMax = Math.max(xMax, prevSlot.x + prevSlot.paintedWidth);
+            yMax = Math.max(yMax, prevSlot.y + prevSlot.paintedHeight);
+        }
+        return Qt.rect(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+    property bool _envHovered: false
+    property bool _envDragOver: false
+    readonly property bool _slotHovered: _envHovered || _envDragOver
+    readonly property bool _slotDragOver: _envDragOver
+
+    on_SlotHoveredChanged: {
+        if (manager && manager.setSlotHover)
+            manager.setSlotHover(arrivalSeq, _slotHovered);
+    }
+    on_SlotDragOverChanged: {
+        if (manager && manager.setSlotDragOver)
+            manager.setSlotDragOver(arrivalSeq, _slotDragOver);
+    }
+
+    Item {
+        parent: root.contentLayer
+        x: root._slotEnvelopeRect.x
+        y: root._slotEnvelopeRect.y
+        width: root._slotEnvelopeRect.width
+        height: root._slotEnvelopeRect.height
+        z: -1
+        HoverHandler {
+            onHoveredChanged: root._envHovered = hovered
+        }
+        DropArea {
+            anchors.fill: parent
+            keys: ["text/uri-list"]
+            onContainsDragChanged: root._envDragOver = containsDrag
+        }
+    }
+
     Connections {
         target: root
         function onXChanged() { InputManager.refresh(); }
@@ -762,11 +851,19 @@ Item {
     // rendered size of this slot (wrapperWidth/Height in the contract may be
     // 0 for auto-sized wrappers — manager-driven slot rects are the source
     // of truth for layout computations downstream).
-    readonly property var _publishSlotRect: {
-        if (manager && manager.setSlotRect) {
+    //
+    // Implemented imperatively via signal handlers (NOT a side-effecting
+    // readonly binding) — Qt 6 flags the latter as a binding loop.
+    function _publishSlotRect() {
+        if (manager && manager.setSlotRect)
             manager.setSlotRect(arrivalSeq, x, y, paintedWidth, paintedHeight);
-        }
-        return null;
+    }
+    Connections {
+        target: root
+        function onXChanged()              { root._publishSlotRect() }
+        function onYChanged()              { root._publishSlotRect() }
+        function onPaintedWidthChanged()   { root._publishSlotRect() }
+        function onPaintedHeightChanged()  { root._publishSlotRect() }
     }
 
     Component.onCompleted: {
@@ -790,5 +887,9 @@ Item {
         InputManager.removeRegion(bridgeRight);
         if (manager && manager.clearSlotRect)
             manager.clearSlotRect(arrivalSeq);
+        if (manager && manager.clearSlotHover)
+            manager.clearSlotHover(arrivalSeq);
+        if (manager && manager.clearSlotDragOver)
+            manager.clearSlotDragOver(arrivalSeq);
     }
 }

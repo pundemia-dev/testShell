@@ -45,6 +45,52 @@ QtObject {
         return slotRects[arrivalSeq] ?? null;
     }
 
+    // Per-arrivalSeq hover state — true while cursor is over the slot's bg
+    // OR any of its bridge regions. Written by WindowSlot. Modules subscribe
+    // to this for "is cursor anywhere on my slot's input region" auto-hide
+    // logic (no timers — close the moment this goes false).
+    property var slotHover: ({})
+
+    function setSlotHover(arrivalSeq, hovered) {
+        if (arrivalSeq === undefined || arrivalSeq === null) return;
+        const cur = slotHover[arrivalSeq] ?? false;
+        if (cur === hovered) return;
+        const updated = Object.assign({}, slotHover);
+        updated[arrivalSeq] = hovered;
+        slotHover = updated;
+    }
+
+    function clearSlotHover(arrivalSeq) {
+        if (arrivalSeq === undefined || arrivalSeq === null) return;
+        if (slotHover[arrivalSeq] === undefined) return;
+        const updated = Object.assign({}, slotHover);
+        delete updated[arrivalSeq];
+        slotHover = updated;
+    }
+
+    // Per-arrivalSeq drag-over state — true while a drag (file/text) is over
+    // the slot's bg OR any of its bridge regions. Tracked separately from
+    // slotHover so modules can distinguish "cursor is here" from "drag is
+    // here" (e.g. stash's drop-zone chooser depends on drag, not hover).
+    property var slotDragOver: ({})
+
+    function setSlotDragOver(arrivalSeq, dragOver) {
+        if (arrivalSeq === undefined || arrivalSeq === null) return;
+        const cur = slotDragOver[arrivalSeq] ?? false;
+        if (cur === dragOver) return;
+        const updated = Object.assign({}, slotDragOver);
+        updated[arrivalSeq] = dragOver;
+        slotDragOver = updated;
+    }
+
+    function clearSlotDragOver(arrivalSeq) {
+        if (arrivalSeq === undefined || arrivalSeq === null) return;
+        if (slotDragOver[arrivalSeq] === undefined) return;
+        const updated = Object.assign({}, slotDragOver);
+        delete updated[arrivalSeq];
+        slotDragOver = updated;
+    }
+
     function determineRailIndex(wrapper) {
         const left = wrapper.aLeft ?? false;
         const right = wrapper.aRight ?? false;
@@ -73,13 +119,19 @@ QtObject {
 
     // Legacy alias: callers passing (wrapper, isolate, excludeBarArea) still work
     // — the extra args are silently ignored. Phase D will clean up call sites.
+    // Returns the assigned arrivalSeq (unique per request), or -1 if invalid.
+    // Callers that want to subscribe to slotHover or slotRects later can store
+    // the seq.
     function requestBackground(wrapper /*, isolate, excludeBarArea */) {
-        if (!wrapper) return;
+        if (!wrapper) return -1;
         const i = determineRailIndex(wrapper);
-        if (rails[i].find(e => e.wrapper === wrapper)) return;
+        const existing = rails[i].find(e => e.wrapper === wrapper);
+        if (existing) return existing.arrivalSeq;
+        const seq = _seq++;
         const newRails = rails.slice();
-        newRails[i] = [...rails[i], { wrapper: wrapper, arrivalSeq: _seq++ }];
+        newRails[i] = [...rails[i], { wrapper: wrapper, arrivalSeq: seq }];
         rails = newRails;
+        return seq;
     }
 
     function removeBackground(wrapper) {

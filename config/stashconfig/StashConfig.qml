@@ -67,7 +67,7 @@ JsonObject {
     // Auto-hide delay (ms). After mouse leaves both the trigger strip and
     // the open panel, wait this long before closing. 0 = stay open until
     // toggled off via shortcut.
-    property int autoHideMs: 400
+    property int autoHideMs: 100000
 
     // Overlay = covers underlying window; push = displaces siblings on rail.
     property string mode: "overlay"

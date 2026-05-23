@@ -18,43 +18,101 @@ Item {
     // ── Visibility ──────────────────────────────────────────────────
     property bool stashVisible: false
 
-    // ── Hover-driven auto-hide ──────────────────────────────────────
-    // Either the trigger strip or the open panel (or its content) being
-    // hovered counts as "active". When all sources drop hover, leaveTimer
-    // counts down Config.stash.autoHideMs and then hides the panel.
-    property bool _triggerHovered: false
-    property bool _panelHovered: false
-    // Set when a file drag enters the trigger strip — lets StashContent
-    // show the drop-zone chooser the moment the panel pops in, instead of
-    // waiting for the drag to also enter the content area.
-    property bool incomingDrag: false
-    readonly property bool _anyHovered: _triggerHovered || _panelHovered
+    // ── Focus-driven auto-hide (no timer) ───────────────────────────
+    //
+    // Module closes the instant focus leaves it. Sources of "cursor is
+    // engaged with this module":
+    //   _stripHovered    — BorderZone trigger strip is hovered.
+    //   _stripDragOver   — drag (file/text) is over the strip.
+    //   _slotHovered     — cursor is on the bg's painted rect OR any of
+    //                      its 4 bridge gaps (published by WindowSlot to
+    //                      manager.slotHover, gap-free via HoverHandler +
+    //                      DropArea on each).
+    //   _slotDragOver    — drag (file/text) is over the bg or its bridges
+    //                      (kept separate so incomingDrag can use it).
+    // _anyHovered = OR of all four. The moment it goes false, we hide.
+    property int _interactionRail: -1
+    property int _arrivalSeq: -1
+    readonly property bool _stripHovered: _interactionRail >= 0
+        ? (InteractionManager.stripHovered[_interactionRail] ?? false)
+        : false
+    readonly property bool _stripDragOver: _interactionRail >= 0
+        ? (InteractionManager.stripDragOver[_interactionRail] ?? false)
+        : false
+    readonly property bool _slotHovered: _arrivalSeq >= 0
+        ? (manager.slotHover[_arrivalSeq] ?? false)
+        : false
+    readonly property bool _slotDragOver: _arrivalSeq >= 0
+        ? (manager.slotDragOver[_arrivalSeq] ?? false)
+        : false
 
-    function notePanelHover(hovered) { _panelHovered = hovered; }
-    function noteIncomingDrag(active) { incomingDrag = active; }
+    // Reliable signal from inside StashContent (not blocked by Qt's
+    // topmost-only hover event delivery).
+    property bool _panelHovered: false
+    property bool _panelDragging: false
+
+    // incomingDrag is true any time a file/text drag is anywhere in the
+    // module's input region (strip + bg + bridges). Keeps the drop-zone
+    // chooser visible during the entire transit from strip to inner tile.
+    readonly property bool incomingDrag: _stripDragOver || _slotDragOver || _panelDragging
+
+    // Sticky strip engagement: when the strip's hover/drag drops, hold a
+    // brief "still engaged" flag so the cursor has time to land on the
+    // panel itself (whose HoverHandler/DropArea fire reliably via
+    // notePanelHover / notePanelDragging from StashContent).
+    property bool _stickyStripEngaged: false
+    readonly property bool _rawStripEngaged: _stripHovered || _stripDragOver
+    on_RawStripEngagedChanged: {
+        if (_rawStripEngaged) {
+            _stickyStripEngaged = true;
+            stickyExitTimer.stop();
+        } else {
+            stickyExitTimer.restart();
+        }
+    }
+    Timer {
+        id: stickyExitTimer
+        interval: 300
+        repeat: false
+        onTriggered: root._stickyStripEngaged = false
+    }
+
+    // _anyHovered = engaged on strip (with sticky grace) OR panel itself.
+    // _panelHovered / _panelDragging come from StashContent — they're
+    // reliable because they're on the same Item as Qt's hover delivery
+    // target (no z-blocking from the strip).
+    readonly property bool _anyHovered: _stickyStripEngaged
+                                        || _slotHovered || _slotDragOver
+                                        || _panelHovered || _panelDragging
+
+    function notePanelHover(hovered)  { _panelHovered = hovered; }
+    function notePanelDragging(active) { _panelDragging = active; }
+    function noteIncomingDrag(active) { /* legacy stub */ }
 
     onStashVisibleChanged: {
         if (!stashVisible) {
-            _triggerHovered = false;
-            _panelHovered = false;
-            incomingDrag = false;
-            leaveTimer.stop();
+            // Reset the hover stack so the next fresh hover on the strip
+            // fires layer 0 (this module) again.
+            if (_interactionRail >= 0)
+                InteractionManager.resetCounter(_interactionRail);
         }
     }
     on_AnyHoveredChanged: {
         if (!stashVisible) return;
-        if (_anyHovered) leaveTimer.stop();
-        else if (Config.stash.autoHideMs > 0) leaveTimer.restart();
+        if (_anyHovered) {
+            transitGraceTimer.stop();
+            return;
+        }
+        transitGraceTimer.restart();
     }
 
     Timer {
-        id: leaveTimer
-        interval: Config.stash.autoHideMs
+        id: transitGraceTimer
+        interval: 100
         repeat: false
         onTriggered: {
-            if (!root._anyHovered && root.stashVisible) {
+            if (root.stashVisible && !root._anyHovered)
                 VisibilitiesManager.setVisibility(root.screen, "stash", false);
-            }
         }
     }
 
@@ -127,7 +185,28 @@ Item {
     Component.onCompleted: {
         VisibilitiesManager.addVisibility(root.screen, "stash", Config.stash.shortcut,
                                           false, false, "Toggle Stash");
+
+        // Register with InteractionManager on the rail derived from the
+        // wrapper's anchors. Hover at layer 0 opens the panel; drop also
+        // opens it (and incomingDrag tracks stripDragOver automatically).
+        _interactionRail = manager.determineRailIndex(content);
+        if (_interactionRail >= 0) {
+            InteractionManager.registerHover(_interactionRail, 0, "stash", () => {
+                VisibilitiesManager.setVisibility(root.screen, "stash", true);
+            });
+            InteractionManager.registerDrop(_interactionRail, "stash", () => {
+                VisibilitiesManager.setVisibility(root.screen, "stash", true);
+            });
+        }
+
         refreshStash();
+    }
+
+    Component.onDestruction: {
+        if (_interactionRail >= 0) {
+            InteractionManager.unregisterHover(_interactionRail, "stash");
+            InteractionManager.unregisterDrop(_interactionRail, "stash");
+        }
     }
 
     Connections {
@@ -177,46 +256,20 @@ Item {
         }
     }
 
-    // ── Hover trigger: thin strip at the chosen edge ───────────────
-    Loader {
-        active: Config.stash.enabled && Config.stash.hoverStripPx > 0
-        anchors.left: Config.stash.anchors.left ? parent.left : (Config.stash.anchors.horizontalCenter ? parent.left : undefined)
-        anchors.right: Config.stash.anchors.right ? parent.right : (Config.stash.anchors.horizontalCenter ? parent.right : undefined)
-        anchors.top: !Config.stash.anchors.bottom ? parent.top : undefined
-        anchors.bottom: Config.stash.anchors.bottom ? parent.bottom : undefined
-        height: Config.stash.anchors.top || Config.stash.anchors.bottom ? Config.stash.hoverStripPx : parent.height
-        width: Config.stash.anchors.left || Config.stash.anchors.right ? Config.stash.hoverStripPx : parent.width
-
-        sourceComponent: Item {
-            HoverHandler {
-                id: hover
-                onHoveredChanged: {
-                    root._triggerHovered = hovered;
-                    if (hovered) VisibilitiesManager.setVisibility(root.screen, "stash", true);
-                }
-            }
-            DropArea {
-                anchors.fill: parent
-                keys: ["text/uri-list"]
-                onEntered: {
-                    root._triggerHovered = true;
-                    root.incomingDrag = true;
-                    VisibilitiesManager.setVisibility(root.screen, "stash", true);
-                }
-                onExited: {
-                    root._triggerHovered = false;
-                    root.incomingDrag = false;
-                }
-            }
-        }
-    }
+    // Hover trigger replaced by BorderZone strips driven through
+    // InteractionManager — see Component.onCompleted above.
 
     // ── Backend Loader: registers/unregisters the bg via manager ───
     Loader {
         active: root.stashVisible
         sourceComponent: Item {
-            Component.onCompleted: root.manager.requestBackground(root.content)
-            Component.onDestruction: root.manager.removeBackground(root.content)
+            Component.onCompleted: {
+                root._arrivalSeq = root.manager.requestBackground(root.content);
+            }
+            Component.onDestruction: {
+                root.manager.removeBackground(root.content);
+                root._arrivalSeq = -1;
+            }
         }
     }
 }
