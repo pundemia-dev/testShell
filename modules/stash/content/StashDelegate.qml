@@ -53,7 +53,6 @@ Item {
         if (isPdf || isVideo) checkThumb.running = true
     }
 
-    // Check if cached thumb already exists before generating
     Process {
         id: checkThumb
         command: ["test", "-f", del._thumbPath]
@@ -83,19 +82,25 @@ Item {
         drag.target: dragItem
         hoverEnabled: true
 
-        StyledRect {
+        // Outer clipped surface — rounded corners actually clip the image
+        // and the gradient overlay (Rectangle's `clip: true` is rectangular;
+        // ClippingRectangle masks to its rounded shape).
+        StyledClippingRect {
+            id: surface
             anchors.fill: parent
-            radius: Appearance.rounding.small
+            radius: Appearance.rounding.normal
             color: Colours.palette.surface_container
-            clip: true
 
             // System theme icon underneath — always present, gets faded out
-            // when the thumbnail becomes ready. Keeping it on-screen during
-            // thumb decode prevents the "blank rectangle" flicker.
+            // when the thumbnail becomes ready.
             IconImage {
                 id: sysIcon
-                anchors.centerIn: parent
-                width: Math.min(parent.width, parent.height) * 0.52
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                // Nudge up so the rendered icon leaves room at the bottom
+                // for the filename label without crowding it.
+                anchors.verticalCenterOffset: -Appearance.padding.normal
+                width: Math.min(parent.width, parent.height) * 0.66
                 height: width
                 source: Quickshell.iconPath(del.themeIcon, "application-x-generic")
                 asynchronous: true
@@ -103,8 +108,7 @@ Item {
                 Behavior on opacity { Anim {} }
             }
 
-            // Thumbnail (images / generated PDF+video thumbs). Cached so
-            // GridView delegate recycling doesn't re-decode and flash.
+            // Thumbnail (images / generated PDF+video thumbs).
             Image {
                 id: thumb
                 anchors.fill: parent
@@ -116,29 +120,42 @@ Item {
                 Behavior on opacity { Anim {} }
             }
 
-            // File name label — always visible when no thumb, on-hover when thumb shown
+            // Gradient overlay — fades transparent → dark from top to bottom.
+            // Only painted while a thumb exists; opacity tied to hover so it
+            // animates in/out as the cursor moves between files (Anim = the
+            // project's standard 400 ms fade).
             Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                height: nameLabel.implicitHeight + Appearance.padding.small * 2
-                color: del.hasThumb ? Qt.alpha(Colours.palette.surface, 0.82) : "transparent"
-                visible: !del.hasThumb || tile.containsMouse
-
-                StyledText {
-                    id: nameLabel
-                    anchors {
-                        left: parent.left; right: parent.right
-                        verticalCenter: parent.verticalCenter
-                        leftMargin: Appearance.padding.small
-                        rightMargin: Appearance.padding.small
-                    }
-                    text: del.fileName
-                    color: del.hasThumb ? Colours.palette.on_surface : Colours.palette.on_surface_variant
-                    font.pointSize: Appearance.font.size.smaller
-                    elide: Text.ElideMiddle
-                    horizontalAlignment: Text.AlignHCenter
+                anchors.fill: parent
+                visible: del.hasThumb
+                opacity: tile.containsMouse ? 1 : 0
+                Behavior on opacity { Anim {} }
+                gradient: Gradient {
+                    GradientStop { position: 0.2; color: "transparent" }
+                    GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.75) }
                 }
+            }
+
+            // Filename label.
+            // - With thumb: shown only on hover, white text over the gradient.
+            // - Without thumb: always visible, low-contrast text on the
+            //   icon-only background.
+            StyledText {
+                id: nameLabel
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    bottom: parent.bottom
+                    leftMargin: Appearance.padding.small
+                    rightMargin: Appearance.padding.small
+                    bottomMargin: Appearance.padding.small
+                }
+                text: del.fileName
+                color: del.hasThumb ? "white" : Colours.palette.on_surface_variant
+                font.pointSize: Appearance.font.size.smaller
+                elide: Text.ElideMiddle
+                horizontalAlignment: Text.AlignHCenter
+                opacity: del.hasThumb ? (tile.containsMouse ? 1 : 0) : 1
+                Behavior on opacity { Anim {} }
             }
         }
 
@@ -151,36 +168,256 @@ Item {
             Drag.mimeData: { "text/uri-list": del.fileURL }
         }
 
-        RowLayout {
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.margins: Appearance.padding.small
-            spacing: 2
-            opacity: tile.containsMouse ? 1.0 : 0.0
-            Behavior on opacity { Anim {} }
+        // ── Action buttons ─────────────────────────────────────────
+        // A single MouseArea owns hover + clicks for the whole strip.
+        // Nested MouseAreas inside IconButton/StateLayer were eating the
+        // hover events we needed (the trash-hover trigger never fired),
+        // so the three "buttons" are now pure visuals (StyledRect + glyph)
+        // and the wrapper MouseArea dispatches the click based on
+        // `mouseX` against the trash / send / bookmark sub-zones.
+        Item {
+            id: actions
+            anchors.top: surface.top
+            anchors.right: surface.right
+            width: actions.btnSize +
+                   (actions.trashHovered
+                        ? (actions.btnSize + actions.btnSize + actions.spacing * 2)
+                        : 0)
+            height: actions.btnSize
 
-            IconButton {
-                icon: del.isFav ? "" : ""
-                type: IconButton.Tonal
-                implicitHeight: 24
-                onClicked: {
-                    const f = !del.isFav
-                    del.stash.model.setProperty(del.index, "isFav", f)
-                    del.stash.model.move(del.index, f ? 0 : del.stash.model.count - 1, 1)
+            property int spacing: Appearance.spacing.small
+            property int btnRadius: Appearance.rounding.small
+            property int btnSize: 26
+
+            property bool fileHovered: tile.containsMouse
+            // Hysteresis: entering the trash zone (rightmost `btnSize` px)
+            // latches `_expanded` true, and it stays true until the cursor
+            // leaves the actions strip entirely. Lets the user move freely
+            // across the gap between buttons without the strip collapsing.
+            property bool _expanded: false
+            property bool trashHovered: actions.fileHovered && actions._expanded
+
+            // Trash visual (rightmost) — scales 0.5 → 1.0 on trash-hover.
+            StyledRect {
+                id: trashBtn
+                width: actions.btnSize
+                height: actions.btnSize
+                anchors.right: parent.right
+                anchors.top: parent.top
+                radius: actions.btnRadius
+                color: Colours.palette.secondary_container
+                transformOrigin: Item.Center
+
+                opacity: actions.fileHovered ? 1 : 0
+                scale: actions.trashHovered ? 1 : 0.5
+
+                Behavior on opacity { Anim {} }
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Appearance.anim.durations.small
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                StyledIcon {
+                    anchors.centerIn: parent
+                    text: "\ueb41"
+                    color: Colours.palette.on_secondary_container
+                    font.pointSize: Appearance.font.size.smaller
                 }
             }
-            IconButton {
-                icon: ""
-                type: IconButton.Filled
-                implicitHeight: 24
+
+            // Send visual — slides in from behind trash with a small delay.
+            StyledRect {
+                id: sendBtn
                 visible: Config.stash.localsendEnabled
-                onClicked: del.sender.openSendPicker(del.filePath)
+                width: actions.btnSize
+                height: actions.btnSize
+                anchors.right: trashBtn.left
+                anchors.rightMargin: actions.spacing
+                anchors.top: parent.top
+                radius: actions.btnRadius
+                color: Colours.palette.primary
+
+                // slideOffset is driven imperatively by `slideInAnim` below
+                // so that the slide only happens on expansion (from behind
+                // trash → 0). On collapse the button stays put while opacity
+                // + scale fade it out, instead of zipping back behind trash.
+                property real slideOffset: 0
+                transform: Translate { x: sendBtn.slideOffset }
+
+                opacity: actions.trashHovered ? 1 : 0
+                scale: actions.trashHovered ? 1 : 0.5
+                transformOrigin: Item.Center
+
+                SequentialAnimation {
+                    id: sendBtnSlideIn
+                    PauseAnimation { duration: Appearance.anim.durations.smaller }
+                    NumberAnimation {
+                        target: sendBtn
+                        property: "slideOffset"
+                        from: actions.btnSize + actions.spacing
+                        to: 0
+                        duration: Appearance.anim.durations.normal
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Appearance.anim.curves.bubblyMove
+                    }
+                }
+                Connections {
+                    target: actions
+                    function onTrashHoveredChanged() {
+                        if (actions.trashHovered) sendBtnSlideIn.restart()
+                        else                     sendBtnSlideIn.stop()
+                    }
+                }
+                Behavior on opacity {
+                    SequentialAnimation {
+                        PauseAnimation {
+                            duration: actions.trashHovered
+                                ? Appearance.anim.durations.smaller
+                                : 0
+                        }
+                        NumberAnimation { duration: Appearance.anim.durations.small }
+                    }
+                }
+                Behavior on scale {
+                    SequentialAnimation {
+                        PauseAnimation {
+                            duration: actions.trashHovered
+                                ? Appearance.anim.durations.smaller
+                                : 0
+                        }
+                        NumberAnimation {
+                            duration: Appearance.anim.durations.normal
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.anim.curves.bubblyMove
+                        }
+                    }
+                }
+
+                StyledIcon {
+                    anchors.centerIn: parent
+                    text: "\ueb21"
+                    color: Colours.palette.on_primary
+                    font.pointSize: Appearance.font.size.smaller
+                }
             }
-            IconButton {
-                icon: ""
-                type: IconButton.Tonal
-                implicitHeight: 24
-                onClicked: deleteProc.running = true
+
+            // Bookmark visual — leftmost, longer delay.
+            StyledRect {
+                id: bookmarkBtn
+                width: actions.btnSize
+                height: actions.btnSize
+                anchors.right: sendBtn.left
+                anchors.rightMargin: actions.spacing
+                anchors.top: parent.top
+                radius: actions.btnRadius
+                color: Colours.palette.secondary_container
+
+                // Same imperative slide-in story as sendBtn — keeps it in
+                // place on collapse so it doesn't tunnel back behind trash.
+                property real slideOffset: 0
+                transform: Translate { x: bookmarkBtn.slideOffset }
+
+                opacity: actions.trashHovered ? 1 : 0
+                scale: actions.trashHovered ? 1 : 0.5
+                transformOrigin: Item.Center
+
+                SequentialAnimation {
+                    id: bookmarkBtnSlideIn
+                    PauseAnimation { duration: Appearance.anim.durations.small }
+                    NumberAnimation {
+                        target: bookmarkBtn
+                        property: "slideOffset"
+                        from: actions.btnSize * 2 + actions.spacing * 2
+                        to: 0
+                        duration: Appearance.anim.durations.normal
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Appearance.anim.curves.bubblyMove
+                    }
+                }
+                Connections {
+                    target: actions
+                    function onTrashHoveredChanged() {
+                        if (actions.trashHovered) bookmarkBtnSlideIn.restart()
+                        else                     bookmarkBtnSlideIn.stop()
+                    }
+                }
+                Behavior on opacity {
+                    SequentialAnimation {
+                        PauseAnimation {
+                            duration: actions.trashHovered
+                                ? Appearance.anim.durations.small
+                                : 0
+                        }
+                        NumberAnimation { duration: Appearance.anim.durations.small }
+                    }
+                }
+                Behavior on scale {
+                    SequentialAnimation {
+                        PauseAnimation {
+                            duration: actions.trashHovered
+                                ? Appearance.anim.durations.small
+                                : 0
+                        }
+                        NumberAnimation {
+                            duration: Appearance.anim.durations.normal
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.anim.curves.bubblyMove
+                        }
+                    }
+                }
+
+                StyledIcon {
+                    anchors.centerIn: parent
+                    text: del.isFav ? "\ueced" : "\uea3a"
+                    color: Colours.palette.on_secondary_container
+                    font.pointSize: Appearance.font.size.smaller
+                }
+            }
+
+            // Single hover + click sink. Latches `_expanded` once the
+            // cursor enters the trash zone; clears it on exit. Click is
+            // dispatched by mouseX against the trash / send / bookmark
+            // sub-bands. The gap between bands is absorbed into the
+            // closest button so a click in a gap still does something.
+            MouseArea {
+                id: actionsMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+
+                function inTrashZone() {
+                    return containsMouse && mouseX >= actions.width - actions.btnSize
+                }
+
+                onPositionChanged: { if (inTrashZone()) actions._expanded = true }
+                onEntered:         { if (inTrashZone()) actions._expanded = true }
+                onExited:          actions._expanded = false
+
+                onClicked: {
+                    if (!actions._expanded) {
+                        // Trash-only view — actions.width === btnSize, any
+                        // click in the strip means trash.
+                        deleteProc.running = true
+                        return
+                    }
+                    // Expanded view: three bands right→left.
+                    // Split each gap in half so clicks always land somewhere.
+                    const halfGap   = actions.spacing / 2
+                    const trashLeft = actions.width - actions.btnSize - halfGap
+                    const sendLeft  = actions.width - actions.btnSize * 2 - actions.spacing - halfGap
+                    if (mouseX >= trashLeft) {
+                        deleteProc.running = true
+                    } else if (mouseX >= sendLeft) {
+                        if (Config.stash.localsendEnabled)
+                            del.sender.openSendPicker(del.filePath)
+                    } else {
+                        const f = !del.isFav
+                        del.stash.model.setProperty(del.index, "isFav", f)
+                        del.stash.model.move(del.index, f ? 0 : del.stash.model.count - 1, 1)
+                    }
+                }
             }
         }
 

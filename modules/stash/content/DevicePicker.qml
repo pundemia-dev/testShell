@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Widgets
 import qs.config
 import qs.services
 import qs.components
@@ -15,7 +14,7 @@ StyledRect {
     required property bool   sending
 
     signal picked(string ip)
-    signal closed()
+    signal rescan
 
     color: Colours.palette.surface
     radius: Appearance.rounding.normal
@@ -26,7 +25,7 @@ StyledRect {
         anchors.margins: Appearance.padding.normal
         spacing: Appearance.spacing.small
 
-        // Header row
+        // Header: state label + lone rescan button.
         RowLayout {
             Layout.fillWidth: true
             spacing: Appearance.spacing.small
@@ -43,10 +42,11 @@ StyledRect {
                 font.bold: true
             }
             IconButton {
-                icon: ""
-                type: IconButton.Text
-                implicitHeight: 24
-                onClicked: root.closed()
+                icon: "\ueb13"
+                type: IconButton.Tonal
+                implicitHeight: 28
+                disabled: root.sending
+                onClicked: { if (!root.sending) root.rescan() }
             }
         }
 
@@ -83,63 +83,39 @@ StyledRect {
             }
         }
 
-        // Device list
+        // Device list — height capped at visibleDevicesMax rows. If more
+        // devices are discovered, the user scrolls within the cap.
         ListView {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            // Hard ceiling. Each row ≈ deviceRowH (kept in sync with
+            // StashContent._deviceRowH). +spacing for the gap.
+            Layout.maximumHeight: Config.stash.visibleDevicesMax * 60 +
+                                  (Config.stash.visibleDevicesMax - 1) * Appearance.spacing.smaller
             model: root.devices
             clip: true
-            spacing: 4
+            spacing: Appearance.spacing.smaller
             visible: !root.sending
 
-            delegate: StyledRect {
+            delegate: Item {
+                id: wrap
+                required property int index
                 required property string alias
                 required property string ip
+                required property string deviceType
+                required property string deviceModel
 
                 width: ListView.view.width
-                height: 36
-                radius: Appearance.rounding.small
-                color: deviceMouse.containsMouse
-                    ? Qt.alpha(Colours.palette.primary, 0.16)
-                    : Colours.palette.surface_container
+                implicitHeight: unit.implicitHeight
 
-                Behavior on color { CAnim {} }
-
-                RowLayout {
+                DeviceUnit {
+                    id: unit
                     anchors.fill: parent
-                    anchors.leftMargin: Appearance.padding.normal
-                    anchors.rightMargin: Appearance.padding.small
-                    spacing: Appearance.spacing.normal
-
-                    IconImage {
-                        source: Quickshell.iconPath("computer", "network-wired")
-                        Layout.preferredWidth: 18
-                        Layout.preferredHeight: 18
-                        asynchronous: true
-                    }
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-                        StyledText {
-                            text: alias
-                            color: Colours.palette.on_surface
-                            font.pointSize: Appearance.font.size.normal
-                            elide: Text.ElideRight
-                        }
-                        StyledText {
-                            text: ip
-                            color: Colours.palette.on_surface_variant
-                            font.pointSize: Appearance.font.size.smaller
-                        }
-                    }
-                }
-
-                MouseArea {
-                    id: deviceMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: root.picked(ip)
+                    alias: wrap.alias
+                    ip: wrap.ip
+                    deviceType: wrap.deviceType
+                    deviceModel: wrap.deviceModel
+                    onPicked: root.picked(wrap.ip)
                 }
             }
         }

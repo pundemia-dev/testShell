@@ -116,7 +116,7 @@ Each module is `modules/<name>/<Name>Wrapper.qml` + `modules/<name>/content/`. T
 | `modules/bar` | Status bar (3 pinned segments: begin/center/end) |
 | `modules/launcher` | Application launcher with pluggable search |
 | `modules/notifications` | D-Bus notification popups |
-| `modules/stash` | File tray (drag/drop + LocalSend share); hover-trigger demo |
+| `modules/stash` | File tray (drag/drop + LocalSend share); hover-trigger; two-zone drag chooser |
 | `modules/settings` | Settings UI |
 
 ### Visibility & Focus
@@ -178,7 +178,8 @@ Singletons in `services/`:
 | Keyboard input regions | `utils/InputManager.qml` |
 | Edge reservation (exclusion zones) | `drawers/Drawers.qml` (`reservedEdge` aggregation), `drawers/exclusions/Exclusions.qml` |
 | Niri integration | `services/Niri.qml`, `utils/NiriFocusGrab.qml` |
-| LocalSend integration | `modules/stash/content/StashContent.qml`, `scripts/localsend_{discover,send}.sh` |
+| LocalSend integration | `modules/stash/content/StashContent.qml`, `modules/stash/content/{DevicePicker,DeviceUnit}.qml`, `scripts/localsend_{discover,send}.sh` |
+| Dashed-border component | `components/DashedRect.qml` (Canvas-based, configurable dash / gap / radius) |
 
 ---
 
@@ -226,6 +227,21 @@ When implementing hover-driven panels (like `modules/stash`):
 - Track combined hover state of the trigger AND the open panel in the wrapper.
 - `Timer` with `Config.<module>.autoHideMs` to close after both lose hover.
 - Hide on shortcut as a fallback (`VisibilitiesManager.setVisibility`).
+- If the panel also accepts drops, propagate an `incomingDrag` flag from the trigger strip's DropArea so the content can show a drag-specific layout before the drag has reached the inner DropAreas. Pair it with an outer DropArea inside the content that tracks `_localDragging` — this bridges the seam when the cursor leaves the trigger strip but hasn't entered an inner zone yet.
+
+### Stash drag-zone chooser
+
+`modules/stash` has three mutually exclusive view states, picked from `_dragging` and `lsState`:
+
+1. **Drop-zone chooser** (`_dragging && lsState === "idle"`) — two equal-size tiles. FilesTray has no background by default and overlays a `DashedRect` only while the cursor with a drag is over it. LocalSend has a primary-tinted fill whose alpha bumps on hover, and dropping there bypasses the stash dir entirely (calls `sendDroppedFiles`).
+2. **File tray** (`!_dragging && lsState === "idle"`) — the GridView/ListView plus the action strip (refresh / open folder / send-all / clear-all).
+3. **Device picker** (`lsState !== "idle"`) — `DevicePicker` covers everything; uses `DeviceUnit` rows with type icon + alias + IP badge + OS badge.
+
+Tile dimensions swap with orientation via `Config.stash.dropZoneX` / `dropZoneY`: when `isVertical=true` width=x, height=y; when false they swap. The panel's overall size is content-driven — implicit width/height are computed from file count clamped by `rowsMax` / `colsMax`.
+
+### LocalSend discover protocol
+
+`scripts/localsend_discover.sh` emits one line per device, tab-separated: `alias\tip\tdeviceType\tdeviceModel`. The `deviceType` is one of LocalSend's `mobile|laptop|desktop|tablet|headless`; `DeviceUnit.qml` maps it to a Tabler glyph and falls back to a CLI icon for anything unrecognised. `deviceModel` is shown verbatim as the OS/model badge (LocalSend doesn't have a separate OS field — the value comes through as-is).
 
 ### Commit style
 

@@ -21,14 +21,36 @@ JsonObject {
     // Grid sizing.
     // `columns` controls the column count in vertical layout (side panel);
     // keep it low for a narrow, tall drawer — 2 by default. `rowsMax` caps
-    // how tall the vertical grid grows. In horizontal layout there's always
-    // one row, and `cellSize` drives both dimensions.
+    // how tall the vertical grid grows. In horizontal layout there's a
+    // single row and `colsMax` caps how many tiles are visible before the
+    // ListView scrolls. `cellSize` drives both dimensions.
     property int columns: 2
     property int rowsMax: 6
+    property int colsMax: 8
     property int cellSize: 96
+
+    // Drop-zone tile dimensions (drag-into-stash chooser). Two values that
+    // swap roles with orientation: when isVertical=true, width=x, height=y;
+    // when isVertical=false, width=y, height=x. Lets one config describe
+    // both panel orientations without separate H/V variables.
+    property int dropZoneX: 160
+    property int dropZoneY: 96
+
+    // Dashed border around the FilesTray drop zone (only visible during drag).
+    property int dashedBorderWidth: 2
+    property int dashedBorderDashLength: 10
+    property int dashedBorderGapLength: 6
+    property int dashedBorderRadius: 4
 
     // LocalSend integration
     property bool localsendEnabled: true
+    // Max devices visible at once in the picker before the list scrolls.
+    // Indirectly caps panel height in picker mode.
+    property int visibleDevicesMax: 5
+    // Vertical spacing (px) between alias and badges row inside a DeviceUnit.
+    // Smaller → tighter row. The picker's row-height estimate (~60 px) is
+    // tuned assuming this stays under ~8 px.
+    property int deviceUnitSpacing: 2
 
     // Layout direction override: "auto" | "horizontal" | "vertical".
     // "auto" rule: top/bottom anchor → horizontal (takes priority over left/right);

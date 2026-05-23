@@ -17,6 +17,10 @@ Singleton {
         readonly property int normal: 17
         readonly property int large: 25
         readonly property int full: 1000
+        // Pill-shape multiplier consumed by IconButton/TextButton/ToggleButton/etc.
+        // 1.0 → fully pill-rounded, 0 → square. Without this, those components
+        // evaluated `Math.min(1, undefined) = NaN` and rendered with no radius.
+        readonly property real scale: 1.0
     }
 
     component Spacing: QtObject {

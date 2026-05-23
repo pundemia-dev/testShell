@@ -1,6 +1,6 @@
 #!/bin/bash
 # LocalSend discovery: UDP multicast announce/listen + HTTP /24 fallback scan.
-# Emits one `alias\tip` per discovered device to stdout, then exits.
+# Emits one `alias\tip\tdeviceType\tdeviceModel` per discovered device, then exits.
 
 python3 - <<'EOF'
 import socket, json, time, struct, re, subprocess, asyncio, ssl
@@ -18,10 +18,14 @@ src_m = re.search(r'src (\d+\.\d+\.\d+\.\d+)', route_out)
 lan_ip = src_m.group(1) if src_m else ''
 
 seen = set()
-def emit(ip, alias):
-    if ip not in seen and ip not in local_ips:
-        seen.add(ip)
-        print(f"{alias}\t{ip}", flush=True)
+def emit(ip, info):
+    if ip in seen or ip in local_ips:
+        return
+    seen.add(ip)
+    alias = (info.get('alias') or 'Unknown').replace('\t', ' ')
+    dtype = (info.get('deviceType') or '').replace('\t', ' ')
+    dmodel = (info.get('deviceModel') or '').replace('\t', ' ')
+    print(f"{alias}\t{ip}\t{dtype}\t{dmodel}", flush=True)
 
 # Phase 1: UDP multicast announce + listen.
 rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -64,7 +68,7 @@ while time.time() < deadline:
             continue
         if info.get('fingerprint') == FINGERPRINT:
             continue
-        emit(ip, info.get('alias', 'Unknown'))
+        emit(ip, info)
     except socket.timeout:
         pass
 
@@ -91,7 +95,7 @@ async def probe(ip):
         if len(body) < 2:
             return
         info = json.loads(body[1].decode())
-        emit(ip, info.get('alias', 'Unknown'))
+        emit(ip, info)
     except Exception:
         pass
 

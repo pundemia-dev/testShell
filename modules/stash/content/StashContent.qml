@@ -34,26 +34,76 @@ Item {
     readonly property int _cols:   Config.stash.columns
     readonly property int _rows:   Math.max(1, Math.min(Config.stash.rowsMax,
                                         Math.ceil(Math.max(1, stash.model.count) / _cols)))
-    readonly property int _hCount: Math.max(1, Math.min(8, stash.model.count))
+    readonly property int _hCount: Math.max(1, Math.min(Config.stash.colsMax, stash.model.count))
     // Actions strip dimensions. When vertical: actions sit *below* the grid
     // as a row, so we need its height. When horizontal: actions sit to the
     // *right* of the row, so we need its width.
     readonly property int _actW:   84
     readonly property int _actH:   40
 
-    implicitWidth: isVertical
-        ? (_cell + _gap) * _cols + _gap
-        : (_cell + _gap) * _hCount + _gap + _actW + _gap
-    implicitHeight: isVertical
-        ? (_cell + _gap) * _rows + _gap + _actH + _gap
-        : _cell + _gap * 2
+    // Drop-zone tile dimensions (drag-into-stash chooser). x/y swap with
+    // orientation per Config.stash.dropZoneX / dropZoneY contract.
+    readonly property int _zoneW: isVertical ? Config.stash.dropZoneX : Config.stash.dropZoneY
+    readonly property int _zoneH: isVertical ? Config.stash.dropZoneY : Config.stash.dropZoneX
+
+    // Device picker sizing — approximate, kept in sync with DeviceUnit's
+    // natural layout (icon + alias + badges row).
+    readonly property int _deviceRowH:    60
+    readonly property int _pickerHeaderH: 44   // header row (state label + rescan)
+    readonly property int _pickerPadH:    Appearance.padding.normal * 2
+    // Visible device count = devices found, clamped to 1..visibleDevicesMax
+    // so the panel always has at least one row's worth of vertical space
+    // for the "Scanning…" / "Sending…" placeholders.
+    readonly property int _pickerVisibleRows: Math.max(1,
+        Math.min(deviceModel.count, Config.stash.visibleDevicesMax))
+    readonly property int _pickerH: _pickerHeaderH + _pickerPadH +
+        _pickerVisibleRows * _deviceRowH +
+        Math.max(0, _pickerVisibleRows - 1) * Appearance.spacing.smaller
+
+    // View state: dropping a file into the trigger strip or directly onto
+    // this content area pivots from "file tray" to "pick a drop zone".
+    property bool _localDragging: false
+    readonly property bool _dragging: (root.stash.incomingDrag ?? false) || _localDragging
+
+    readonly property bool _showZones:  _dragging && lsState === "idle"
+    readonly property bool _showPicker: lsState !== "idle"
+    readonly property bool _showFiles:  !_dragging && lsState === "idle"
+
+    // Content-driven sizing: one dimension is fixed (column count when vertical,
+    // single-row height when horizontal), the other shrinks to fit the actual
+    // visible file count (capped by rowsMax / colsMax). Picker mode picks its
+    // own height from visibleDevicesMax instead.
+    implicitWidth: _showZones
+        ? (isVertical ? _zoneW : (_zoneW * 2 + _gap))
+        : (isVertical
+            ? (_cell + _gap) * _cols + _gap
+            : (_cell + _gap) * _hCount + _gap + _actW + _gap)
+    implicitHeight: _showZones
+        ? (isVertical ? (_zoneH * 2 + _gap) : _zoneH)
+        : _showPicker
+            ? _pickerH
+            : (isVertical
+                ? (_cell + _gap) * _rows + _gap + _actH + _gap
+                : _cell + _gap * 2)
 
     HoverHandler {
         onHoveredChanged: root.stash.notePanelHover(hovered)
     }
 
+    // Outer drag tracker — keeps `_dragging` true across the seam between
+    // the trigger strip leaving and an inner zone receiving the drag. Does
+    // not accept drops itself; inner DropAreas handle that.
+    DropArea {
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+        onEntered: root._localDragging = true
+        onExited:  root._localDragging = false
+        onDropped: root._localDragging = false
+    }
+
     // ── LocalSend state ────────────────────────────────────────────
     property string pendingFile: ""
+    property var pendingQueue: []
     property string lsState: "idle"   // idle | scanning | ready | sending
     ListModel { id: deviceModel }
 
@@ -71,7 +121,12 @@ Item {
                     if (parts.length < 2) continue
                     const ip = parts[1].trim()
                     if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) continue
-                    deviceModel.append({ alias: parts[0].trim(), ip: ip })
+                    deviceModel.append({
+                        alias: parts[0].trim(),
+                        ip: ip,
+                        deviceType: parts.length > 2 ? parts[2].trim() : "",
+                        deviceModel: parts.length > 3 ? parts[3].trim() : ""
+                    })
                 }
                 root.lsState = "ready"
             }
@@ -83,13 +138,40 @@ Item {
         stdout: StdioCollector {}
         stderr: StdioCollector {}
         onExited: {
+            // Drain queue: send remaining files to the same target. Target
+            // IP is held on the process command line, so we just re-arm with
+            // the next path until pendingQueue is empty, then return to idle.
+            if (root.pendingQueue.length > 0) {
+                const next = root.pendingQueue.shift()
+                root.pendingFile = next
+                sendProc.command = ["bash", root.scriptsDir + "/localsend_send.sh", next, sendProc._target]
+                sendProc.running = true
+                return
+            }
             root.lsState = "idle"
             root.pendingFile = ""
         }
+        property string _target: ""
     }
 
     function openSendPicker(file) {
         pendingFile = file
+        pendingQueue = []
+        startScan()
+    }
+
+    function openSendPickerAll() {
+        const all = []
+        for (let i = 0; i < root.stash.model.count; i++) {
+            all.push(root.stash.model.get(i).filePath)
+        }
+        if (all.length === 0) return
+        pendingFile = all.shift()
+        pendingQueue = all
+        startScan()
+    }
+
+    function startScan() {
         deviceModel.clear()
         lsState = "scanning"
         discoverProc.running = true
@@ -97,6 +179,7 @@ Item {
 
     function sendTo(ip) {
         lsState = "sending"
+        sendProc._target = ip
         sendProc.command = ["bash", root.scriptsDir + "/localsend_send.sh", pendingFile, ip]
         sendProc.running = true
     }
@@ -110,14 +193,143 @@ Item {
     }
     Process { id: dropProc; onExited: root.stash.refreshStash() }
 
-    // ── Main layout ────────────────────────────────────────────────
-    // Outer layout switches orientation with `isVertical`:
-    //   vertical   → GridLayout flows top→bottom: file area on top, actions row below.
-    //   horizontal → GridLayout flows left→right: file area on left, actions column right.
-    // The inner actions panel mirrors the same switch so buttons stack
-    // perpendicular to the panel's long axis.
+    // Helpers — collect dropped URLs and start an outbound send queue
+    // straight from the LocalSend zone (no stash detour).
+    function pathsFromDrop(drop) {
+        const paths = []
+        if (!drop.hasUrls) return paths
+        for (let i = 0; i < drop.urls.length; i++) {
+            const u = drop.urls[i].toString().trim()
+            if (!u.startsWith("file://")) continue
+            paths.push(decodeURIComponent(u.replace("file://", "")))
+        }
+        return paths
+    }
+
+    function sendDroppedFiles(paths) {
+        if (paths.length === 0) return
+        pendingFile = paths[0]
+        pendingQueue = paths.slice(1)
+        startScan()
+    }
+
+    // ── State 1: Drop-zone chooser (drag in progress) ──────────────
+    // Two equal-size tiles. FilesTray copies/symlinks into the stash dir.
+    // LocalSend immediately fires up the device picker — no stash detour.
     GridLayout {
         anchors.fill: parent
+        visible: root._showZones
+        flow: root.isVertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+        rows: root.isVertical ? 2 : 1
+        columns: root.isVertical ? 1 : 2
+        rowSpacing: root._gap
+        columnSpacing: root._gap
+
+        // FilesTray zone — transparent by default, dashed border on hover.
+        Item {
+            Layout.preferredWidth:  root._zoneW
+            Layout.preferredHeight: root._zoneH
+
+            DashedRect {
+                anchors.fill: parent
+                strokeColor: Colours.palette.primary
+                strokeWidth: Config.stash.dashedBorderWidth
+                dashLength:  Config.stash.dashedBorderDashLength
+                gapLength:   Config.stash.dashedBorderGapLength
+                cornerRadius: Config.stash.dashedBorderRadius
+                opacity: filesDrop.containsDrag ? 1 : 0
+                Behavior on opacity { Anim {} }
+            }
+
+            ColumnLayout {
+                anchors.left: parent.left
+                anchors.leftMargin: Appearance.padding.normal
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Appearance.spacing.small
+
+                StyledIcon {
+                    text: "\ueac4"
+                    color: Colours.palette.primary
+                    font.pointSize: Appearance.font.size.extraLarge
+                    Layout.alignment: Qt.AlignLeft
+                }
+                StyledText {
+                    text: "Files Tray"
+                    color: Colours.palette.on_surface
+                    font.pointSize: Appearance.font.size.normal
+                    Layout.alignment: Qt.AlignLeft
+                }
+            }
+
+            DropArea {
+                id: filesDrop
+                anchors.fill: parent
+                keys: ["text/uri-list"]
+                onDropped: drop => {
+                    if (!drop.hasUrls) return
+                    for (let i = 0; i < drop.urls.length; i++) {
+                        const url = drop.urls[i].toString().trim()
+                        if (!url.startsWith("file://")) continue
+                        root.dropPath(decodeURIComponent(url.replace("file://", "")))
+                    }
+                    drop.accept()
+                    root._localDragging = false
+                    root.stash.noteIncomingDrag(false)
+                }
+            }
+        }
+
+        // LocalSend zone — always tinted; hover bumps the alpha.
+        Item {
+            Layout.preferredWidth:  root._zoneW
+            Layout.preferredHeight: root._zoneH
+
+            StyledRect {
+                anchors.fill: parent
+                radius: Appearance.rounding.small
+                color: Qt.alpha(Colours.palette.primary, sendDrop.containsDrag ? 0.34 : 0.18)
+                Behavior on color { CAnim {} }
+            }
+
+            ColumnLayout {
+                anchors.left: parent.left
+                anchors.leftMargin: Appearance.padding.normal
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Appearance.spacing.small
+
+                StyledIcon {
+                    text: "\uf016"
+                    color: Colours.palette.primary
+                    font.pointSize: Appearance.font.size.extraLarge
+                    Layout.alignment: Qt.AlignLeft
+                }
+                StyledText {
+                    text: "LocalSend"
+                    color: Colours.palette.on_surface
+                    font.pointSize: Appearance.font.size.normal
+                    Layout.alignment: Qt.AlignLeft
+                }
+            }
+
+            DropArea {
+                id: sendDrop
+                anchors.fill: parent
+                keys: ["text/uri-list"]
+                onDropped: drop => {
+                    const paths = root.pathsFromDrop(drop)
+                    drop.accept()
+                    root._localDragging = false
+                    root.stash.noteIncomingDrag(false)
+                    if (paths.length > 0) root.sendDroppedFiles(paths)
+                }
+            }
+        }
+    }
+
+    // ── State 2: File tray (default open view) ─────────────────────
+    GridLayout {
+        anchors.fill: parent
+        visible: root._showFiles
         rowSpacing: root._gap
         columnSpacing: root._gap
         flow: root.isVertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
@@ -133,7 +345,7 @@ Item {
             ColumnLayout {
                 anchors.centerIn: parent
                 spacing: Appearance.spacing.small
-                visible: root.stash.model.count === 0 && root.lsState === "idle"
+                visible: root.stash.model.count === 0
 
                 IconImage {
                     source: Quickshell.iconPath("folder-open", "folder")
@@ -159,7 +371,7 @@ Item {
             GridView {
                 id: vGrid
                 anchors.fill: parent
-                visible: root.isVertical && root.stash.model.count > 0 && root.lsState === "idle"
+                visible: root.isVertical && root.stash.model.count > 0
                 model: root.stash.model
                 cellWidth:  root._cell + root._gap
                 cellHeight: root._cell + root._gap
@@ -177,7 +389,7 @@ Item {
             ListView {
                 id: hList
                 anchors.fill: parent
-                visible: !root.isVertical && root.stash.model.count > 0 && root.lsState === "idle"
+                visible: !root.isVertical && root.stash.model.count > 0
                 model: root.stash.model
                 orientation: ListView.Horizontal
                 spacing: root._gap
@@ -191,15 +403,13 @@ Item {
                 }
             }
 
-            // DropArea: accept dragged files
+            // DropArea: file dropped on the open tray goes into the stash dir.
+            // Kept passive (no hover background) so it doesn't compete with
+            // the explicit drop-zone chooser shown during drag.
             DropArea {
                 anchors.fill: parent
                 keys: ["text/uri-list"]
-                property bool isHovered: false
-                onEntered: isHovered = true
-                onExited:  isHovered = false
                 onDropped: drop => {
-                    isHovered = false
                     if (!drop.hasUrls) return
                     for (let i = 0; i < drop.urls.length; i++) {
                         const url = drop.urls[i].toString().trim()
@@ -208,34 +418,10 @@ Item {
                     }
                     drop.accept()
                 }
-
-                StyledRect {
-                    anchors.fill: parent
-                    radius: Appearance.rounding.normal
-                    color: parent.isHovered ? Qt.alpha(Colours.palette.primary, 0.18) : "transparent"
-                }
-            }
-
-            // Device picker overlay (LocalSend)
-            DevicePicker {
-                anchors.fill: parent
-                visible: root.lsState !== "idle"
-                stateText: root.lsState === "scanning" ? "Scanning…"
-                         : root.lsState === "sending"  ? "Sending…"
-                         : deviceModel.count === 0     ? "No devices found"
-                         : "Send to"
-                sending: root.lsState === "sending"
-                devices: deviceModel
-                onPicked: ip => root.sendTo(ip)
-                onClosed: {
-                    root.lsState = "idle"
-                    root.pendingFile = ""
-                    discoverProc.running = false
-                }
             }
         }
 
-        // ── Actions strip (row below grid / column beside row) ─────
+        // ── Actions strip ──────────────────────────────────────────
         GridLayout {
             Layout.preferredWidth:  root.isVertical ? -1 : root._actW
             Layout.preferredHeight: root.isVertical ? root._actH : -1
@@ -247,30 +433,31 @@ Item {
             rows: root.isVertical ? 1 : 5
             columns: root.isVertical ? 5 : 1
 
-            StyledText {
-                text: root.stash.model.count + " file" + (root.stash.model.count === 1 ? "" : "s")
-                color: Colours.palette.on_surface_variant
-                font.pointSize: Appearance.font.size.smaller
-                Layout.alignment: Qt.AlignCenter
-                horizontalAlignment: Text.AlignHCenter
-            }
-
             IconButton {
                 Layout.alignment: Qt.AlignCenter
-                icon: ""
+                icon: "\ueb13"
                 type: IconButton.Tonal
                 onClicked: root.stash.refreshStash()
             }
 
             IconButton {
                 Layout.alignment: Qt.AlignCenter
-                icon: ""
+                icon: "\ueaad"
                 type: IconButton.Tonal
                 onClicked: openProc.running = true
             }
             Process {
                 id: openProc
                 command: ["xdg-open", root.stash.stashDir]
+            }
+
+            IconButton {
+                Layout.alignment: Qt.AlignCenter
+                icon: "\ueb21"
+                type: IconButton.Tonal
+                visible: Config.stash.localsendEnabled
+                disabled: root.stash.model.count === 0
+                onClicked: { if (root.stash.model.count > 0) root.openSendPickerAll() }
             }
 
             Item {
@@ -280,7 +467,7 @@ Item {
 
             IconButton {
                 Layout.alignment: Qt.AlignCenter
-                icon: ""
+                icon: "\ueb41"
                 type: IconButton.Tonal
                 onClicked: clearAllProc.running = true
             }
@@ -289,6 +476,23 @@ Item {
                 command: ["bash", "-c", "rm -rf '" + root.stash.stashDir + "'/* && touch '" + root.stash.stashDir + "'"]
                 onExited: root.stash.refreshStash()
             }
+        }
+    }
+
+    // ── State 3: Device picker (scanning / sending) ────────────────
+    DevicePicker {
+        anchors.fill: parent
+        visible: root._showPicker
+        stateText: root.lsState === "scanning" ? "Scanning…"
+                 : root.lsState === "sending"  ? "Sending…"
+                 : deviceModel.count === 0     ? "No devices found"
+                 : "Send to"
+        sending: root.lsState === "sending"
+        devices: deviceModel
+        onPicked: ip => root.sendTo(ip)
+        onRescan: {
+            discoverProc.running = false
+            root.startScan()
         }
     }
 }

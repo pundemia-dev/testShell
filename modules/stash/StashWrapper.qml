@@ -24,14 +24,20 @@ Item {
     // counts down Config.stash.autoHideMs and then hides the panel.
     property bool _triggerHovered: false
     property bool _panelHovered: false
+    // Set when a file drag enters the trigger strip — lets StashContent
+    // show the drop-zone chooser the moment the panel pops in, instead of
+    // waiting for the drag to also enter the content area.
+    property bool incomingDrag: false
     readonly property bool _anyHovered: _triggerHovered || _panelHovered
 
     function notePanelHover(hovered) { _panelHovered = hovered; }
+    function noteIncomingDrag(active) { incomingDrag = active; }
 
     onStashVisibleChanged: {
         if (!stashVisible) {
             _triggerHovered = false;
             _panelHovered = false;
+            incomingDrag = false;
             leaveTimer.stop();
         }
     }
@@ -194,9 +200,13 @@ Item {
                 keys: ["text/uri-list"]
                 onEntered: {
                     root._triggerHovered = true;
+                    root.incomingDrag = true;
                     VisibilitiesManager.setVisibility(root.screen, "stash", true);
                 }
-                onExited: root._triggerHovered = false
+                onExited: {
+                    root._triggerHovered = false;
+                    root.incomingDrag = false;
+                }
             }
         }
     }

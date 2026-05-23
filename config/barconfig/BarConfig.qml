@@ -60,19 +60,7 @@ JsonObject {
     ]
 
     property list<var> centerLayout: [
-        { "type": "widget", "name": "Clock" },
-        { "type": "widget", "name": "Dinamic" },
-        { "type": "group", "children": [
-            { "type": "widget", "name": "NetworkStatus" },
-            { "type": "widget", "name": "PowerStatus" },
-            { "type": "widget", "name": "Dinamic" },
-            { "type": "widget", "name": "BluetoothStatus" }
-        ]},
-        { "type": "widget", "name": "OsIcon" },
-        { "type": "widget", "name": "OsIcon" },
-        { "type": "group", "children": [
-            { "type": "widget", "name": "Tray" }
-        ]}
+        { "type": "widget", "name": "Workspaces" }
     ]
 
     property list<var> endLayout: [
