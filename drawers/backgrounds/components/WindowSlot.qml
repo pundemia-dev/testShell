@@ -228,6 +228,136 @@ Item {
         intersection: Intersection.Subtract
     }
 
+    // ── Resize-union holdover ────────────────────────────────────────
+    //
+    // When the slot's geometry is animating (e.g. hover-expand), the input
+    // mask shrinks the moment the target changes — so the cursor that was
+    // inside the old shape can momentarily fall outside the new shape and
+    // trigger wl_pointer.leave. To prevent that, we keep a SECOND region
+    // pinned at the pre-animation rect (`_stableRect`) and only update it
+    // once geometry has been stable for `_stableHoldMs`.
+    readonly property int _stableHoldMs: 600
+    readonly property rect _currentRect: Qt.rect(root.x, root.y, root.paintedWidth, root.paintedHeight)
+    property rect _stableRect: Qt.rect(0, 0, 0, 0)
+    on_CurrentRectChanged: stableTimer.restart()
+
+    Timer {
+        id: stableTimer
+        interval: root._stableHoldMs
+        repeat: false
+        onTriggered: root._stableRect = root._currentRect
+    }
+
+    Region {
+        id: holdoverRegion
+        x: root._stableRect.x
+        y: root._stableRect.y
+        width: root._stableRect.width
+        height: root._stableRect.height
+        intersection: Intersection.Subtract
+    }
+
+    // ── Bridge regions ───────────────────────────────────────────────
+    //
+    // Cover the margin gap between this slot's facing edge and its anchor
+    // (prev's far edge or screen edge for layer-1) so cursor traversal
+    // through the gap doesn't fire wl_pointer.leave on the underlying
+    // compositor surface. Up to 4 sides: any side with a positive gap
+    // produces a non-empty bridge; zero-sized bridges contribute nothing
+    // to the mask.
+    readonly property int _prevBottom: prevSlot ? prevSlot.targetY + prevSlot.paintedHeight : 0
+    readonly property int _prevTop: prevSlot ? prevSlot.targetY : zHeight
+    readonly property int _prevRight: prevSlot ? prevSlot.targetX + prevSlot.paintedWidth : 0
+    readonly property int _prevLeft: prevSlot ? prevSlot.targetX : zWidth
+
+    readonly property rect _bridgeTopRect: {
+        // Layer-1 with top anchor: gap from screen top to root.y
+        if (!isOverlay && layerIdx <= 1 && aTop && root.y > 0)
+            return Qt.rect(root.x, 0, paintedWidth, root.y);
+        // Layer-2+ aTop / center / topLeft+topRight non-L-step: from prev.bottom to root.y
+        if (!isOverlay && layerIdx > 1 && prevSlot && !isLStep
+                && (aTop || anchor === "center")) {
+            const gap = root.y - _prevBottom;
+            if (gap > 0) return Qt.rect(root.x, _prevBottom, paintedWidth, gap);
+        }
+        return Qt.rect(0, 0, 0, 0);
+    }
+
+    readonly property rect _bridgeBottomRect: {
+        if (!isOverlay && layerIdx <= 1 && aBottom && (root.y + paintedHeight) < zHeight) {
+            const top = root.y + paintedHeight;
+            return Qt.rect(root.x, top, paintedWidth, zHeight - top);
+        }
+        if (!isOverlay && layerIdx > 1 && prevSlot && !isLStep && aBottom) {
+            const top = root.y + paintedHeight;
+            const gap = _prevTop - top;
+            if (gap > 0) return Qt.rect(root.x, top, paintedWidth, gap);
+        }
+        return Qt.rect(0, 0, 0, 0);
+    }
+
+    readonly property rect _bridgeLeftRect: {
+        // Layer-1 with left anchor: from x=0 to root.x
+        if (!isOverlay && layerIdx <= 1 && aLeft && root.x > 0)
+            return Qt.rect(0, root.y, root.x, paintedHeight);
+        // Layer-2+ left rail or L-step topLeft/bottomLeft: from prev.right to root.x
+        if (!isOverlay && layerIdx > 1 && prevSlot
+                && (anchor === "left"
+                    || ((anchor === "topLeft" || anchor === "bottomLeft") && isLStep))) {
+            const gap = root.x - _prevRight;
+            if (gap > 0) return Qt.rect(_prevRight, root.y, gap, paintedHeight);
+        }
+        return Qt.rect(0, 0, 0, 0);
+    }
+
+    readonly property rect _bridgeRightRect: {
+        if (!isOverlay && layerIdx <= 1 && aRight && (root.x + paintedWidth) < zWidth) {
+            const left = root.x + paintedWidth;
+            return Qt.rect(left, root.y, zWidth - left, paintedHeight);
+        }
+        if (!isOverlay && layerIdx > 1 && prevSlot
+                && (anchor === "right"
+                    || ((anchor === "topRight" || anchor === "bottomRight") && isLStep))) {
+            const left = root.x + paintedWidth;
+            const gap = _prevLeft - left;
+            if (gap > 0) return Qt.rect(left, root.y, gap, paintedHeight);
+        }
+        return Qt.rect(0, 0, 0, 0);
+    }
+
+    Region {
+        id: bridgeTop
+        x: root._bridgeTopRect.x
+        y: root._bridgeTopRect.y
+        width: root._bridgeTopRect.width
+        height: root._bridgeTopRect.height
+        intersection: Intersection.Subtract
+    }
+    Region {
+        id: bridgeBottom
+        x: root._bridgeBottomRect.x
+        y: root._bridgeBottomRect.y
+        width: root._bridgeBottomRect.width
+        height: root._bridgeBottomRect.height
+        intersection: Intersection.Subtract
+    }
+    Region {
+        id: bridgeLeft
+        x: root._bridgeLeftRect.x
+        y: root._bridgeLeftRect.y
+        width: root._bridgeLeftRect.width
+        height: root._bridgeLeftRect.height
+        intersection: Intersection.Subtract
+    }
+    Region {
+        id: bridgeRight
+        x: root._bridgeRightRect.x
+        y: root._bridgeRightRect.y
+        width: root._bridgeRightRect.width
+        height: root._bridgeRightRect.height
+        intersection: Intersection.Subtract
+    }
+
     Connections {
         target: root
         function onXChanged() { InputManager.refresh(); }
@@ -639,9 +769,25 @@ Item {
         return null;
     }
 
-    Component.onCompleted: InputManager.addRegion(inputRegion)
+    Component.onCompleted: {
+        // Seed _stableRect once bindings have resolved.
+        Qt.callLater(() => {
+            root._stableRect = Qt.rect(root.x, root.y, root.paintedWidth, root.paintedHeight);
+        });
+        InputManager.addRegion(inputRegion);
+        InputManager.addRegion(holdoverRegion);
+        InputManager.addRegion(bridgeTop);
+        InputManager.addRegion(bridgeBottom);
+        InputManager.addRegion(bridgeLeft);
+        InputManager.addRegion(bridgeRight);
+    }
     Component.onDestruction: {
         InputManager.removeRegion(inputRegion);
+        InputManager.removeRegion(holdoverRegion);
+        InputManager.removeRegion(bridgeTop);
+        InputManager.removeRegion(bridgeBottom);
+        InputManager.removeRegion(bridgeLeft);
+        InputManager.removeRegion(bridgeRight);
         if (manager && manager.clearSlotRect)
             manager.clearSlotRect(arrivalSeq);
     }

@@ -32,6 +32,14 @@ Variants {
 
         property var backgroundsManager: BackgroundsManager {}
 
+        // InteractionManager is a global singleton, but its stack-reset
+        // connection needs to know which BackgroundsManager to watch. Last
+        // scope to load wins — for multi-monitor setups, modules registering
+        // hover handlers should still work, but counters/state are global.
+        // TODO: per-screen InteractionManager state once multi-monitor is
+        // exercised.
+        Component.onCompleted: InteractionManager.backgroundsManager = backgroundsManager
+
         // Border thickness (shell-level frame), used as a floor for *_area
         // when no pinned window reserves space on that side.
         readonly property int border_area: Config.border.enabled || Config.border.thickness < 1 ? Config.border.thickness : 0

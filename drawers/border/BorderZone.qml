@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.config
 import qs.services
+import qs.utils
 
 // One of 8 logical zones around the screen perimeter. Renders 1 (side) or 2
 // (corner) blocking debug MouseArea strips along its edge(s), with geometry
@@ -25,6 +26,23 @@ Item {
     required property int bottom_area
 
     anchors.fill: parent
+
+    // Rail this zone fires events to (1:1 mapping, see BackgroundsManager).
+    readonly property int rail: manager.railForZone(zoneIdx)
+
+    // Strip-hover dedup: cursor entering ANY of the 1-2 strips of this zone
+    // counts as a single rail hover. Transitions from 0 → 1 strip hovered
+    // fires the InteractionManager.fireHover; 1 → 0 just decrements.
+    property int _stripsHovered: 0
+
+    function _stripEnter() {
+        _stripsHovered++;
+        if (_stripsHovered === 1) InteractionManager.fireHover(rail);
+    }
+
+    function _stripExit() {
+        if (_stripsHovered > 0) _stripsHovered--;
+    }
 
     // ── Side flags (which screen edges this zone touches) ────────────
     readonly property var _sides: manager.zoneSides(zoneIdx)
@@ -215,65 +233,80 @@ Item {
         return palette[zoneIdx] ?? Qt.rgba(0.5, 0.5, 0.5, 0.35);
     }
 
+    // ── Strip prefab ────────────────────────────────────────────────
+    // Each visible strip (1 for side zone, 2 for corner zone) carries the
+    // same set of input handlers wired to InteractionManager:
+    //   - hover (dedup via zone's _stripsHovered counter)
+    //   - click (advances stack)
+    //   - slide (press inside, drag out → fires once per gesture)
+    //   - drop (DragEvent with file/text payload)
+    component InteractionStrip: Rectangle {
+        id: strip
+        color: root._debugColor
+
+        DropArea {
+            anchors.fill: parent
+            onEntered: InteractionManager.fireDrop(root.rail)
+        }
+
+        MouseArea {
+            id: strip_mouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+            property bool _slideArmed: false
+
+            onEntered: root._stripEnter()
+            onExited: root._stripExit()
+            onClicked: InteractionManager.fireClick(root.rail)
+
+            onPressed: { _slideArmed = true; }
+            onReleased: { _slideArmed = false; }
+            onCanceled: { _slideArmed = false; }
+            onPositionChanged: mouse => {
+                if (!_slideArmed) return;
+                const inside = mouse.x >= 0 && mouse.x <= width
+                            && mouse.y >= 0 && mouse.y <= height;
+                if (!inside) {
+                    InteractionManager.fireSlide(root.rail);
+                    _slideArmed = false;
+                }
+            }
+        }
+    }
+
     // ── Strips ───────────────────────────────────────────────────────
-    Rectangle {
+    InteractionStrip {
         visible: root.touchTop
         x: root._topStripX
         y: 0
         width: root._topStripW
         height: root._topStripH
-        color: root._debugColor
-
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            // InteractionManager hook lands here later.
-        }
     }
 
-    Rectangle {
+    InteractionStrip {
         visible: root.touchRight
         x: root.zWidth - root._rightStripW
         y: root._rightStripY
         width: root._rightStripW
         height: root._rightStripH
-        color: root._debugColor
-
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-        }
     }
 
-    Rectangle {
+    InteractionStrip {
         visible: root.touchBottom
         x: root._botStripX
         y: root.zHeight - root._botStripH
         width: root._botStripW
         height: root._botStripH
-        color: root._debugColor
-
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-        }
     }
 
-    Rectangle {
+    InteractionStrip {
         visible: root.touchLeft
         x: 0
         y: root._leftStripY
         width: root._leftStripW
         height: root._leftStripH
-        color: root._debugColor
-
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-        }
     }
 }
