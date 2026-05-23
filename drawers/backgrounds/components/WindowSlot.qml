@@ -165,6 +165,12 @@ Item {
     }
 
     // ── Position resolved ────────────────────────────────────────────
+    //
+    // The gap between this slot and its prev on the same rail is taken from
+    // THIS slot's own facing margin — i.e. the margin on the side that faces
+    // prev. So a layer-2 bg below a pinned bar uses its own `mTop` as the
+    // gap, not prev.mBottom. Each margin reads as "gap on this side from
+    // whatever is adjacent" (prev bg, reserved space, or screen edge).
     readonly property int targetX: {
         // Overlay: cover prev (act like layer 1 of this anchor).
         if (isOverlay) return ownX;
@@ -173,14 +179,14 @@ Item {
         // L-step (layer 2 on corner with side reservation): sideways step.
         if (isLStep) {
             if (anchor === "topLeft" || anchor === "bottomLeft") {
-                return prevSlot.targetX + prevSlot.paintedWidth + (prevSlot.mRight || 0);
+                return prevSlot.targetX + prevSlot.paintedWidth + mLeft;
             }
             // topRight / bottomRight
-            return prevSlot.targetX - paintedWidth - (prevSlot.mLeft || 0);
+            return prevSlot.targetX - paintedWidth - mRight;
         }
         // Side-growing rails (left/right): X is growth axis → from prev.
-        if (anchor === "left") return prevSlot.targetX + prevSlot.paintedWidth + (prevSlot.mRight || 0);
-        if (anchor === "right") return prevSlot.targetX - paintedWidth - (prevSlot.mLeft || 0);
+        if (anchor === "left") return prevSlot.targetX + prevSlot.paintedWidth + mLeft;
+        if (anchor === "right") return prevSlot.targetX - paintedWidth - mRight;
         // Otherwise (vertical-growth rails): own X.
         return ownX;
     }
@@ -197,9 +203,9 @@ Item {
             return prevSlot.targetY + prevSlot.paintedHeight - paintedHeight;
         }
         // Top/center/topLeft/topRight rails grow DOWN; left/right keep own Y.
-        if (aTop) return prevSlot.targetY + prevSlot.paintedHeight + (prevSlot.mBottom || 0);
-        if (aBottom) return prevSlot.targetY - paintedHeight - (prevSlot.mTop || 0);
-        if (anchor === "center") return prevSlot.targetY + prevSlot.paintedHeight + (prevSlot.mBottom || 0);
+        if (aTop) return prevSlot.targetY + prevSlot.paintedHeight + mTop;
+        if (aBottom) return prevSlot.targetY - paintedHeight - mBottom;
+        if (anchor === "center") return prevSlot.targetY + prevSlot.paintedHeight + mTop;
         return ownY;
     }
 

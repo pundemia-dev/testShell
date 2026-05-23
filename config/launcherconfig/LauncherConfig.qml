@@ -27,7 +27,7 @@ JsonObject {
         // horizontalCenter: true
     }
     property OffsetsData offsets: OffsetsData {
-        right: 100
+        right: 10
         // verticalCenter: 0
         // horizontalCenter: 0
     }
