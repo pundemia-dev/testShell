@@ -239,15 +239,25 @@ Item {
 
     // ── Debug visual colour (cycle through palette by zoneIdx) ───────
     readonly property color _debugColor: {
+
         const palette = [
-            Qt.rgba(1, 0.3, 0.3, 0.35),  // 0 topLeft   red
-            Qt.rgba(1, 0.6, 0.2, 0.35),  // 1 top       orange
-            Qt.rgba(1, 0.9, 0.2, 0.35),  // 2 topRight  yellow
-            Qt.rgba(0.5, 1, 0.3, 0.35),  // 3 right     green
-            Qt.rgba(0.3, 1, 0.8, 0.35),  // 4 botRight  teal
-            Qt.rgba(0.3, 0.6, 1, 0.35),  // 5 bottom    blue
-            Qt.rgba(0.6, 0.4, 1, 0.35),  // 6 botLeft   purple
-            Qt.rgba(1, 0.4, 0.9, 0.35)   // 7 left      pink
+        Qt.rgba(1, 0.3, 0.3, 0),  // 0 topLeft   red
+        Qt.rgba(1, 0.6, 0.2, 0),  // 1 top       orange
+        Qt.rgba(1, 0.9, 0.2, 0),  // 2 topRight  yellow
+        Qt.rgba(0.5, 1, 0.3, 0),  // 3 right     green
+        Qt.rgba(0.3, 1, 0.8, 0),  // 4 botRight  teal
+        Qt.rgba(0.3, 0.6, 1, 0),  // 5 bottom    blue
+        Qt.rgba(0.6, 0.4, 1, 0),  // 6 botLeft   purple
+        Qt.rgba(1, 0.4, 0.9, 0)   // 7 left      pink
+
+            // Qt.rgba(1, 0.3, 0.3, 0.35),  // 0 topLeft   red
+            // Qt.rgba(1, 0.6, 0.2, 0.35),  // 1 top       orange
+            // Qt.rgba(1, 0.9, 0.2, 0.35),  // 2 topRight  yellow
+            // Qt.rgba(0.5, 1, 0.3, 0.35),  // 3 right     green
+            // Qt.rgba(0.3, 1, 0.8, 0.35),  // 4 botRight  teal
+            // Qt.rgba(0.3, 0.6, 1, 0.35),  // 5 bottom    blue
+            // Qt.rgba(0.6, 0.4, 1, 0.35),  // 6 botLeft   purple
+            // Qt.rgba(1, 0.4, 0.9, 0.35)   // 7 left      pink
         ];
         return palette[zoneIdx] ?? Qt.rgba(0.5, 0.5, 0.5, 0.35);
     }

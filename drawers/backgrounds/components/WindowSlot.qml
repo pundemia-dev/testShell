@@ -228,32 +228,98 @@ Item {
         intersection: Intersection.Subtract
     }
 
-    // ── Resize-union holdover ────────────────────────────────────────
+    // ── Resize-union holdover (cursor-aware) ─────────────────────────
     //
-    // When the slot's geometry is animating (e.g. hover-expand), the input
-    // mask shrinks the moment the target changes — so the cursor that was
-    // inside the old shape can momentarily fall outside the new shape and
-    // trigger wl_pointer.leave. To prevent that, we keep a SECOND region
-    // pinned at the pre-animation rect (`_stableRect`) and only update it
-    // once geometry has been stable for `_stableHoldMs`.
-    readonly property int _stableHoldMs: 600
-    readonly property rect _currentRect: Qt.rect(root.x, root.y, root.paintedWidth, root.paintedHeight)
-    property rect _stableRect: Qt.rect(0, 0, 0, 0)
-    on_CurrentRectChanged: stableTimer.restart()
+    // When the slot's geometry changes (resize / move), the input mask
+    // shrinks the moment the target changes — so the cursor that was inside
+    // the old shape can momentarily fall outside the new shape and trigger
+    // wl_pointer.leave. To prevent that, two "display" rects lag the live
+    // targets:
+    //
+    //   _slotDisplayRect      — display for the slot input region
+    //   _envelopeDisplayRect  — display for the slot envelope (hover/drag)
+    //
+    // Both follow the same InteractionStrip-style semantics:
+    //   - On target change: if cursor (hover OR drag) is engaged with the
+    //     envelope, expand display to union(old display, new target). Else
+    //     snap display to target.
+    //   - When cursor enters the new target rect specifically: snap that
+    //     display to its target (old part no longer needed).
+    //   - When cursor leaves the envelope entirely: snap both.
+    //
+    // The envelope HoverHandler / DropArea below drive the engagement and
+    // position signals. Cursor coords are mapped to window space (envelope
+    // local + envelope x/y), which matches the slot/envelope target rects
+    // (computed in window coords).
+    readonly property rect _slotTargetRect: Qt.rect(root.x, root.y, root.paintedWidth, root.paintedHeight)
+    property rect _slotDisplayRect: Qt.rect(0, 0, 0, 0)
+    property rect _envelopeDisplayRect: Qt.rect(0, 0, 0, 0)
 
-    Timer {
-        id: stableTimer
-        interval: root._stableHoldMs
-        repeat: false
-        onTriggered: root._stableRect = root._currentRect
+    function _rectUnion(a, b) {
+        // Empty rect contributes nothing — otherwise (0,0,0,0) would be
+        // treated as a point at origin and pull the union back to the screen
+        // corner, which matters before Qt.callLater seeds the displays.
+        if (a.width <= 0 || a.height <= 0) return b;
+        if (b.width <= 0 || b.height <= 0) return a;
+        const x0 = Math.min(a.x, b.x);
+        const y0 = Math.min(a.y, b.y);
+        const x1 = Math.max(a.x + a.width, b.x + b.width);
+        const y1 = Math.max(a.y + a.height, b.y + b.height);
+        return Qt.rect(x0, y0, x1 - x0, y1 - y0);
     }
+    function _rectContains(r, x, y) {
+        return x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height;
+    }
+    function _rectInflate(r, m) {
+        return Qt.rect(r.x - m, r.y - m, r.width + 2 * m, r.height + 2 * m);
+    }
+    function _rectClip(inner, outer) {
+        const x0 = Math.max(outer.x, inner.x);
+        const y0 = Math.max(outer.y, inner.y);
+        const x1 = Math.min(outer.x + outer.width, inner.x + inner.width);
+        const y1 = Math.min(outer.y + outer.height, inner.y + inner.height);
+        return Qt.rect(x0, y0, Math.max(0, x1 - x0), Math.max(0, y1 - y0));
+    }
+    // On target change: ALWAYS union with the previous display. Collapse is
+    // never triggered by a resize itself — only by explicit cursor signals
+    // (cursor entered new target → _maybeCollapseFromCursor, or cursor left
+    // envelope → _snapDisplaysToTarget). This avoids a race where `_envHovered`
+    // is briefly false during the binding cascade of a click (Qt may rearrange
+    // hover delivery when a MouseArea grabs the press), which previously caused
+    // _resyncDisplays to take the snap branch and shrink the mask out from
+    // under a still-engaged cursor.
+    function _resyncDisplays() {
+        _slotDisplayRect = _rectUnion(_slotDisplayRect, _slotTargetRect);
+        _envelopeDisplayRect = _rectUnion(_envelopeDisplayRect, _slotEnvelopeRect);
+    }
+    function _snapDisplaysToTarget() {
+        _slotDisplayRect = _slotTargetRect;
+        _envelopeDisplayRect = _slotEnvelopeRect;
+    }
+    // On collapse: snap to a buffered version of target = inflate(target, m)
+    // clipped to the CURRENT display (= previous bg bounds). The buffer
+    // protects against accidental cursor jitter pushing one pixel outside
+    // the freshly shrunk mask; the clip guarantees the buffer never extends
+    // past where the bg already was, so we never grow.
+    function _maybeCollapseFromCursor(wx, wy) {
+        const m = Math.max(0, Config.backgrounds.resizeHoldoverMargin ?? 0);
+        if (_rectContains(_slotTargetRect, wx, wy)) {
+            _slotDisplayRect = _rectClip(_rectInflate(_slotTargetRect, m), _slotDisplayRect);
+        }
+        if (_rectContains(_slotEnvelopeRect, wx, wy)) {
+            _envelopeDisplayRect = _rectClip(_rectInflate(_slotEnvelopeRect, m), _envelopeDisplayRect);
+        }
+    }
+
+    on_SlotTargetRectChanged: _resyncDisplays()
+    on_SlotEnvelopeRectChanged: _resyncDisplays()
 
     Region {
         id: holdoverRegion
-        x: root._stableRect.x
-        y: root._stableRect.y
-        width: root._stableRect.width
-        height: root._stableRect.height
+        x: root._slotDisplayRect.x
+        y: root._slotDisplayRect.y
+        width: root._slotDisplayRect.width
+        height: root._slotDisplayRect.height
         intersection: Intersection.Subtract
     }
 
@@ -430,20 +496,43 @@ Item {
             manager.setSlotDragOver(arrivalSeq, _slotDragOver);
     }
 
+    // Envelope Item — sized to the resize-union DISPLAY rect, not the live
+    // target. While the slot/envelope geometry changes with the cursor
+    // engaged, the display rect holds the union of old & new, so the
+    // HoverHandler keeps reporting hovered=true until the cursor enters the
+    // new target rect (collapse) or leaves entirely (snap on exit).
     Item {
+        id: envelopeItem
         parent: root.contentLayer
-        x: root._slotEnvelopeRect.x
-        y: root._slotEnvelopeRect.y
-        width: root._slotEnvelopeRect.width
-        height: root._slotEnvelopeRect.height
+        x: root._envelopeDisplayRect.x
+        y: root._envelopeDisplayRect.y
+        width: root._envelopeDisplayRect.width
+        height: root._envelopeDisplayRect.height
         z: -1
         HoverHandler {
-            onHoveredChanged: root._envHovered = hovered
+            id: envHover
+            onHoveredChanged: {
+                root._envHovered = hovered;
+                if (!hovered && !root._envDragOver) root._snapDisplaysToTarget();
+            }
+        }
+        readonly property point _hoverPos: envHover.point.position
+        on_HoverPosChanged: {
+            if (envHover.hovered)
+                root._maybeCollapseFromCursor(_hoverPos.x + envelopeItem.x,
+                                              _hoverPos.y + envelopeItem.y);
         }
         DropArea {
             anchors.fill: parent
             keys: ["text/uri-list"]
-            onContainsDragChanged: root._envDragOver = containsDrag
+            onContainsDragChanged: {
+                root._envDragOver = containsDrag;
+                if (!containsDrag && !root._envHovered) root._snapDisplaysToTarget();
+            }
+            onPositionChanged: drag => {
+                root._maybeCollapseFromCursor(drag.x + envelopeItem.x,
+                                              drag.y + envelopeItem.y);
+            }
         }
     }
 
@@ -867,9 +956,11 @@ Item {
     }
 
     Component.onCompleted: {
-        // Seed _stableRect once bindings have resolved.
+        // Seed display rects once bindings have resolved, so they start at
+        // the live target instead of (0,0,0,0).
         Qt.callLater(() => {
-            root._stableRect = Qt.rect(root.x, root.y, root.paintedWidth, root.paintedHeight);
+            root._slotDisplayRect = root._slotTargetRect;
+            root._envelopeDisplayRect = root._slotEnvelopeRect;
         });
         InputManager.addRegion(inputRegion);
         InputManager.addRegion(holdoverRegion);

@@ -8,8 +8,11 @@ following Region instances:
 
 - `inputRegion` — the slot's painted rect (using `lastTargetWidth /
   lastTargetHeight` so it doesn't collapse during close animations).
-- `holdoverRegion` — the **pre-animation** painted rect, held
-  stable for `_stableHoldMs` (600 ms) after any geometry change.
+- `holdoverRegion` — the **display** rect (resize-union with cursor-
+  aware collapse, see below). When the slot's geometry changes while
+  the envelope is engaged, the holdover holds the union of the old
+  and new rects; it collapses only when the cursor enters the new
+  target rect specifically OR leaves the envelope entirely.
 - `bridgeTop / bridgeBottom / bridgeLeft / bridgeRight` — the
   margin gap on each facing side, computed per the rules below.
   Zero-sized when no gap exists on that side.
@@ -68,28 +71,49 @@ time.
 
 ## Resize-union holdover (slot side)
 
-Animating geometry exposes a hazard: if the slot shrinks while the
-cursor is inside it (e.g. content state change shrinks the panel),
-the `inputRegion` shrinks too and the cursor falls outside the
-mask → wl_pointer.leave → hover handlers reset → panel hides.
+Animating geometry exposes a hazard: if the slot shrinks (or shifts)
+while the cursor is inside it, the `inputRegion` shrinks too and the
+cursor falls outside the mask → wl_pointer.leave → hover handlers
+reset → panel hides.
 
-`WindowSlot` mitigates this with `holdoverRegion`:
+`WindowSlot` mitigates this with two **display rects** that lag their
+live targets, identical to the resize-union semantics in
+[`BorderZone`'s InteractionStrip](./border-zones.md):
 
-- `_currentRect` is the live (x, y, paintedWidth, paintedHeight).
-- `_stableRect` is updated only after `_stableHoldMs` (600 ms) of
-  no geometry change (managed by `stableTimer` which restarts on
-  every `_currentRect` change).
-- `holdoverRegion` is bound to `_stableRect`, so during animation
-  it pins the **pre-animation** bounds while `inputRegion` follows
-  the live painted size. The mask = `inputRegion ∪ holdoverRegion`
-  for that slot.
-- `Component.onCompleted` seeds `_stableRect` via `Qt.callLater`
-  (after first frame layout) so the initial state isn't (0, 0, 0, 0).
+- `_slotTargetRect` — live `(x, y, paintedWidth, paintedHeight)`.
+  `_slotDisplayRect` — what `holdoverRegion` is bound to.
+- `_slotEnvelopeRect` — stable bounding box of slot + bridges +
+  edge extensions (the envelope **target**). `_envelopeDisplayRect`
+  — what the envelope `Item` is sized to.
 
-The same idea applies independently to the **strip MouseArea** in
-`BorderZone` — see [border zones doc](./border-zones.md) for
-resize-union semantics there (display rect union, collapse on
-"cursor entered new target" OR "cursor left union").
+Resync rules (driven by the envelope's `HoverHandler` and `DropArea`):
+
+- On any target change (`_slotTargetRect` or `_slotEnvelopeRect`):
+  **always** expand the matching display rect to `union(old display,
+  new target)`. The display never shrinks because of a resize itself
+  — that path is race-prone (Qt may briefly redirect hover delivery
+  when a MouseArea grabs a press during the click that triggered the
+  resize, leaving `_envHovered` momentarily false and snapping the
+  mask out from under a still-engaged cursor).
+- When the cursor enters the new target rect specifically (detected
+  via `HoverHandler.point.position` / `DropArea.onPositionChanged`,
+  mapped to window-coords): collapse that display to a **buffered**
+  target — `inflate(target, Config.backgrounds.resizeHoldoverMargin)`
+  clipped to the current display. The buffer protects against
+  accidental jitter pushing the cursor one pixel outside the freshly
+  shrunk mask; the clip guarantees the buffer never extends past the
+  previous bg bounds.
+- When the cursor leaves the envelope entirely (`_envHovered` and
+  `_envDragOver` both false): snap both displays directly to their
+  targets — no buffer needed once the cursor is gone.
+
+The mask = `inputRegion ∪ holdoverRegion ∪ bridges` for that slot.
+`inputRegion` follows the live target (jumps the moment
+`lastTargetWidth/Height` changes); `holdoverRegion` follows the
+union'd display rect so cursor-engaged transitions stay covered.
+
+`Component.onCompleted` seeds both display rects via `Qt.callLater`
+(after first frame layout) so the initial state isn't (0, 0, 0, 0).
 
 ## Slot envelope (hover + drag tracking)
 
@@ -98,12 +122,15 @@ a bridge area also has to register as "still engaged with the
 panel" for hover-trigger modules (e.g. stash) to keep the panel
 open without timers. For that, each `WindowSlot` adds a separate
 invisible **envelope Item** parented to `contentLayer` at `z=-1`,
-with a `HoverHandler` + `DropArea`. Geometry: bounding box of the
-stable slot rect + all non-zero bridges, plus the screen-edge or
-prev-slot extension on the facing side. Stable from the first
-frame because it's computed from `Math.max(paintedW/H,
+with a `HoverHandler` + `DropArea`. The envelope is sized to
+`_envelopeDisplayRect` (the resize-union display rect described
+above), whose **target** (`_slotEnvelopeRect`) is the bounding box
+of the stable slot rect + all non-zero bridges + the screen-edge or
+prev-slot extension on the facing side. The target is stable from
+the first frame because it's computed from `Math.max(paintedW/H,
 lastTargetW/H, targetWrapperW/H)` rather than the live animating
-size.
+size; the display rect inherits that stability and additionally
+unions with the previous shape during cursor-engaged transitions.
 
 The envelope publishes:
 

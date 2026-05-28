@@ -51,6 +51,15 @@ JsonObject {
     property int overlapShrink: 15
     property real fadeStrength: 1.0
 
+    // Resize-union holdover collapse buffer (px). When the cursor enters the
+    // new bg target after a resize, the holdover display does NOT snap
+    // exactly to `newTarget` — instead it snaps to `newTarget` inflated by
+    // this many pixels on every side, clipped to the previous display rect
+    // so the buffer never extends past the old bg bounds. Protects against
+    // accidental jitter (mouse pickup / trackpad touch) that would otherwise
+    // push the cursor one pixel outside the freshly shrunk mask.
+    property int resizeHoldoverMargin: 30
+
     component Directions: JsonObject {
         property int left: 0
         property int right: 0

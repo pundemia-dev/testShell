@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
+import qs.utils
 
 // Niri replacement for HyprlandFocusGrab.
 // Grants exclusive keyboard focus to `window` when active and catches outside-clicks.
@@ -21,9 +22,14 @@ Item {
         root.active ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     // Full-screen transparent window on the Top layer.
-    // Pointer events that fall through the Overlay window (outside registered
-    // panel regions) land here and trigger dismissal.
+    // Pointer events outside the shell's registered panel regions land here
+    // and trigger dismissal. The mask subtracts InputManager.regions so this
+    // window does not claim input where the drawers window already does —
+    // without the subtraction, within-layer ordering on Top is undefined and
+    // the dismiss surface may shadow drawers (eating clicks meant for the
+    // launcher buttons etc).
     PanelWindow {
+        id: dismissWin
         screen: root.screen
         color: "transparent"
         visible: root.active
@@ -37,6 +43,14 @@ Item {
         anchors.left: true
         anchors.right: true
         anchors.bottom: true
+
+        mask: Region {
+            x: 0
+            y: 0
+            width: dismissWin.width
+            height: dismissWin.height
+            regions: InputManager.regions
+        }
 
         MouseArea {
             anchors.fill: parent
