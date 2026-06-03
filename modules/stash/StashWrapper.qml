@@ -229,6 +229,11 @@ Item {
         function onRequestArrived() {
             VisibilitiesManager.setVisibility(root.screen, "stash", true);
         }
+        // Accepted files are mirrored into the stash dir by the receive
+        // server; pull them into the tray as soon as each one lands.
+        function onFileReceived(path: string) {
+            root.refreshStash();
+        }
     }
 
     // ── QtObject contract for the rails system ─────────────────────

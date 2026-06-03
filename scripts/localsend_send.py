@@ -4,8 +4,8 @@
 # dependencies = []
 # ///
 #
-# Send a single file to a LocalSend device.
-# Usage: localsend_send.py <file> <target-ip>
+# Send one or more files to a LocalSend device in a single session.
+# Usage: localsend_send.py <target-ip> <file> [<file> ...]
 
 import sys, os, json, ssl, hashlib, subprocess, mimetypes
 from urllib import request
@@ -26,24 +26,42 @@ def die(msg):
 
 
 if len(sys.argv) < 3:
-    die("Usage: localsend_send.py <file> <target-ip>")
+    die("Usage: localsend_send.py <target-ip> <file...>")
 
-FILE = sys.argv[1]
-TARGET = sys.argv[2]
+TARGET = sys.argv[1]
+ARG_FILES = sys.argv[2:]
 
-if not FILE or not os.path.isfile(FILE):
-    die("File not found")
 if not TARGET:
     die("No target device specified")
 
-FILENAME = os.path.basename(FILE)
-FILESIZE = os.path.getsize(FILE)
-try:
-    FILETYPE = subprocess.check_output(
-        ["file", "-b", "--mime-type", FILE], text=True).strip()
-except Exception:
-    FILETYPE = mimetypes.guess_type(FILE)[0] or "application/octet-stream"
-FILE_ID = "ps_" + hashlib.md5(os.urandom(16)).hexdigest()[:8]
+# Build per-file metadata + the prepare-upload payload. Each file gets a
+# stable id so we can match the upload token the receiver hands back.
+entries = {}        # file_id -> {"path","name","type"}
+files_payload = {}  # file_id -> LocalSend file descriptor
+for path in ARG_FILES:
+    if not path or not os.path.isfile(path):
+        continue
+    name = os.path.basename(path)
+    size = os.path.getsize(path)
+    try:
+        ftype = subprocess.check_output(
+            ["file", "-b", "--mime-type", path], text=True).strip()
+    except Exception:
+        ftype = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    fid = "ps_" + hashlib.md5(os.urandom(16)).hexdigest()[:8]
+    entries[fid] = {"path": path, "name": name, "type": ftype}
+    files_payload[fid] = {
+        "id": fid,
+        "fileName": name,
+        "size": size,
+        "fileType": ftype,
+        "sha256": None,
+        "preview": None,
+        "metadata": None,
+    }
+
+if not files_payload:
+    die("No files found")
 
 # Identity fingerprint = SHA-256 of our TLS cert (shared with the receive
 # server in ~/.cache/pshell_localsend). Generated on demand if absent so
@@ -82,17 +100,7 @@ body = json.dumps({
         "protocol": "https",
         "download": False,
     },
-    "files": {
-        FILE_ID: {
-            "id": FILE_ID,
-            "fileName": FILENAME,
-            "size": FILESIZE,
-            "fileType": FILETYPE,
-            "sha256": None,
-            "preview": None,
-            "metadata": None,
-        }
-    },
+    "files": files_payload,
 }).encode()
 
 try:
@@ -103,14 +111,25 @@ except Exception:
     die("Rejected or timed out")
 
 SESSION = prep.get("sessionId", "")
-TOKEN = prep.get("files", {}).get(FILE_ID, "")
-if not SESSION or not TOKEN:
+TOKENS = prep.get("files", {})  # file_id -> token (only accepted files)
+if not SESSION or not TOKENS:
     die("Rejected or timed out")
 
-try:
-    with open(FILE, "rb") as f:
-        post(f"/api/localsend/v2/upload?sessionId={SESSION}&fileId={FILE_ID}&token={TOKEN}",
-             f.read(), {"Content-Type": FILETYPE}, 120)
-    notify(f"Sent: {FILENAME}")
-except Exception:
+sent = 0
+last_name = ""
+for fid, meta in entries.items():
+    token = TOKENS.get(fid)
+    if not token:
+        continue
+    try:
+        with open(meta["path"], "rb") as f:
+            post(f"/api/localsend/v2/upload?sessionId={SESSION}&fileId={fid}&token={token}",
+                 f.read(), {"Content-Type": meta["type"]}, 120)
+        sent += 1
+        last_name = meta["name"]
+    except Exception:
+        pass
+
+if sent == 0:
     die("Upload failed")
+notify(f"Sent {sent} files" if sent > 1 else f"Sent: {last_name}")

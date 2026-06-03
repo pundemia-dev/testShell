@@ -29,7 +29,7 @@
 #     {"action":"reject","sessionId":..}
 
 import sys, os, json, time, struct, socket, ssl, threading, secrets, subprocess, re
-import argparse, ipaddress, concurrent.futures
+import argparse, ipaddress, concurrent.futures, shutil
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib import request as urlrequest
 
@@ -41,8 +41,12 @@ UPLOAD_TIMEOUT = 20
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--alias", default="pShell Stash")
+# FilesTray directory: every accepted *file* is also mirrored here so it shows
+# up in the stash tray. Empty disables mirroring.
+parser.add_argument("--stash-dir", default="")
 args = parser.parse_args()
 ALIAS = args.alias
+STASH_DIR = os.path.expanduser(args.stash_dir) if args.stash_dir else ""
 
 import hashlib
 
@@ -130,6 +134,20 @@ def unique_path(directory, name):
         i += 1
 
 
+def is_text_message(meta):
+    # A pasted/clipboard message vs a real file: LocalSend tags messages with
+    # fileType "text" (desktop) or "text/plain" (mobile) AND carries the full
+    # message in the `preview` field — real files never set `preview` for
+    # text, so `preview` present + a text-ish type is the reliable signal.
+    t = (meta.get("type") or "")
+    preview = meta.get("preview")
+    if t == "text":
+        return True
+    if t.startswith("text") and isinstance(preview, str) and preview:
+        return True
+    return False
+
+
 # -- HTTP handler -------------------------------------------------------
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -205,12 +223,23 @@ class Handler(BaseHTTPRequestHandler):
         for fid, meta in files.items():
             size = int(meta.get("size", 0) or 0)
             total += size
+            preview = meta.get("preview")
             file_list.append({
                 "id": fid,
                 "name": meta.get("fileName", "file"),
                 "size": size,
                 "type": meta.get("fileType", ""),
+                "preview": preview if isinstance(preview, str) else "",
             })
+
+        log("prepare-upload:", [(f["name"], f["type"], bool(f["preview"]))
+                                for f in file_list])
+
+        # Pure single-message text send → expose the text so the accept card
+        # can offer a "copy" affordance instead of a file row.
+        text_files = [f for f in file_list if is_text_message(f)]
+        is_text = len(file_list) == 1 and len(text_files) == 1
+        text_body = text_files[0]["preview"] if is_text else ""
 
         ev = threading.Event()
         with _sessions_lock:
@@ -223,6 +252,8 @@ class Handler(BaseHTTPRequestHandler):
             "fingerprint": info.get("fingerprint", ""),
             "files": file_list,
             "totalSize": total,
+            "isText": is_text,
+            "text": text_body,
         })
 
         decided = ev.wait(timeout=120)
@@ -308,9 +339,37 @@ class Handler(BaseHTTPRequestHandler):
         self._empty(200)
         with sess["lock"]:
             sess["done"].add(fid)
-            emit({"event": "file-done", "sessionId": sid,
-                  "name": meta["name"], "path": dest})
-            notify("LocalSend", f"Received: {meta['name']}")
+            # A pasted/clipboard message → copy straight to the clipboard and
+            # drop the temp file, while actual files are kept and mirrored into
+            # the FilesTray stash dir.
+            if is_text_message(meta):
+                try:
+                    with open(dest, "r", encoding="utf-8", errors="replace") as tf:
+                        content = tf.read()
+                except Exception:
+                    content = ""
+                if not content:
+                    content = meta.get("preview") or ""
+                try:
+                    subprocess.run(["wl-copy"], input=content.encode(), check=False)
+                except Exception:
+                    pass
+                try:
+                    os.remove(dest)
+                except Exception:
+                    pass
+                emit({"event": "text-received", "sessionId": sid, "text": content})
+                notify("LocalSend", "Text copied to clipboard", "edit-paste")
+            else:
+                if STASH_DIR:
+                    try:
+                        os.makedirs(STASH_DIR, exist_ok=True)
+                        shutil.copy2(dest, unique_path(STASH_DIR, os.path.basename(dest)))
+                    except Exception as e:
+                        log("stash mirror failed:", e)
+                emit({"event": "file-done", "sessionId": sid,
+                      "name": meta["name"], "path": dest})
+                notify("LocalSend", f"Received: {meta['name']}")
             if len(sess["done"]) >= len(sess["files"]):
                 emit({"event": "session-done", "sessionId": sid})
                 with _sessions_lock:

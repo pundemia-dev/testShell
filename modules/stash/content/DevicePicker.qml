@@ -10,8 +10,9 @@ StyledRect {
     id: root
 
     required property string stateText
-    required property var    devices
-    required property bool   sending
+    required property var devices
+    required property bool sending
+    property bool scanning: false
 
     signal picked(string ip)
     signal rescan
@@ -42,11 +43,36 @@ StyledRect {
                 font.bold: true
             }
             IconButton {
+                id: rescanBtn
                 icon: "\ueb13"
                 type: IconButton.Tonal
                 implicitHeight: 28
                 disabled: root.sending
-                onClicked: { if (!root.sending) root.rescan() }
+                onClicked: {
+                    if (!root.sending)
+                        root.rescan();
+                }
+
+                // While scanning, the icon spins one full turn on a bezier
+                // ease (accelerate \u2192 settle), pauses, then repeats \u2014 a
+                // "thinking" indicator. Resets upright when scanning stops.
+                SequentialAnimation {
+                    running: root.scanning
+                    loops: Animation.Infinite
+                    NumberAnimation {
+                        target: rescanBtn.label
+                        property: "rotation"
+                        from: 360
+                        to: 0
+                        duration: Appearance.anim.durations.extraLarge
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Appearance.anim.curves.bubblyHeight
+                    }
+                    PauseAnimation {
+                        duration: Appearance.anim.durations.small
+                    }
+                    onStopped: rescanBtn.label.rotation = 0
+                }
             }
         }
 
@@ -90,8 +116,7 @@ StyledRect {
             Layout.fillHeight: true
             // Hard ceiling. Each row ≈ deviceRowH (kept in sync with
             // StashContent._deviceRowH). +spacing for the gap.
-            Layout.maximumHeight: Config.stash.visibleDevicesMax * 60 +
-                                  (Config.stash.visibleDevicesMax - 1) * Appearance.spacing.smaller
+            Layout.maximumHeight: Config.stash.visibleDevicesMax * 60 + (Config.stash.visibleDevicesMax - 1) * Appearance.spacing.smaller
             model: root.devices
             clip: true
             spacing: Appearance.spacing.smaller
@@ -127,7 +152,9 @@ StyledRect {
             visible: root.sending
             spacing: Appearance.spacing.small
 
-            Item { Layout.fillHeight: true }
+            Item {
+                Layout.fillHeight: true
+            }
 
             StyledText {
                 text: "Uploading file…"
@@ -135,7 +162,9 @@ StyledRect {
                 Layout.alignment: Qt.AlignHCenter
             }
 
-            Item { Layout.fillHeight: true }
+            Item {
+                Layout.fillHeight: true
+            }
         }
     }
 }

@@ -101,13 +101,17 @@ Item {
         : _cell + _gap * 2
 
     // Incoming card height: header + file rows (capped) + destination + buttons.
+    readonly property bool _incomingIsText: LocalSend.request
+        ? (LocalSend.request.isText ?? false) : false
     readonly property int _incomingRows: Math.max(1, Math.min(Config.stash.visibleDevicesMax,
         LocalSend.request ? LocalSend.request.files.length : 1))
-    readonly property int _incomingH: _pickerHeaderH + _pickerPadH
-        + _incomingRows * 32
-        + 36   // destination row
-        + 44   // accept / reject buttons
-        + Appearance.spacing.small * 3
+    readonly property int _incomingH: _incomingIsText
+        ? _pickerHeaderH + _pickerPadH + 160 + 44 + Appearance.spacing.small * 3
+        : _pickerHeaderH + _pickerPadH
+            + _incomingRows * 32
+            + 36   // destination row
+            + 44   // accept / reject buttons
+            + Appearance.spacing.small * 3
 
     // Content-driven sizing: one dimension is fixed (column count when vertical,
     // single-row height when horizontal), the other shrinks to fit the actual
@@ -138,8 +142,11 @@ Item {
     }
 
     // ── LocalSend state ────────────────────────────────────────────
-    property string pendingFile: ""
-    property var pendingQueue: []
+    // Files queued for the current outbound transfer. They all go out in a
+    // single LocalSend session (one prepare-upload, one accept prompt on the
+    // peer), so multi-file sends work for both the send-all button and a
+    // multi-file drop onto the LocalSend zone.
+    property var pendingFiles: []
     property string lsState: "idle"   // idle | scanning | ready | sending
     ListModel { id: deviceModel }
 
@@ -174,25 +181,13 @@ Item {
         stdout: StdioCollector {}
         stderr: StdioCollector {}
         onExited: {
-            // Drain queue: send remaining files to the same target. Target
-            // IP is held on the process command line, so we just re-arm with
-            // the next path until pendingQueue is empty, then return to idle.
-            if (root.pendingQueue.length > 0) {
-                const next = root.pendingQueue.shift()
-                root.pendingFile = next
-                sendProc.command = [root.scriptsDir + "/localsend_send.py", next, sendProc._target]
-                sendProc.running = true
-                return
-            }
             root.lsState = "idle"
-            root.pendingFile = ""
+            root.pendingFiles = []
         }
-        property string _target: ""
     }
 
     function openSendPicker(file) {
-        pendingFile = file
-        pendingQueue = []
+        pendingFiles = [file]
         startScan()
     }
 
@@ -202,8 +197,7 @@ Item {
             all.push(root.stash.model.get(i).filePath)
         }
         if (all.length === 0) return
-        pendingFile = all.shift()
-        pendingQueue = all
+        pendingFiles = all
         startScan()
     }
 
@@ -214,9 +208,9 @@ Item {
     }
 
     function sendTo(ip) {
+        if (pendingFiles.length === 0) return
         lsState = "sending"
-        sendProc._target = ip
-        sendProc.command = [root.scriptsDir + "/localsend_send.py", pendingFile, ip]
+        sendProc.command = [root.scriptsDir + "/localsend_send.py", ip].concat(pendingFiles)
         sendProc.running = true
     }
 
@@ -244,8 +238,7 @@ Item {
 
     function sendDroppedFiles(paths) {
         if (paths.length === 0) return
-        pendingFile = paths[0]
-        pendingQueue = paths.slice(1)
+        pendingFiles = paths
         startScan()
     }
 
@@ -532,6 +525,7 @@ Item {
                  : deviceModel.count === 0     ? "No devices found"
                  : "Send to"
         sending: root.lsState === "sending"
+        scanning: root.lsState === "scanning"
         devices: deviceModel
         onPicked: ip => root.sendTo(ip)
         onRescan: {

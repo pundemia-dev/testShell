@@ -20,6 +20,16 @@ Singleton {
     readonly property string scriptsDir: (Quickshell.env("HOME") || "/home/user")
         + "/.config/quickshell/pShell/scripts"
 
+    // FilesTray dir (resolved from config) — passed to the receive server so
+    // every accepted file is mirrored into the stash tray.
+    readonly property string stashDir: {
+        let p = Config.stash.stashDir;
+        const home = Quickshell.env("HOME") || "/home/user";
+        if (p.startsWith("~"))           p = home + p.slice(1);
+        else if (p.startsWith("$HOME"))  p = home + p.slice(5);
+        return p;
+    }
+
     readonly property bool enabled: Config.stash.localsendReceiveEnabled
     // True once the server has emitted its "ready" event.
     property bool serverReady: false
@@ -40,6 +50,10 @@ Singleton {
     property var _queue: []
 
     signal requestArrived
+    // A non-text file finished downloading (already saved + mirrored to stash).
+    signal fileReceived(string path)
+    // A pasted/clipboard message arrived (already copied to the clipboard).
+    signal textReceived(string text)
 
     function accept(dir: string): void {
         if (!request)
@@ -103,6 +117,13 @@ Singleton {
                 totalBytes = ev.total;
             }
             break;
+        case "file-done":
+            if (ev.path)
+                fileReceived(ev.path);
+            break;
+        case "text-received":
+            textReceived(ev.text || "");
+            break;
         case "session-done":
             if (request && ev.sessionId === request.sessionId)
                 _advance();
@@ -137,7 +158,8 @@ Singleton {
 
         running: root.enabled
         command: [root.scriptsDir + "/localsend_receive.py",
-                  "--alias", Config.stash.localsendAlias]
+                  "--alias", Config.stash.localsendAlias,
+                  "--stash-dir", root.stashDir]
         stdinEnabled: true
 
         stdout: SplitParser {

@@ -24,6 +24,10 @@ StyledRect {
         + "/.config/quickshell/pShell/scripts"
 
     readonly property var req: LocalSend.request
+    // A pure text/clipboard send — the card offers a "copy" affordance and the
+    // text itself instead of a file row + download destination.
+    readonly property bool isTextMsg: req ? (req.isText ?? false) : false
+    readonly property string textBody: req ? (req.text ?? "") : ""
     // One-off override chosen via the folder dialog; resets per request.
     property string chosenDir: ""
     readonly property string effectiveDir: chosenDir !== "" ? chosenDir : defaultDir
@@ -80,7 +84,7 @@ StyledRect {
                 Layout.fillWidth: true
                 spacing: 0
                 StyledText {
-                    text: "Incoming files"
+                    text: root.isTextMsg ? "Incoming message" : "Incoming files"
                     color: Colours.palette.on_surface
                     font.pointSize: Appearance.font.size.normal
                     font.bold: true
@@ -101,11 +105,33 @@ StyledRect {
             }
         }
 
+        // ── Text message body (copy affordance) ──────────────────────
+        Flickable {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.isTextMsg
+            clip: true
+            contentWidth: width
+            contentHeight: msgText.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+
+            StyledText {
+                id: msgText
+                width: parent.width
+                text: root.textBody
+                color: Colours.palette.on_surface
+                font.pointSize: Appearance.font.size.small
+                wrapMode: Text.Wrap
+                textFormat: Text.PlainText
+            }
+        }
+
         // ── File list ─────────────────────────────────────────────────
         ListView {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.maximumHeight: Config.stash.visibleDevicesMax * 32
+            visible: !root.isTextMsg
             model: root.req ? root.req.files : []
             clip: true
             spacing: Appearance.spacing.smaller / 2
@@ -171,7 +197,7 @@ StyledRect {
         // ── Destination row ───────────────────────────────────────────
         RowLayout {
             Layout.fillWidth: true
-            visible: !LocalSend.receiving
+            visible: !LocalSend.receiving && !root.isTextMsg
             spacing: Appearance.spacing.small
 
             StyledText {
@@ -211,12 +237,12 @@ StyledRect {
             IconTextButton {
                 Layout.fillWidth: true
                 type: IconTextButton.Tonal
-                text: "Reject"
+                text: root.isTextMsg ? "Dismiss" : "Reject"
                 onClicked: LocalSend.reject()
             }
             IconTextButton {
                 Layout.fillWidth: true
-                text: "Accept"
+                text: root.isTextMsg ? "Copy" : "Accept"
                 onClicked: LocalSend.accept(root.effectiveDir)
             }
         }

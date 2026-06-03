@@ -3,9 +3,10 @@ import Quickshell.Io
 JsonObject {
     property bool enabled: true
 
-    // Filesystem dir where dropped files live (symlinks or copies).
-    // Resolved with $HOME at runtime if it starts with ~ or $HOME.
-    property string stashDir: "$HOME/Downloads/qs_stash"
+    // Filesystem dir where dropped files live (symlinks or copies). Kept in
+    // /tmp so the tray is scratch space that clears on reboot. Resolved with
+    // $HOME at runtime if it starts with ~ or $HOME.
+    property string stashDir: "/tmp/qs_stash"
 
     // Drop mode for incoming files: "copy" duplicates the file into stashDir,
     // "symlink" creates a symlink (no extra disk usage, original must stay put).
