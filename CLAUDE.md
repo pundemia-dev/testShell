@@ -201,7 +201,8 @@ The uniform buffer is **1472 bytes** (up from 1440) after adding two `vec4` slot
 | Slot input mask (bridges + holdover + envelope) | `drawers/backgrounds/components/WindowSlot.qml`, `utils/InputManager.qml`, `drawers/Drawers.qml` (mask Region) |
 | Edge reservation (exclusion zones) | `drawers/Drawers.qml` (`reservedEdge` aggregation), `drawers/exclusions/Exclusions.qml` |
 | Niri integration | `services/Niri.qml`, `utils/NiriFocusGrab.qml` |
-| LocalSend integration | `modules/stash/content/StashContent.qml`, `modules/stash/content/{DevicePicker,DeviceUnit}.qml`, `scripts/localsend_{discover,send}.sh` |
+| LocalSend send | `modules/stash/content/StashContent.qml`, `modules/stash/content/{DevicePicker,DeviceUnit}.qml`, `scripts/localsend_{discover,send}.py` |
+| LocalSend receive | `services/LocalSend.qml` (singleton: owns receive server, accept/reject state), `modules/stash/content/IncomingRequest.qml` (accept/reject card), `scripts/localsend_receive.py` (HTTPS server), `scripts/localsend_pickdir.sh` (folder dialog) |
 | Dashed-border component | `components/DashedRect.qml` (Canvas-based, configurable dash / gap / radius) |
 | Per-zone shader logic (sink + boost + frame smin gating) | `plugin/src/Caelestia/Blobs/shaders/blob.frag`, `plugin/src/Caelestia/Blobs/blobmaterial.{hpp,cpp}` |
 
@@ -289,7 +290,7 @@ Tile dimensions swap with orientation via `Config.stash.dropZoneX` / `dropZoneY`
 
 ### LocalSend discover protocol
 
-`scripts/localsend_discover.sh` emits one line per device, tab-separated: `alias\tip\tdeviceType\tdeviceModel`. The `deviceType` is one of LocalSend's `mobile|laptop|desktop|tablet|headless`; `DeviceUnit.qml` maps it to a Tabler glyph and falls back to a CLI icon for anything unrecognised. `deviceModel` is shown verbatim as the OS/model badge (LocalSend doesn't have a separate OS field — the value comes through as-is).
+`scripts/localsend_discover.py` emits one line per device, tab-separated: `alias\tip\tdeviceType\tdeviceModel`. The `deviceType` is one of LocalSend's `mobile|laptop|desktop|tablet|headless`; `DeviceUnit.qml` maps it to a Tabler glyph and falls back to a CLI icon for anything unrecognised. `deviceModel` is shown verbatim as the OS/model badge (LocalSend doesn't have a separate OS field — the value comes through as-is).
 
 ### Commit style
 

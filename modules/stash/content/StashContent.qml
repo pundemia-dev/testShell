@@ -77,9 +77,37 @@ Item {
     on_LocalDraggingChanged: root.stash.notePanelDragging(_localDragging)
     readonly property bool _dragging: (root.stash.incomingDrag ?? false) || _localDragging
 
-    readonly property bool _showZones:  _dragging && lsState === "idle"
-    readonly property bool _showPicker: lsState !== "idle"
-    readonly property bool _showFiles:  !_dragging && lsState === "idle"
+    // Incoming LocalSend request takes precedence over every other view.
+    readonly property bool _showIncoming: LocalSend.hasIncoming
+    readonly property bool _showZones:  !_showIncoming && _dragging && lsState === "idle"
+    readonly property bool _showPicker: !_showIncoming && lsState !== "idle"
+    readonly property bool _showFiles:  !_showIncoming && !_dragging && lsState === "idle"
+
+    // Default download dir for accepted files ($HOME-resolved).
+    readonly property string defaultDownloadDir: {
+        let p = Config.stash.downloadDir
+        const home = Quickshell.env("HOME") || "/home/user"
+        if (p.startsWith("~"))      p = home + p.slice(1)
+        else if (p.startsWith("$HOME")) p = home + p.slice(5)
+        return p
+    }
+
+    // Base (file-tray) dimensions, reused by the size bindings below.
+    readonly property int _baseW: isVertical
+        ? (_cell + _gap) * _cols + _gap
+        : (_cell + _gap) * _hCount + _gap + _actW + _gap
+    readonly property int _baseH: isVertical
+        ? (_cell + _gap) * _rows + _gap + _actH + _gap
+        : _cell + _gap * 2
+
+    // Incoming card height: header + file rows (capped) + destination + buttons.
+    readonly property int _incomingRows: Math.max(1, Math.min(Config.stash.visibleDevicesMax,
+        LocalSend.request ? LocalSend.request.files.length : 1))
+    readonly property int _incomingH: _pickerHeaderH + _pickerPadH
+        + _incomingRows * 32
+        + 36   // destination row
+        + 44   // accept / reject buttons
+        + Appearance.spacing.small * 3
 
     // Content-driven sizing: one dimension is fixed (column count when vertical,
     // single-row height when horizontal), the other shrinks to fit the actual
@@ -87,16 +115,13 @@ Item {
     // own height from visibleDevicesMax instead.
     implicitWidth: _showZones
         ? (isVertical ? _zoneW : (_zoneW * 2 + _gap))
-        : (isVertical
-            ? (_cell + _gap) * _cols + _gap
-            : (_cell + _gap) * _hCount + _gap + _actW + _gap)
+        : _showIncoming ? Math.max(280, _baseW)
+        : _baseW
     implicitHeight: _showZones
         ? (isVertical ? (_zoneH * 2 + _gap) : _zoneH)
-        : _showPicker
-            ? _pickerH
-            : (isVertical
-                ? (_cell + _gap) * _rows + _gap + _actH + _gap
-                : _cell + _gap * 2)
+        : _showIncoming ? _incomingH
+        : _showPicker ? _pickerH
+        : _baseH
 
     HoverHandler {
         onHoveredChanged: root.stash.notePanelHover(hovered)
@@ -120,7 +145,7 @@ Item {
 
     Process {
         id: discoverProc
-        command: ["bash", root.scriptsDir + "/localsend_discover.sh"]
+        command: [root.scriptsDir + "/localsend_discover.py"]
         stdout: StdioCollector {
             id: discoverOut
             onStreamFinished: {
@@ -155,7 +180,7 @@ Item {
             if (root.pendingQueue.length > 0) {
                 const next = root.pendingQueue.shift()
                 root.pendingFile = next
-                sendProc.command = ["bash", root.scriptsDir + "/localsend_send.sh", next, sendProc._target]
+                sendProc.command = [root.scriptsDir + "/localsend_send.py", next, sendProc._target]
                 sendProc.running = true
                 return
             }
@@ -191,7 +216,7 @@ Item {
     function sendTo(ip) {
         lsState = "sending"
         sendProc._target = ip
-        sendProc.command = ["bash", root.scriptsDir + "/localsend_send.sh", pendingFile, ip]
+        sendProc.command = [root.scriptsDir + "/localsend_send.py", pendingFile, ip]
         sendProc.running = true
     }
 
@@ -437,8 +462,8 @@ Item {
             rowSpacing: root._gap
             columnSpacing: root._gap
             flow: root.isVertical ? GridLayout.LeftToRight : GridLayout.TopToBottom
-            rows: root.isVertical ? 1 : 5
-            columns: root.isVertical ? 5 : 1
+            rows: root.isVertical ? 1 : 6
+            columns: root.isVertical ? 6 : 1
 
             IconButton {
                 Layout.alignment: Qt.AlignCenter
@@ -465,6 +490,18 @@ Item {
                 visible: Config.stash.localsendEnabled
                 disabled: root.stash.model.count === 0
                 onClicked: { if (root.stash.model.count > 0) root.openSendPickerAll() }
+            }
+
+            // Receive toggle — turn the LocalSend receive server on/off.
+            // Checked state is persisted in shell.json via Config.stash.
+            IconButton {
+                Layout.alignment: Qt.AlignCenter
+                icon: ""   // localsend
+                type: IconButton.Tonal
+                toggle: true
+                visible: Config.stash.localsendEnabled
+                checked: Config.stash.localsendReceiveEnabled
+                onClicked: Config.stash.localsendReceiveEnabled = !Config.stash.localsendReceiveEnabled
             }
 
             Item {
@@ -501,5 +538,12 @@ Item {
             discoverProc.running = false
             root.startScan()
         }
+    }
+
+    // ── State 4: Incoming LocalSend request (accept / reject) ──────
+    IncomingRequest {
+        anchors.fill: parent
+        visible: root._showIncoming
+        defaultDir: root.defaultDownloadDir
     }
 }

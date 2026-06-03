@@ -1,10 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+#
 # LocalSend discovery: UDP multicast announce/listen + HTTP subnet fallback scan.
 # Runs across EVERY local IPv4 interface (not just the one the default route
 # picks) so it keeps working when a VPN tunnel captures the multicast route.
 # Emits one `alias\tip\tdeviceType\tdeviceModel` per discovered device, then exits.
 
-python3 - <<'EOF'
 import socket, json, time, struct, re, subprocess, asyncio, ssl, ipaddress
 
 MCAST = '224.0.0.167'
@@ -148,4 +152,3 @@ async def scan():
 
 if targets:
     asyncio.run(scan())
-EOF

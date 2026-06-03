@@ -44,6 +44,16 @@ JsonObject {
 
     // LocalSend integration
     property bool localsendEnabled: true
+
+    // Receive side: when true, pShell runs the LocalSend receive server so
+    // other devices can discover it and send files. Persisted here so the
+    // toggle survives restarts (JsonAdapter writes back to shell.json).
+    property bool localsendReceiveEnabled: false
+    // Alias broadcast to other LocalSend devices (their device list shows this).
+    property string localsendAlias: "pShell Stash"
+    // Default folder for accepted incoming files. Resolved with $HOME/~ at
+    // runtime. The accept card offers a one-off override via a folder dialog.
+    property string downloadDir: "$HOME/Downloads"
     // Max devices visible at once in the picker before the list scrolls.
     // Indirectly caps panel height in picker mode.
     property int visibleDevicesMax: 5

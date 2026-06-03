@@ -81,9 +81,12 @@ Item {
     // _panelHovered / _panelDragging come from StashContent — they're
     // reliable because they're on the same Item as Qt's hover delivery
     // target (no z-blocking from the strip).
+    // A pending/active LocalSend request keeps the panel open regardless of
+    // hover, so the accept/reject card stays put until resolved.
     readonly property bool _anyHovered: _stickyStripEngaged
                                         || _slotHovered || _slotDragOver
                                         || _panelHovered || _panelDragging
+                                        || LocalSend.hasIncoming
 
     function notePanelHover(hovered)  { _panelHovered = hovered; }
     function notePanelDragging(active) { _panelDragging = active; }
@@ -216,6 +219,15 @@ Item {
                 root.stashVisible = state;
                 if (state) root.refreshStash();
             }
+        }
+    }
+
+    // Pop the stash open when a LocalSend transfer request arrives so the
+    // user can accept/reject it. The card lives in StashContent (state 4).
+    Connections {
+        target: LocalSend
+        function onRequestArrived() {
+            VisibilitiesManager.setVisibility(root.screen, "stash", true);
         }
     }
 

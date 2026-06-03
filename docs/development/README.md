@@ -34,5 +34,6 @@ which targets end-user configuration).
 - `components/DashedRect.qml` — Canvas-based dashed border (used
   by the stash drop-zone chooser; configurable dash / gap / radius).
 - LocalSend discover protocol — line format emitted by
-  `scripts/localsend_discover.sh` and how `DeviceUnit.qml` maps
-  `deviceType` to glyphs.
+  `scripts/localsend_discover.py` and how `DeviceUnit.qml` maps
+  `deviceType` to glyphs. Receive side: `scripts/localsend_receive.py`
+  (HTTPS server) + `services/LocalSend.qml` (state/coordination).

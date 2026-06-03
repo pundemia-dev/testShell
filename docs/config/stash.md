@@ -191,9 +191,13 @@ by default, rising to `0.34` while a drag hovers over it.
 
 ## LocalSend
 
-Outbound file share over the LocalSend protocol (UDP multicast +
-HTTPS fallback) — see `scripts/localsend_discover.sh` and
-`scripts/localsend_send.sh`.
+File share over the LocalSend protocol (UDP multicast + HTTPS
+fallback). Outbound: `scripts/localsend_discover.py` (find peers) and
+`scripts/localsend_send.py` (upload). Inbound: `scripts/localsend_receive.py`
+runs an HTTPS receive server, coordinated by the `services/LocalSend.qml`
+singleton; the accept/reject card is `IncomingRequest.qml`. All three Python
+scripts are self-contained [uv](https://docs.astral.sh/uv/) scripts (PEP 723
+shebang) — executable and run directly, no venv.
 
 ### `localsendEnabled` (bool, default `true`)
 Toggles the LocalSend share button on each file tile, the "send all"
@@ -219,6 +223,26 @@ Vertical gap (px) between alias and badge row inside a
 `DeviceUnit`. Tighter than the default `spacing.smaller` so the
 icon + name + badge stack reads as one block. Increase to `4`–`6`
 if you prefer more breathing room.
+
+### `localsendReceiveEnabled` (bool, default `false`)
+Turns the inbound receive server on/off. When `true`, pShell announces
+itself on the LAN (alias `localsendAlias`) so other LocalSend apps can
+send to it, and `services/LocalSend.qml` keeps `localsend_receive.py`
+running. Toggled from the antenna button in the action strip; the value
+is persisted to `shell.json`, so the server comes back up on restart.
+When a transfer request arrives the stash pops open and shows an
+accept/reject card (`IncomingRequest.qml`) listing the sender and files.
+
+### `localsendAlias` (string, default `"pShell Stash"`)
+The device name broadcast to other LocalSend peers — what they see in
+their target list.
+
+### `downloadDir` (string, default `"$HOME/Downloads"`)
+Where accepted incoming files are written. `~`/`$HOME` are resolved at
+runtime. The accept card shows this as the default destination and
+offers a one-off override via a system folder dialog
+(`scripts/localsend_pickdir.sh`, zenity/kdialog/yad) for the current
+transfer only.
 
 ---
 
@@ -325,6 +349,11 @@ derived from it.
   [`modules/stash/content/DeviceUnit.qml`](../../modules/stash/content/DeviceUnit.qml)
 - Dashed border component:
   [`components/DashedRect.qml`](../../components/DashedRect.qml)
-- Discovery & send scripts:
-  [`scripts/localsend_discover.sh`](../../scripts/localsend_discover.sh),
-  [`scripts/localsend_send.sh`](../../scripts/localsend_send.sh)
+- LocalSend scripts (uv, PEP 723):
+  [`scripts/localsend_discover.py`](../../scripts/localsend_discover.py),
+  [`scripts/localsend_send.py`](../../scripts/localsend_send.py),
+  [`scripts/localsend_receive.py`](../../scripts/localsend_receive.py),
+  [`scripts/localsend_pickdir.sh`](../../scripts/localsend_pickdir.sh)
+- LocalSend receive service:
+  [`services/LocalSend.qml`](../../services/LocalSend.qml),
+  [`modules/stash/content/IncomingRequest.qml`](../../modules/stash/content/IncomingRequest.qml)
