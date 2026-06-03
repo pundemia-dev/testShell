@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
 import Caelestia.Blobs
 import qs.config
 import qs.services
@@ -54,7 +55,19 @@ Item {
     Item {
         id: bgRenderHost
         anchors.fill: parent
+        // Already layered to expose the merged-SDF union texture for
+        // WindowSlot's halo mask (ShaderEffectSource sourceItem). The
+        // effect below also makes this FBO the shell's drop-shadow source —
+        // cast from the panel shapes only, so content text (in contentLayer,
+        // not in this item) stays out of any resampled layer. The external
+        // halo ShaderEffectSource samples the raw layer texture, unaffected
+        // by this composite-time effect.
         layer.enabled: true
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            blurMax: 15
+            shadowColor: Qt.alpha(Colours.palette.shadow, 0.7)
+        }
 
         BlobInvertedRect {
             id: invertedFrame

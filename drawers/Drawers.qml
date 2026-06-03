@@ -128,15 +128,16 @@ Variants {
                 }
             }
 
-            // Shell's effects layer
+            // Shell content. NOTE: deliberately NOT wrapped in a
+            // `layer.enabled` Item. A full-screen offscreen layer gets
+            // bilinearly resampled when composited at a fractional output
+            // scale (e.g. niri `scale 1.48`), softening *all* content —
+            // text, icons, SDF edges. The panel drop-shadow that used to
+            // live here now sits on `bgRenderHost` inside Backgrounds, so
+            // it's cast from the panel shapes only and content (contentLayer
+            // text) renders straight to the framebuffer → crisp.
             Item {
                 anchors.fill: parent
-                layer.enabled: true
-                layer.effect: MultiEffect {
-                    shadowEnabled: true
-                    blurMax: 15
-                    shadowColor: Qt.alpha(Colours.palette.shadow, 0.7)
-                }
 
                 Corners {}
 

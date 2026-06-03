@@ -46,8 +46,10 @@ Item {
     }
 
     function _stripExit() {
-        if (_stripsHovered > 0) _stripsHovered--;
-        if (_stripsHovered === 0) InteractionManager._setStripHovered(rail, false);
+        if (_stripsHovered > 0)
+            _stripsHovered--;
+        if (_stripsHovered === 0)
+            InteractionManager._setStripHovered(rail, false);
     }
 
     function _dropEnter() {
@@ -59,8 +61,10 @@ Item {
     }
 
     function _dropExit() {
-        if (_stripsDragOver > 0) _stripsDragOver--;
-        if (_stripsDragOver === 0) InteractionManager._setStripDragOver(rail, false);
+        if (_stripsDragOver > 0)
+            _stripsDragOver--;
+        if (_stripsDragOver === 0)
+            InteractionManager._setStripDragOver(rail, false);
     }
 
     // ── Side flags (which screen edges this zone touches) ────────────
@@ -92,16 +96,24 @@ Item {
     // WindowSlot runs its first frame): synthesized from wrapper data the
     // same way WindowSlot computes ownX/ownY.
     function _entryRect(entry) {
-        if (!entry) return null;
+        if (!entry)
+            return null;
         const live = manager.slotRectByArrivalSeq(entry.arrivalSeq);
         if (live && live.w > 0 && live.h > 0)
-            return { x: live.x, y: live.y, w: live.w, h: live.h };
+            return {
+                x: live.x,
+                y: live.y,
+                w: live.w,
+                h: live.h
+            };
 
         const wrapper = entry.wrapper;
-        if (!wrapper) return null;
+        if (!wrapper)
+            return null;
         const w = wrapper.wrapperWidth || 0;
         const h = wrapper.wrapperHeight || 0;
-        if (w <= 0 || h <= 0) return null;
+        if (w <= 0 || h <= 0)
+            return null;
 
         const isPinned = wrapper.pinned ?? false;
         const isOverlay = (wrapper.mode ?? "push") === "overlay";
@@ -126,17 +138,30 @@ Item {
         const vCO = wrapper.vCenterOffset ?? 0;
 
         let x, y;
-        if (aHC && !aLeft && !aRight) x = (root.zWidth / 2) - (w / 2) + hCO;
-        else if (aLeft) x = mL + eL;
-        else if (aRight) x = root.zWidth - w - mR - eR;
-        else x = 0;
+        if (aHC && !aLeft && !aRight)
+            x = (root.zWidth / 2) - (w / 2) + hCO;
+        else if (aLeft)
+            x = mL + eL;
+        else if (aRight)
+            x = root.zWidth - w - mR - eR;
+        else
+            x = 0;
 
-        if (aVC && !aTop && !aBottom) y = (root.zHeight / 2) - (h / 2) + vCO;
-        else if (aTop) y = mT + eT;
-        else if (aBottom) y = root.zHeight - h - mB - eB;
-        else y = 0;
+        if (aVC && !aTop && !aBottom)
+            y = (root.zHeight / 2) - (h / 2) + vCO;
+        else if (aTop)
+            y = mT + eT;
+        else if (aBottom)
+            y = root.zHeight - h - mB - eB;
+        else
+            y = 0;
 
-        return { x: x, y: y, w: w, h: h };
+        return {
+            x: x,
+            y: y,
+            w: w,
+            h: h
+        };
     }
 
     // ── Projection extents (union of edge-nearest bg rects) ──────────
@@ -147,30 +172,43 @@ Item {
         let yMin = Infinity, yMax = -Infinity;
         for (const entry of _entries) {
             const r = _entryRect(entry);
-            if (!r) continue;
+            if (!r)
+                continue;
             xMin = Math.min(xMin, r.x);
             xMax = Math.max(xMax, r.x + r.w);
             yMin = Math.min(yMin, r.y);
             yMax = Math.max(yMax, r.y + r.h);
         }
-        if (xMin === Infinity) return null;
-        return { xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax };
+        if (xMin === Infinity)
+            return null;
+        return {
+            xMin: xMin,
+            xMax: xMax,
+            yMin: yMin,
+            yMax: yMax
+        };
     }
 
     // ── Strip thickness (perpendicular to edge) ──────────────────────
     function _topmostMargin(side) {
         const w = _topmost ? _topmost.wrapper : null;
-        if (!w) return 0;
-        if (side === "top")    return w.mTop ?? 0;
-        if (side === "right")  return w.mRight ?? 0;
-        if (side === "bottom") return w.mBottom ?? 0;
-        if (side === "left")   return w.mLeft ?? 0;
+        if (!w)
+            return 0;
+        if (side === "top")
+            return w.mTop ?? 0;
+        if (side === "right")
+            return w.mRight ?? 0;
+        if (side === "bottom")
+            return w.mBottom ?? 0;
+        if (side === "left")
+            return w.mLeft ?? 0;
         return 0;
     }
 
     function _stripThickness(side) {
         const t = (Config.border.thickness ?? 0) + _topmostMargin(side);
-        if (t > 0) return t;
+        if (t > 0)
+            return t;
         return Config.border.defaultMouseAreaThickness ?? 10;
     }
 
@@ -178,86 +216,108 @@ Item {
 
     // ── Top strip geometry (for zones touching top edge) ─────────────
     readonly property int _topStripX: {
-        if (!touchTop) return 0;
-        if (_proj) return Math.max(0, _proj.xMin);
+        if (!touchTop)
+            return 0;
+        if (_proj)
+            return Math.max(0, _proj.xMin);
         // Empty zone: anchor at corner for corner zones, center for side
-        if (zoneIdx === 0) return 0;                       // topLeft
-        if (zoneIdx === 2) return Math.max(0, zWidth - _defaultLen); // topRight
+        if (zoneIdx === 0)
+            return 0;                       // topLeft
+        if (zoneIdx === 2)
+            return Math.max(0, zWidth - _defaultLen); // topRight
         return Math.max(0, (zWidth - _defaultLen) / 2);    // top (zone 1)
     }
     readonly property int _topStripW: {
-        if (!touchTop) return 0;
-        if (_proj) return Math.max(0, _proj.xMax - _proj.xMin);
+        if (!touchTop)
+            return 0;
+        if (_proj)
+            return Math.max(0, _proj.xMax - _proj.xMin);
         return _defaultLen;
     }
     readonly property int _topStripH: touchTop ? _stripThickness("top") : 0
 
     // ── Bottom strip geometry ────────────────────────────────────────
     readonly property int _botStripX: {
-        if (!touchBottom) return 0;
-        if (_proj) return Math.max(0, _proj.xMin);
-        if (zoneIdx === 6) return 0;                       // bottomLeft
-        if (zoneIdx === 4) return Math.max(0, zWidth - _defaultLen); // bottomRight
+        if (!touchBottom)
+            return 0;
+        if (_proj)
+            return Math.max(0, _proj.xMin);
+        if (zoneIdx === 6)
+            return 0;                       // bottomLeft
+        if (zoneIdx === 4)
+            return Math.max(0, zWidth - _defaultLen); // bottomRight
         return Math.max(0, (zWidth - _defaultLen) / 2);    // bottom (zone 5)
     }
     readonly property int _botStripW: {
-        if (!touchBottom) return 0;
-        if (_proj) return Math.max(0, _proj.xMax - _proj.xMin);
+        if (!touchBottom)
+            return 0;
+        if (_proj)
+            return Math.max(0, _proj.xMax - _proj.xMin);
         return _defaultLen;
     }
     readonly property int _botStripH: touchBottom ? _stripThickness("bottom") : 0
 
     // ── Left strip geometry ──────────────────────────────────────────
     readonly property int _leftStripY: {
-        if (!touchLeft) return 0;
-        if (_proj) return Math.max(0, _proj.yMin);
-        if (zoneIdx === 0) return 0;                       // topLeft
-        if (zoneIdx === 6) return Math.max(0, zHeight - _defaultLen); // bottomLeft
+        if (!touchLeft)
+            return 0;
+        if (_proj)
+            return Math.max(0, _proj.yMin);
+        if (zoneIdx === 0)
+            return 0;                       // topLeft
+        if (zoneIdx === 6)
+            return Math.max(0, zHeight - _defaultLen); // bottomLeft
         return Math.max(0, (zHeight - _defaultLen) / 2);   // left (zone 7)
     }
     readonly property int _leftStripH: {
-        if (!touchLeft) return 0;
-        if (_proj) return Math.max(0, _proj.yMax - _proj.yMin);
+        if (!touchLeft)
+            return 0;
+        if (_proj)
+            return Math.max(0, _proj.yMax - _proj.yMin);
         return _defaultLen;
     }
     readonly property int _leftStripW: touchLeft ? _stripThickness("left") : 0
 
     // ── Right strip geometry ─────────────────────────────────────────
     readonly property int _rightStripY: {
-        if (!touchRight) return 0;
-        if (_proj) return Math.max(0, _proj.yMin);
-        if (zoneIdx === 2) return 0;                       // topRight
-        if (zoneIdx === 4) return Math.max(0, zHeight - _defaultLen); // bottomRight
+        if (!touchRight)
+            return 0;
+        if (_proj)
+            return Math.max(0, _proj.yMin);
+        if (zoneIdx === 2)
+            return 0;                       // topRight
+        if (zoneIdx === 4)
+            return Math.max(0, zHeight - _defaultLen); // bottomRight
         return Math.max(0, (zHeight - _defaultLen) / 2);   // right (zone 3)
     }
     readonly property int _rightStripH: {
-        if (!touchRight) return 0;
-        if (_proj) return Math.max(0, _proj.yMax - _proj.yMin);
+        if (!touchRight)
+            return 0;
+        if (_proj)
+            return Math.max(0, _proj.yMax - _proj.yMin);
         return _defaultLen;
     }
     readonly property int _rightStripW: touchRight ? _stripThickness("right") : 0
 
     // ── Debug visual colour (cycle through palette by zoneIdx) ───────
     readonly property color _debugColor: {
+        const palette = [Qt.rgba(1, 0.3, 0.3, 0)  // 0 topLeft   red
+            , Qt.rgba(1, 0.6, 0.2, 0)  // 1 top       orange
+            , Qt.rgba(1, 0.9, 0.2, 0)  // 2 topRight  yellow
+            , Qt.rgba(0.5, 1, 0.3, 0)  // 3 right     green
+            , Qt.rgba(0.3, 1, 0.8, 0)  // 4 botRight  teal
+            , Qt.rgba(0.3, 0.6, 1, 0)  // 5 bottom    blue
+            , Qt.rgba(0.6, 0.4, 1, 0)  // 6 botLeft   purple
+            , Qt.rgba(1, 0.4, 0.9, 0)   // 7 left      pink
 
-        const palette = [
-        Qt.rgba(1, 0.3, 0.3, 0),  // 0 topLeft   red
-        Qt.rgba(1, 0.6, 0.2, 0),  // 1 top       orange
-        Qt.rgba(1, 0.9, 0.2, 0),  // 2 topRight  yellow
-        Qt.rgba(0.5, 1, 0.3, 0),  // 3 right     green
-        Qt.rgba(0.3, 1, 0.8, 0),  // 4 botRight  teal
-        Qt.rgba(0.3, 0.6, 1, 0),  // 5 bottom    blue
-        Qt.rgba(0.6, 0.4, 1, 0),  // 6 botLeft   purple
-        Qt.rgba(1, 0.4, 0.9, 0)   // 7 left      pink
-
-            // Qt.rgba(1, 0.3, 0.3, 0.35),  // 0 topLeft   red
-            // Qt.rgba(1, 0.6, 0.2, 0.35),  // 1 top       orange
-            // Qt.rgba(1, 0.9, 0.2, 0.35),  // 2 topRight  yellow
-            // Qt.rgba(0.5, 1, 0.3, 0.35),  // 3 right     green
-            // Qt.rgba(0.3, 1, 0.8, 0.35),  // 4 botRight  teal
-            // Qt.rgba(0.3, 0.6, 1, 0.35),  // 5 bottom    blue
-            // Qt.rgba(0.6, 0.4, 1, 0.35),  // 6 botLeft   purple
-            // Qt.rgba(1, 0.4, 0.9, 0.35)   // 7 left      pink
+        // Qt.rgba(1, 0.3, 0.3, 1.0)  // 0 topLeft   red
+        // , Qt.rgba(1, 0.6, 0.2, 1.0)  // 1 top       orange
+        // , Qt.rgba(1, 0.9, 0.2, 1.0)  // 2 topRight  yellow
+        // , Qt.rgba(0.5, 1, 0.3, 1.0)  // 3 right     green
+        // , Qt.rgba(0.3, 1, 0.8, 1.0)  // 4 botRight  teal
+        // , Qt.rgba(0.3, 0.6, 1, 1.0)  // 5 bottom    blue
+        // , Qt.rgba(0.6, 0.4, 1, 1.0)  // 6 botLeft   purple
+        // , Qt.rgba(1, 0.4, 0.9, 1.0)   // 7 left      pink
         ];
         return palette[zoneIdx] ?? Qt.rgba(0.5, 0.5, 0.5, 0.35);
     }
@@ -295,8 +355,10 @@ Item {
         height: _dh
 
         function _snapToTarget() {
-            _dx = targetX; _dy = targetY;
-            _dw = targetWidth; _dh = targetHeight;
+            _dx = targetX;
+            _dy = targetY;
+            _dw = targetWidth;
+            _dh = targetHeight;
         }
 
         function _expandToTarget() {
@@ -304,8 +366,10 @@ Item {
             const y0 = Math.min(_dy, targetY);
             const x1 = Math.max(_dx + _dw, targetX + targetWidth);
             const y1 = Math.max(_dy + _dh, targetY + targetHeight);
-            _dx = x0; _dy = y0;
-            _dw = x1 - x0; _dh = y1 - y0;
+            _dx = x0;
+            _dy = y0;
+            _dw = x1 - x0;
+            _dh = y1 - y0;
         }
 
         function _resyncOnTargetChange() {
@@ -317,9 +381,9 @@ Item {
             else
                 _snapToTarget();
         }
-        onTargetXChanged:      _resyncOnTargetChange()
-        onTargetYChanged:      _resyncOnTargetChange()
-        onTargetWidthChanged:  _resyncOnTargetChange()
+        onTargetXChanged: _resyncOnTargetChange()
+        onTargetYChanged: _resyncOnTargetChange()
+        onTargetWidthChanged: _resyncOnTargetChange()
         onTargetHeightChanged: _resyncOnTargetChange()
 
         function _maybeCollapseFromCursor(localX, localY) {
@@ -328,10 +392,7 @@ Item {
             // no longer needed.
             const ax = localX + strip._dx;
             const ay = localY + strip._dy;
-            if (ax >= strip.targetX
-                    && ax < strip.targetX + strip.targetWidth
-                    && ay >= strip.targetY
-                    && ay < strip.targetY + strip.targetHeight) {
+            if (ax >= strip.targetX && ax < strip.targetX + strip.targetWidth && ay >= strip.targetY && ay < strip.targetY + strip.targetHeight) {
                 strip._snapToTarget();
             }
         }
@@ -343,10 +404,12 @@ Item {
             id: strip_hover
             cursorShape: Qt.PointingHandCursor
             onHoveredChanged: {
-                if (hovered) root._stripEnter();
+                if (hovered)
+                    root._stripEnter();
                 else {
                     root._stripExit();
-                    if (!strip_drop.containsDrag) strip._snapToTarget();
+                    if (!strip_drop.containsDrag)
+                        strip._snapToTarget();
                 }
             }
         }
@@ -381,13 +444,19 @@ Item {
             property bool _slideArmed: false
 
             onClicked: InteractionManager.fireClick(root.rail)
-            onPressed: { _slideArmed = true; }
-            onReleased: { _slideArmed = false; }
-            onCanceled: { _slideArmed = false; }
+            onPressed: {
+                _slideArmed = true;
+            }
+            onReleased: {
+                _slideArmed = false;
+            }
+            onCanceled: {
+                _slideArmed = false;
+            }
             onPositionChanged: mouse => {
-                if (!_slideArmed) return;
-                const inside = mouse.x >= 0 && mouse.x <= width
-                            && mouse.y >= 0 && mouse.y <= height;
+                if (!_slideArmed)
+                    return;
+                const inside = mouse.x >= 0 && mouse.x <= width && mouse.y >= 0 && mouse.y <= height;
                 if (!inside) {
                     InteractionManager.fireSlide(root.rail);
                     _slideArmed = false;
