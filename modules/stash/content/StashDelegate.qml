@@ -82,6 +82,28 @@ Item {
         drag.target: dragItem
         hoverEnabled: true
 
+        // Native (file-manager-style) drag-out. We deliberately do NOT bind
+        // dragItem's Drag.active to drag.active: with Drag.Automatic that
+        // binding is re-entrant — starting the native drag drops the
+        // MouseArea grab, so drag.active flips back and the binding re-runs
+        // *inside* QDrag::exec, churning and freeing the QMimeData mid-drag
+        // (the segfault was in QMimeData::hasImage()). Instead we start the
+        // drag imperatively, exactly once, when the threshold is crossed.
+        readonly property bool _dragArmed: drag.active
+        on_DragArmedChanged: {
+            if (!_dragArmed || dragItem.Drag.active)
+                return;
+            // Grab the tile (thumbnail/icon + name) into an image so the drag
+            // carries a file preview under the cursor, then flip Drag.active
+            // — the order Qt's Drag.Automatic recipe prescribes.
+            surface.grabToImage(result => {
+                if (!tile.drag.active)
+                    return;   // released before the grab landed
+                dragItem.Drag.imageSource = result.url;
+                dragItem.Drag.active = true;
+            });
+        }
+
         // Outer clipped surface — rounded corners actually clip the image
         // and the gradient overlay (Rectangle's `clip: true` is rectangular;
         // ClippingRectangle masks to its rounded shape).
@@ -162,10 +184,20 @@ Item {
         Item {
             id: dragItem
             anchors.fill: parent
-            Drag.active: tile.drag.active
+            // Drag.active is set imperatively from tile.on_DragArmedChanged —
+            // see the comment there for why it must NOT be a live binding.
             Drag.dragType: Drag.Automatic
             Drag.supportedActions: Qt.CopyAction
+            Drag.proposedAction: Qt.CopyAction
             Drag.mimeData: { "text/uri-list": del.fileURL }
+
+            // Pin the panel open for the whole native drag. Without this the
+            // cursor leaving the tray trips the hover auto-hide, which
+            // unloads this delegate (and its QMimeData) mid-drag — the
+            // compositor then asks the freed source for the data and the
+            // shell segfaults in QMimeData::hasImage().
+            Drag.onDragStarted:  del.stash.noteOutgoingDrag(true)
+            Drag.onDragFinished: del.stash.noteOutgoingDrag(false)
         }
 
         // ── Action buttons ─────────────────────────────────────────

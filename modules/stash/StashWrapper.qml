@@ -51,6 +51,14 @@ Item {
     property bool _panelHovered: false
     property bool _panelDragging: false
 
+    // True while a file is being dragged *out* of the tray via a native
+    // (Drag.Automatic) drag. An outgoing drag pulls the cursor off the
+    // panel and registers in no local DropArea, so without this the
+    // auto-hide would unload the dragged delegate — and its QMimeData —
+    // mid-drag, segfaulting when the drop target requests the data.
+    property bool _outgoingDrag: false
+    function noteOutgoingDrag(active) { _outgoingDrag = active; }
+
     // incomingDrag is true any time a file/text drag is anywhere in the
     // module's input region (strip + bg + bridges). Keeps the drop-zone
     // chooser visible during the entire transit from strip to inner tile.
@@ -86,6 +94,7 @@ Item {
     readonly property bool _anyHovered: _stickyStripEngaged
                                         || _slotHovered || _slotDragOver
                                         || _panelHovered || _panelDragging
+                                        || _outgoingDrag
                                         || LocalSend.hasIncoming
 
     function notePanelHover(hovered)  { _panelHovered = hovered; }
