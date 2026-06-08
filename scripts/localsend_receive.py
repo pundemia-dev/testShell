@@ -410,6 +410,12 @@ def stdin_loop():
 
 
 # -- multicast discovery ------------------------------------------------
+# Set whenever the set of local interface IPs changes (VPN up/down, network
+# switch). Wakes the registration sweep so freshly-reachable peers see us
+# without restarting the receive server.
+_net_changed = threading.Event()
+
+
 def iface_ips():
     ips = []
     try:
@@ -459,17 +465,38 @@ def discovery_loop():
     except Exception:
         pass
     rx.bind(("", PORT))
-    for ip in iface_ips():
-        try:
-            rx.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                          struct.pack("4s4s", socket.inet_aton(MCAST), socket.inet_aton(ip)))
-        except OSError:
-            pass
     try:
         rx.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
                       struct.pack("4sL", socket.inet_aton(MCAST), socket.INADDR_ANY))
     except OSError:
         pass
+
+    # Tracks which interface IPs we've joined the multicast group on. Joining
+    # is per-interface, so when a new interface appears (e.g. a VPN tun comes
+    # up) we must join on it too — otherwise peers' multicast announces on that
+    # network never reach us until the server restarts.
+    joined = set()
+
+    def sync_membership():
+        nonlocal joined
+        cur = set(iface_ips())
+        for ip in cur - joined:
+            try:
+                rx.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                              struct.pack("4s4s", socket.inet_aton(MCAST),
+                                          socket.inet_aton(ip)))
+            except OSError:
+                pass
+        for ip in joined - cur:
+            try:
+                rx.setsockopt(socket.IPPROTO_IP, socket.IP_DROP_MEMBERSHIP,
+                              struct.pack("4s4s", socket.inet_aton(MCAST),
+                                          socket.inet_aton(ip)))
+            except OSError:
+                pass
+        changed = cur != joined
+        joined = cur
+        return changed
 
     tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     tx.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 4)
@@ -484,14 +511,26 @@ def discovery_loop():
             except OSError:
                 pass
 
+    sync_membership()
     send(announce)
     last_announce = time.time()
+    last_netcheck = time.time()
     rx.settimeout(1.0)
     while True:
+        now = time.time()
+        # Watch for interface changes (VPN up/down) and re-join the multicast
+        # group on any new interface, then re-announce + kick the registration
+        # sweep so the new network sees us immediately.
+        if now - last_netcheck > 2:
+            last_netcheck = now
+            if sync_membership():
+                send(announce)
+                last_announce = now
+                _net_changed.set()
         # Periodic self-announce keeps us fresh in peers' device lists.
-        if time.time() - last_announce > 5:
+        if now - last_announce > 5:
             send(announce)
-            last_announce = time.time()
+            last_announce = now
         try:
             data, (peer, _) = rx.recvfrom(65536)
         except socket.timeout:
@@ -580,7 +619,10 @@ def register_sweep_loop():
         if targets:
             with concurrent.futures.ThreadPoolExecutor(max_workers=64) as ex:
                 list(ex.map(_try_register, targets))
-        time.sleep(30)
+        # Re-sweep every 30 s, but wake immediately when the network changes
+        # (VPN up/down) so a peer on the freshly-added subnet sees us at once.
+        _net_changed.wait(timeout=30)
+        _net_changed.clear()
 
 
 class Server(ThreadingHTTPServer):

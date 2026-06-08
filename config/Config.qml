@@ -11,6 +11,7 @@ import "cornersconfig"
 import "backgroundsconfig"
 import "notifsconfig"
 import "stashconfig"
+import "captureconfig"
 
 Singleton {
     id: root
@@ -22,6 +23,7 @@ Singleton {
     property alias backgrounds: adapter.backgrounds
     property alias notifs: adapter.notifs
     property alias stash: adapter.stash
+    property alias capture: adapter.capture
 
     FileView {
         id: fileview
@@ -41,6 +43,7 @@ Singleton {
             property BackgroundsConfig backgrounds: BackgroundsConfig {}
             property NotifsConfig notifs: NotifsConfig {}
             property StashConfig stash: StashConfig {}
+            property CaptureConfig capture: CaptureConfig {}
         }
     }
 }
