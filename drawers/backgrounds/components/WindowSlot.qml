@@ -39,16 +39,20 @@ Item {
     property Item contentLoader: null
 
     readonly property int targetWrapperWidth: {
-        if (!wrapper) return 0;
-        if (wrapper.wrapperWidth !== undefined && wrapper.wrapperWidth > 0) return wrapper.wrapperWidth;
+        if (!wrapper)
+            return 0;
+        if (wrapper.wrapperWidth !== undefined && wrapper.wrapperWidth > 0)
+            return wrapper.wrapperWidth;
         if (contentLoader && contentLoader.item) {
             return (contentLoader.item.childrenRect.width || contentLoader.item.implicitWidth) + pLeft + pRight;
         }
         return 0;
     }
     readonly property int targetWrapperHeight: {
-        if (!wrapper) return 0;
-        if (wrapper.wrapperHeight !== undefined && wrapper.wrapperHeight > 0) return wrapper.wrapperHeight;
+        if (!wrapper)
+            return 0;
+        if (wrapper.wrapperHeight !== undefined && wrapper.wrapperHeight > 0)
+            return wrapper.wrapperHeight;
         if (contentLoader && contentLoader.item) {
             return (contentLoader.item.childrenRect.height || contentLoader.item.implicitHeight) + pTop + pBottom;
         }
@@ -75,16 +79,23 @@ Item {
     readonly property int paintedWidth: Math.max(0, _rawWidth)
     readonly property int paintedHeight: Math.max(0, _rawHeight)
 
+    // Size follow: one brisk spring per axis, both sharing Liquid's params. The
+    // visible "liquid glass" squash/stretch is NOT produced here — it's the SDF
+    // deform engine on the BlobRect below, driven by the centre velocity this
+    // motion generates (resize from an edge moves the centre toward that edge, so
+    // the stretch direction encodes the expansion origin). See utils/Liquid.qml.
     Behavior on _rawWidth {
-        Anim {
-            easing.bezierCurve: Appearance.anim.curves.bubblyWidth
-            duration: Math.max(root.targetWrapperWidth, root.targetWrapperHeight)
+        SpringAnimation {
+            spring: Liquid.sizeSpring
+            damping: Liquid.sizeDamping
+            epsilon: Liquid.sizeEpsilon
         }
     }
     Behavior on _rawHeight {
-        Anim {
-            easing.bezierCurve: Appearance.anim.curves.bubblyHeight
-            duration: Math.max(root.targetWrapperWidth, root.targetWrapperHeight)
+        SpringAnimation {
+            spring: Liquid.sizeSpring
+            damping: Liquid.sizeDamping
+            epsilon: Liquid.sizeEpsilon
         }
     }
 
@@ -133,16 +144,23 @@ Item {
 
     // ── L-step detection (corner rails, layer 2, side reservation) ──
     readonly property string _sideForCorner: {
-        if (anchor === "topLeft" || anchor === "bottomLeft") return "left";
-        if (anchor === "topRight" || anchor === "bottomRight") return "right";
+        if (anchor === "topLeft" || anchor === "bottomLeft")
+            return "left";
+        if (anchor === "topRight" || anchor === "bottomRight")
+            return "right";
         return "";
     }
     readonly property bool isLStep: {
-        if (!aCorner) return false;
-        if (layerIdx !== 2) return false;
-        if (isOverlay) return false;
-        if (!prevSlot || !prevSlot.isPinned) return false;
-        if (!_sideForCorner) return false;
+        if (!aCorner)
+            return false;
+        if (layerIdx !== 2)
+            return false;
+        if (isOverlay)
+            return false;
+        if (!prevSlot || !prevSlot.isPinned)
+            return false;
+        if (!_sideForCorner)
+            return false;
         return (manager.reservedEdge(_sideForCorner) || 0) > 0;
     }
 
@@ -151,16 +169,20 @@ Item {
         if (aHCenter && !aLeft && !aRight) {
             return (zWidth / 2) - (paintedWidth / 2) + hCenterOffset;
         }
-        if (aLeft) return mLeft + edgeLeft;
-        if (aRight) return zWidth - paintedWidth - mRight - edgeRight;
+        if (aLeft)
+            return mLeft + edgeLeft;
+        if (aRight)
+            return zWidth - paintedWidth - mRight - edgeRight;
         return 0;
     }
     readonly property int ownY: {
         if (aVCenter && !aTop && !aBottom) {
             return (zHeight / 2) - (paintedHeight / 2) + vCenterOffset;
         }
-        if (aTop) return mTop + edgeTop;
-        if (aBottom) return zHeight - paintedHeight - mBottom - edgeBottom;
+        if (aTop)
+            return mTop + edgeTop;
+        if (aBottom)
+            return zHeight - paintedHeight - mBottom - edgeBottom;
         return 0;
     }
 
@@ -173,9 +195,11 @@ Item {
     // whatever is adjacent" (prev bg, reserved space, or screen edge).
     readonly property int targetX: {
         // Overlay: cover prev (act like layer 1 of this anchor).
-        if (isOverlay) return ownX;
+        if (isOverlay)
+            return ownX;
         // Layer 1: own-anchor on both axes.
-        if (layerIdx <= 1 || !prevSlot) return ownX;
+        if (layerIdx <= 1 || !prevSlot)
+            return ownX;
         // L-step (layer 2 on corner with side reservation): sideways step.
         if (isLStep) {
             if (anchor === "topLeft" || anchor === "bottomLeft") {
@@ -185,15 +209,19 @@ Item {
             return prevSlot.targetX - paintedWidth - mRight;
         }
         // Side-growing rails (left/right): X is growth axis → from prev.
-        if (anchor === "left") return prevSlot.targetX + prevSlot.paintedWidth + mLeft;
-        if (anchor === "right") return prevSlot.targetX - paintedWidth - mRight;
+        if (anchor === "left")
+            return prevSlot.targetX + prevSlot.paintedWidth + mLeft;
+        if (anchor === "right")
+            return prevSlot.targetX - paintedWidth - mRight;
         // Otherwise (vertical-growth rails): own X.
         return ownX;
     }
 
     readonly property int targetY: {
-        if (isOverlay) return ownY;
-        if (layerIdx <= 1 || !prevSlot) return ownY;
+        if (isOverlay)
+            return ownY;
+        if (layerIdx <= 1 || !prevSlot)
+            return ownY;
         if (isLStep) {
             // Align with prev's edge facing the corner.
             if (anchor === "topLeft" || anchor === "topRight") {
@@ -203,9 +231,12 @@ Item {
             return prevSlot.targetY + prevSlot.paintedHeight - paintedHeight;
         }
         // Top/center/topLeft/topRight rails grow DOWN; left/right keep own Y.
-        if (aTop) return prevSlot.targetY + prevSlot.paintedHeight + mTop;
-        if (aBottom) return prevSlot.targetY - paintedHeight - mBottom;
-        if (anchor === "center") return prevSlot.targetY + prevSlot.paintedHeight + mTop;
+        if (aTop)
+            return prevSlot.targetY + prevSlot.paintedHeight + mTop;
+        if (aBottom)
+            return prevSlot.targetY - paintedHeight - mBottom;
+        if (anchor === "center")
+            return prevSlot.targetY + prevSlot.paintedHeight + mTop;
         return ownY;
     }
 
@@ -259,8 +290,10 @@ Item {
         // Empty rect contributes nothing — otherwise (0,0,0,0) would be
         // treated as a point at origin and pull the union back to the screen
         // corner, which matters before Qt.callLater seeds the displays.
-        if (a.width <= 0 || a.height <= 0) return b;
-        if (b.width <= 0 || b.height <= 0) return a;
+        if (a.width <= 0 || a.height <= 0)
+            return b;
+        if (b.width <= 0 || b.height <= 0)
+            return a;
         const x0 = Math.min(a.x, b.x);
         const y0 = Math.min(a.y, b.y);
         const x1 = Math.max(a.x + a.width, b.x + b.width);
@@ -341,10 +374,10 @@ Item {
         if (!isOverlay && layerIdx <= 1 && aTop && root.y > 0)
             return Qt.rect(root.x, 0, paintedWidth, root.y);
         // Layer-2+ aTop / center / topLeft+topRight non-L-step: from prev.bottom to root.y
-        if (!isOverlay && layerIdx > 1 && prevSlot && !isLStep
-                && (aTop || anchor === "center")) {
+        if (!isOverlay && layerIdx > 1 && prevSlot && !isLStep && (aTop || anchor === "center")) {
             const gap = root.y - _prevBottom;
-            if (gap > 0) return Qt.rect(root.x, _prevBottom, paintedWidth, gap);
+            if (gap > 0)
+                return Qt.rect(root.x, _prevBottom, paintedWidth, gap);
         }
         return Qt.rect(0, 0, 0, 0);
     }
@@ -357,7 +390,8 @@ Item {
         if (!isOverlay && layerIdx > 1 && prevSlot && !isLStep && aBottom) {
             const top = root.y + paintedHeight;
             const gap = _prevTop - top;
-            if (gap > 0) return Qt.rect(root.x, top, paintedWidth, gap);
+            if (gap > 0)
+                return Qt.rect(root.x, top, paintedWidth, gap);
         }
         return Qt.rect(0, 0, 0, 0);
     }
@@ -367,11 +401,10 @@ Item {
         if (!isOverlay && layerIdx <= 1 && aLeft && root.x > 0)
             return Qt.rect(0, root.y, root.x, paintedHeight);
         // Layer-2+ left rail or L-step topLeft/bottomLeft: from prev.right to root.x
-        if (!isOverlay && layerIdx > 1 && prevSlot
-                && (anchor === "left"
-                    || ((anchor === "topLeft" || anchor === "bottomLeft") && isLStep))) {
+        if (!isOverlay && layerIdx > 1 && prevSlot && (anchor === "left" || ((anchor === "topLeft" || anchor === "bottomLeft") && isLStep))) {
             const gap = root.x - _prevRight;
-            if (gap > 0) return Qt.rect(_prevRight, root.y, gap, paintedHeight);
+            if (gap > 0)
+                return Qt.rect(_prevRight, root.y, gap, paintedHeight);
         }
         return Qt.rect(0, 0, 0, 0);
     }
@@ -381,12 +414,11 @@ Item {
             const left = root.x + paintedWidth;
             return Qt.rect(left, root.y, zWidth - left, paintedHeight);
         }
-        if (!isOverlay && layerIdx > 1 && prevSlot
-                && (anchor === "right"
-                    || ((anchor === "topRight" || anchor === "bottomRight") && isLStep))) {
+        if (!isOverlay && layerIdx > 1 && prevSlot && (anchor === "right" || ((anchor === "topRight" || anchor === "bottomRight") && isLStep))) {
             const left = root.x + paintedWidth;
             const gap = _prevLeft - left;
-            if (gap > 0) return Qt.rect(left, root.y, gap, paintedHeight);
+            if (gap > 0)
+                return Qt.rect(left, root.y, gap, paintedHeight);
         }
         return Qt.rect(0, 0, 0, 0);
     }
@@ -440,15 +472,23 @@ Item {
     readonly property int _envStableH: Math.max(paintedHeight, lastTargetHeight, targetWrapperHeight)
     function _envStablePos() {
         let sx, sy;
-        if (aHCenter && !aLeft && !aRight) sx = (zWidth / 2) - (_envStableW / 2) + hCenterOffset;
-        else if (aLeft) sx = mLeft + edgeLeft;
-        else if (aRight) sx = zWidth - _envStableW - mRight - edgeRight;
-        else sx = root.x;
+        if (aHCenter && !aLeft && !aRight)
+            sx = (zWidth / 2) - (_envStableW / 2) + hCenterOffset;
+        else if (aLeft)
+            sx = mLeft + edgeLeft;
+        else if (aRight)
+            sx = zWidth - _envStableW - mRight - edgeRight;
+        else
+            sx = root.x;
 
-        if (aVCenter && !aTop && !aBottom) sy = (zHeight / 2) - (_envStableH / 2) + vCenterOffset;
-        else if (aTop) sy = mTop + edgeTop;
-        else if (aBottom) sy = zHeight - _envStableH - mBottom - edgeBottom;
-        else sy = root.y;
+        if (aVCenter && !aTop && !aBottom)
+            sy = (zHeight / 2) - (_envStableH / 2) + vCenterOffset;
+        else if (aTop)
+            sy = mTop + edgeTop;
+        else if (aBottom)
+            sy = zHeight - _envStableH - mBottom - edgeBottom;
+        else
+            sy = root.y;
         return Qt.point(sx, sy);
     }
 
@@ -466,10 +506,14 @@ Item {
         // the first frame too. Bridges extend to the screen edge for layer-1
         // anchored sides, and toward prev for layer-2+.
         if (!isOverlay && layerIdx <= 1) {
-            if (aTop && sp.y > 0)                          yMin = Math.min(yMin, 0);
-            if (aBottom && (sp.y + sh) < zHeight)          yMax = Math.max(yMax, zHeight);
-            if (aLeft && sp.x > 0)                         xMin = Math.min(xMin, 0);
-            if (aRight && (sp.x + sw) < zWidth)            xMax = Math.max(xMax, zWidth);
+            if (aTop && sp.y > 0)
+                yMin = Math.min(yMin, 0);
+            if (aBottom && (sp.y + sh) < zHeight)
+                yMax = Math.max(yMax, zHeight);
+            if (aLeft && sp.x > 0)
+                xMin = Math.min(xMin, 0);
+            if (aRight && (sp.x + sw) < zWidth)
+                xMax = Math.max(xMax, zWidth);
         } else if (!isOverlay && layerIdx > 1 && prevSlot) {
             // Layer-2+: bridge toward prev (existing _bridge*Rect logic uses
             // animated geometry; we approximate using prev's stable bounds
@@ -513,35 +557,43 @@ Item {
             id: envHover
             onHoveredChanged: {
                 root._envHovered = hovered;
-                if (!hovered && !root._envDragOver) root._snapDisplaysToTarget();
+                if (!hovered && !root._envDragOver)
+                    root._snapDisplaysToTarget();
             }
         }
         readonly property point _hoverPos: envHover.point.position
         on_HoverPosChanged: {
             if (envHover.hovered)
-                root._maybeCollapseFromCursor(_hoverPos.x + envelopeItem.x,
-                                              _hoverPos.y + envelopeItem.y);
+                root._maybeCollapseFromCursor(_hoverPos.x + envelopeItem.x, _hoverPos.y + envelopeItem.y);
         }
         DropArea {
             anchors.fill: parent
             keys: ["text/uri-list"]
             onContainsDragChanged: {
                 root._envDragOver = containsDrag;
-                if (!containsDrag && !root._envHovered) root._snapDisplaysToTarget();
+                if (!containsDrag && !root._envHovered)
+                    root._snapDisplaysToTarget();
             }
             onPositionChanged: drag => {
-                root._maybeCollapseFromCursor(drag.x + envelopeItem.x,
-                                              drag.y + envelopeItem.y);
+                root._maybeCollapseFromCursor(drag.x + envelopeItem.x, drag.y + envelopeItem.y);
             }
         }
     }
 
     Connections {
         target: root
-        function onXChanged() { InputManager.refresh(); }
-        function onYChanged() { InputManager.refresh(); }
-        function onWidthChanged() { InputManager.refresh(); }
-        function onHeightChanged() { InputManager.refresh(); }
+        function onXChanged() {
+            InputManager.refresh();
+        }
+        function onYChanged() {
+            InputManager.refresh();
+        }
+        function onWidthChanged() {
+            InputManager.refresh();
+        }
+        function onHeightChanged() {
+            InputManager.refresh();
+        }
     }
 
     // ── SDF bg — every wrapper (overlay included) lives in the shared
@@ -554,11 +606,16 @@ Item {
     // center) to the shader, which uses per-zone roundings to enable/disable
     // присасывание per bg.
     BlobRect {
+        id: bgRect
         group: root.group
         implicitWidth: root.paintedWidth
         implicitHeight: root.paintedHeight
         radius: root.effectiveRounding
-        deformScale: 0
+        // Liquid-glass velocity deform (see utils/Liquid.qml). The engine tracks
+        // this rect's centre speed in the scene and stretches along motion.
+        deformScale: Liquid.deformScale
+        stiffness: Liquid.deformStiffness
+        damping: Liquid.deformDamping
         zoneIndex: root.manager ? root.manager.zoneForRail(root.railRef ? root.railRef.railIndex : -1) : -1
     }
 
@@ -639,10 +696,7 @@ Item {
         ShaderEffectSource {
             id: maskShape
             sourceItem: root.groupHost
-            sourceRect: Qt.rect(root.x - root.fadeWidth,
-                                root.y - root.fadeWidth,
-                                root.paintedWidth + 2 * root.fadeWidth,
-                                root.paintedHeight + 2 * root.fadeWidth)
+            sourceRect: Qt.rect(root.x - root.fadeWidth, root.y - root.fadeWidth, root.paintedWidth + 2 * root.fadeWidth, root.paintedHeight + 2 * root.fadeWidth)
             width: root.paintedWidth + 2 * root.fadeWidth
             height: root.paintedHeight + 2 * root.fadeWidth
             visible: false
@@ -675,17 +729,50 @@ Item {
             height: root.fadeWidth
             gradient: Gradient {
                 orientation: Gradient.Vertical
-                GradientStop { position: 0.0; color: root._fadeAt(0.0) }
-                GradientStop { position: 0.1; color: root._fadeAt(0.1) }
-                GradientStop { position: 0.2; color: root._fadeAt(0.2) }
-                GradientStop { position: 0.3; color: root._fadeAt(0.3) }
-                GradientStop { position: 0.4; color: root._fadeAt(0.4) }
-                GradientStop { position: 0.5; color: root._fadeAt(0.5) }
-                GradientStop { position: 0.6; color: root._fadeAt(0.6) }
-                GradientStop { position: 0.7; color: root._fadeAt(0.7) }
-                GradientStop { position: 0.8; color: root._fadeAt(0.8) }
-                GradientStop { position: 0.9; color: root._fadeAt(0.9) }
-                GradientStop { position: 1.0; color: root._fadeAt(1.0) }
+                GradientStop {
+                    position: 0.0
+                    color: root._fadeAt(0.0)
+                }
+                GradientStop {
+                    position: 0.1
+                    color: root._fadeAt(0.1)
+                }
+                GradientStop {
+                    position: 0.2
+                    color: root._fadeAt(0.2)
+                }
+                GradientStop {
+                    position: 0.3
+                    color: root._fadeAt(0.3)
+                }
+                GradientStop {
+                    position: 0.4
+                    color: root._fadeAt(0.4)
+                }
+                GradientStop {
+                    position: 0.5
+                    color: root._fadeAt(0.5)
+                }
+                GradientStop {
+                    position: 0.6
+                    color: root._fadeAt(0.6)
+                }
+                GradientStop {
+                    position: 0.7
+                    color: root._fadeAt(0.7)
+                }
+                GradientStop {
+                    position: 0.8
+                    color: root._fadeAt(0.8)
+                }
+                GradientStop {
+                    position: 0.9
+                    color: root._fadeAt(0.9)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: root._fadeAt(1.0)
+                }
             }
         }
         // Bottom strip — sits BELOW inner solid, gradient opaque→transparent
@@ -696,17 +783,50 @@ Item {
             height: root.fadeWidth
             gradient: Gradient {
                 orientation: Gradient.Vertical
-                GradientStop { position: 0.0; color: root._fadeAt(1.0) }
-                GradientStop { position: 0.1; color: root._fadeAt(0.9) }
-                GradientStop { position: 0.2; color: root._fadeAt(0.8) }
-                GradientStop { position: 0.3; color: root._fadeAt(0.7) }
-                GradientStop { position: 0.4; color: root._fadeAt(0.6) }
-                GradientStop { position: 0.5; color: root._fadeAt(0.5) }
-                GradientStop { position: 0.6; color: root._fadeAt(0.4) }
-                GradientStop { position: 0.7; color: root._fadeAt(0.3) }
-                GradientStop { position: 0.8; color: root._fadeAt(0.2) }
-                GradientStop { position: 0.9; color: root._fadeAt(0.1) }
-                GradientStop { position: 1.0; color: root._fadeAt(0.0) }
+                GradientStop {
+                    position: 0.0
+                    color: root._fadeAt(1.0)
+                }
+                GradientStop {
+                    position: 0.1
+                    color: root._fadeAt(0.9)
+                }
+                GradientStop {
+                    position: 0.2
+                    color: root._fadeAt(0.8)
+                }
+                GradientStop {
+                    position: 0.3
+                    color: root._fadeAt(0.7)
+                }
+                GradientStop {
+                    position: 0.4
+                    color: root._fadeAt(0.6)
+                }
+                GradientStop {
+                    position: 0.5
+                    color: root._fadeAt(0.5)
+                }
+                GradientStop {
+                    position: 0.6
+                    color: root._fadeAt(0.4)
+                }
+                GradientStop {
+                    position: 0.7
+                    color: root._fadeAt(0.3)
+                }
+                GradientStop {
+                    position: 0.8
+                    color: root._fadeAt(0.2)
+                }
+                GradientStop {
+                    position: 0.9
+                    color: root._fadeAt(0.1)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: root._fadeAt(0.0)
+                }
             }
         }
         // Left strip — sits LEFT of inner solid, gradient transparent→opaque
@@ -717,17 +837,50 @@ Item {
             height: root._innerH
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: root._fadeAt(0.0) }
-                GradientStop { position: 0.1; color: root._fadeAt(0.1) }
-                GradientStop { position: 0.2; color: root._fadeAt(0.2) }
-                GradientStop { position: 0.3; color: root._fadeAt(0.3) }
-                GradientStop { position: 0.4; color: root._fadeAt(0.4) }
-                GradientStop { position: 0.5; color: root._fadeAt(0.5) }
-                GradientStop { position: 0.6; color: root._fadeAt(0.6) }
-                GradientStop { position: 0.7; color: root._fadeAt(0.7) }
-                GradientStop { position: 0.8; color: root._fadeAt(0.8) }
-                GradientStop { position: 0.9; color: root._fadeAt(0.9) }
-                GradientStop { position: 1.0; color: root._fadeAt(1.0) }
+                GradientStop {
+                    position: 0.0
+                    color: root._fadeAt(0.0)
+                }
+                GradientStop {
+                    position: 0.1
+                    color: root._fadeAt(0.1)
+                }
+                GradientStop {
+                    position: 0.2
+                    color: root._fadeAt(0.2)
+                }
+                GradientStop {
+                    position: 0.3
+                    color: root._fadeAt(0.3)
+                }
+                GradientStop {
+                    position: 0.4
+                    color: root._fadeAt(0.4)
+                }
+                GradientStop {
+                    position: 0.5
+                    color: root._fadeAt(0.5)
+                }
+                GradientStop {
+                    position: 0.6
+                    color: root._fadeAt(0.6)
+                }
+                GradientStop {
+                    position: 0.7
+                    color: root._fadeAt(0.7)
+                }
+                GradientStop {
+                    position: 0.8
+                    color: root._fadeAt(0.8)
+                }
+                GradientStop {
+                    position: 0.9
+                    color: root._fadeAt(0.9)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: root._fadeAt(1.0)
+                }
             }
         }
         // Right strip — sits RIGHT of inner solid, gradient opaque→transparent
@@ -738,17 +891,50 @@ Item {
             height: root._innerH
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: root._fadeAt(1.0) }
-                GradientStop { position: 0.1; color: root._fadeAt(0.9) }
-                GradientStop { position: 0.2; color: root._fadeAt(0.8) }
-                GradientStop { position: 0.3; color: root._fadeAt(0.7) }
-                GradientStop { position: 0.4; color: root._fadeAt(0.6) }
-                GradientStop { position: 0.5; color: root._fadeAt(0.5) }
-                GradientStop { position: 0.6; color: root._fadeAt(0.4) }
-                GradientStop { position: 0.7; color: root._fadeAt(0.3) }
-                GradientStop { position: 0.8; color: root._fadeAt(0.2) }
-                GradientStop { position: 0.9; color: root._fadeAt(0.1) }
-                GradientStop { position: 1.0; color: root._fadeAt(0.0) }
+                GradientStop {
+                    position: 0.0
+                    color: root._fadeAt(1.0)
+                }
+                GradientStop {
+                    position: 0.1
+                    color: root._fadeAt(0.9)
+                }
+                GradientStop {
+                    position: 0.2
+                    color: root._fadeAt(0.8)
+                }
+                GradientStop {
+                    position: 0.3
+                    color: root._fadeAt(0.7)
+                }
+                GradientStop {
+                    position: 0.4
+                    color: root._fadeAt(0.6)
+                }
+                GradientStop {
+                    position: 0.5
+                    color: root._fadeAt(0.5)
+                }
+                GradientStop {
+                    position: 0.6
+                    color: root._fadeAt(0.4)
+                }
+                GradientStop {
+                    position: 0.7
+                    color: root._fadeAt(0.3)
+                }
+                GradientStop {
+                    position: 0.8
+                    color: root._fadeAt(0.2)
+                }
+                GradientStop {
+                    position: 0.9
+                    color: root._fadeAt(0.1)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: root._fadeAt(0.0)
+                }
             }
         }
 
@@ -764,32 +950,81 @@ Item {
         Shape {
             x: root._innerOff - root.fadeWidth
             y: root._innerOff - root.fadeWidth
-            width: root.fadeWidth; height: root.fadeWidth
+            width: root.fadeWidth
+            height: root.fadeWidth
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
                 strokeWidth: 0
                 fillGradient: RadialGradient {
-                    centerX: root.fadeWidth; centerY: root.fadeWidth
+                    centerX: root.fadeWidth
+                    centerY: root.fadeWidth
                     centerRadius: root.fadeWidth
-                    focalX: root.fadeWidth; focalY: root.fadeWidth
+                    focalX: root.fadeWidth
+                    focalY: root.fadeWidth
                     focalRadius: 0
-                    GradientStop { position: 0.0; color: root._fadeAt(1.0) }
-                    GradientStop { position: 0.1; color: root._fadeAt(0.9) }
-                    GradientStop { position: 0.2; color: root._fadeAt(0.8) }
-                    GradientStop { position: 0.3; color: root._fadeAt(0.7) }
-                    GradientStop { position: 0.4; color: root._fadeAt(0.6) }
-                    GradientStop { position: 0.5; color: root._fadeAt(0.5) }
-                    GradientStop { position: 0.6; color: root._fadeAt(0.4) }
-                    GradientStop { position: 0.7; color: root._fadeAt(0.3) }
-                    GradientStop { position: 0.8; color: root._fadeAt(0.2) }
-                    GradientStop { position: 0.9; color: root._fadeAt(0.1) }
-                    GradientStop { position: 1.0; color: root._fadeAt(0.0) }
+                    GradientStop {
+                        position: 0.0
+                        color: root._fadeAt(1.0)
+                    }
+                    GradientStop {
+                        position: 0.1
+                        color: root._fadeAt(0.9)
+                    }
+                    GradientStop {
+                        position: 0.2
+                        color: root._fadeAt(0.8)
+                    }
+                    GradientStop {
+                        position: 0.3
+                        color: root._fadeAt(0.7)
+                    }
+                    GradientStop {
+                        position: 0.4
+                        color: root._fadeAt(0.6)
+                    }
+                    GradientStop {
+                        position: 0.5
+                        color: root._fadeAt(0.5)
+                    }
+                    GradientStop {
+                        position: 0.6
+                        color: root._fadeAt(0.4)
+                    }
+                    GradientStop {
+                        position: 0.7
+                        color: root._fadeAt(0.3)
+                    }
+                    GradientStop {
+                        position: 0.8
+                        color: root._fadeAt(0.2)
+                    }
+                    GradientStop {
+                        position: 0.9
+                        color: root._fadeAt(0.1)
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: root._fadeAt(0.0)
+                    }
                 }
-                startX: 0; startY: 0
-                PathLine { x: root.fadeWidth; y: 0 }
-                PathLine { x: root.fadeWidth; y: root.fadeWidth }
-                PathLine { x: 0; y: root.fadeWidth }
-                PathLine { x: 0; y: 0 }
+                startX: 0
+                startY: 0
+                PathLine {
+                    x: root.fadeWidth
+                    y: 0
+                }
+                PathLine {
+                    x: root.fadeWidth
+                    y: root.fadeWidth
+                }
+                PathLine {
+                    x: 0
+                    y: root.fadeWidth
+                }
+                PathLine {
+                    x: 0
+                    y: 0
+                }
             }
         }
         // Top-right — sits at the TR corner outside inner solid.
@@ -797,32 +1032,81 @@ Item {
         Shape {
             x: root._innerOff + root._innerW
             y: root._innerOff - root.fadeWidth
-            width: root.fadeWidth; height: root.fadeWidth
+            width: root.fadeWidth
+            height: root.fadeWidth
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
                 strokeWidth: 0
                 fillGradient: RadialGradient {
-                    centerX: 0; centerY: root.fadeWidth
+                    centerX: 0
+                    centerY: root.fadeWidth
                     centerRadius: root.fadeWidth
-                    focalX: 0; focalY: root.fadeWidth
+                    focalX: 0
+                    focalY: root.fadeWidth
                     focalRadius: 0
-                    GradientStop { position: 0.0; color: root._fadeAt(1.0) }
-                    GradientStop { position: 0.1; color: root._fadeAt(0.9) }
-                    GradientStop { position: 0.2; color: root._fadeAt(0.8) }
-                    GradientStop { position: 0.3; color: root._fadeAt(0.7) }
-                    GradientStop { position: 0.4; color: root._fadeAt(0.6) }
-                    GradientStop { position: 0.5; color: root._fadeAt(0.5) }
-                    GradientStop { position: 0.6; color: root._fadeAt(0.4) }
-                    GradientStop { position: 0.7; color: root._fadeAt(0.3) }
-                    GradientStop { position: 0.8; color: root._fadeAt(0.2) }
-                    GradientStop { position: 0.9; color: root._fadeAt(0.1) }
-                    GradientStop { position: 1.0; color: root._fadeAt(0.0) }
+                    GradientStop {
+                        position: 0.0
+                        color: root._fadeAt(1.0)
+                    }
+                    GradientStop {
+                        position: 0.1
+                        color: root._fadeAt(0.9)
+                    }
+                    GradientStop {
+                        position: 0.2
+                        color: root._fadeAt(0.8)
+                    }
+                    GradientStop {
+                        position: 0.3
+                        color: root._fadeAt(0.7)
+                    }
+                    GradientStop {
+                        position: 0.4
+                        color: root._fadeAt(0.6)
+                    }
+                    GradientStop {
+                        position: 0.5
+                        color: root._fadeAt(0.5)
+                    }
+                    GradientStop {
+                        position: 0.6
+                        color: root._fadeAt(0.4)
+                    }
+                    GradientStop {
+                        position: 0.7
+                        color: root._fadeAt(0.3)
+                    }
+                    GradientStop {
+                        position: 0.8
+                        color: root._fadeAt(0.2)
+                    }
+                    GradientStop {
+                        position: 0.9
+                        color: root._fadeAt(0.1)
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: root._fadeAt(0.0)
+                    }
                 }
-                startX: 0; startY: 0
-                PathLine { x: root.fadeWidth; y: 0 }
-                PathLine { x: root.fadeWidth; y: root.fadeWidth }
-                PathLine { x: 0; y: root.fadeWidth }
-                PathLine { x: 0; y: 0 }
+                startX: 0
+                startY: 0
+                PathLine {
+                    x: root.fadeWidth
+                    y: 0
+                }
+                PathLine {
+                    x: root.fadeWidth
+                    y: root.fadeWidth
+                }
+                PathLine {
+                    x: 0
+                    y: root.fadeWidth
+                }
+                PathLine {
+                    x: 0
+                    y: 0
+                }
             }
         }
         // Bottom-left — sits at the BL corner outside inner solid.
@@ -830,32 +1114,81 @@ Item {
         Shape {
             x: root._innerOff - root.fadeWidth
             y: root._innerOff + root._innerH
-            width: root.fadeWidth; height: root.fadeWidth
+            width: root.fadeWidth
+            height: root.fadeWidth
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
                 strokeWidth: 0
                 fillGradient: RadialGradient {
-                    centerX: root.fadeWidth; centerY: 0
+                    centerX: root.fadeWidth
+                    centerY: 0
                     centerRadius: root.fadeWidth
-                    focalX: root.fadeWidth; focalY: 0
+                    focalX: root.fadeWidth
+                    focalY: 0
                     focalRadius: 0
-                    GradientStop { position: 0.0; color: root._fadeAt(1.0) }
-                    GradientStop { position: 0.1; color: root._fadeAt(0.9) }
-                    GradientStop { position: 0.2; color: root._fadeAt(0.8) }
-                    GradientStop { position: 0.3; color: root._fadeAt(0.7) }
-                    GradientStop { position: 0.4; color: root._fadeAt(0.6) }
-                    GradientStop { position: 0.5; color: root._fadeAt(0.5) }
-                    GradientStop { position: 0.6; color: root._fadeAt(0.4) }
-                    GradientStop { position: 0.7; color: root._fadeAt(0.3) }
-                    GradientStop { position: 0.8; color: root._fadeAt(0.2) }
-                    GradientStop { position: 0.9; color: root._fadeAt(0.1) }
-                    GradientStop { position: 1.0; color: root._fadeAt(0.0) }
+                    GradientStop {
+                        position: 0.0
+                        color: root._fadeAt(1.0)
+                    }
+                    GradientStop {
+                        position: 0.1
+                        color: root._fadeAt(0.9)
+                    }
+                    GradientStop {
+                        position: 0.2
+                        color: root._fadeAt(0.8)
+                    }
+                    GradientStop {
+                        position: 0.3
+                        color: root._fadeAt(0.7)
+                    }
+                    GradientStop {
+                        position: 0.4
+                        color: root._fadeAt(0.6)
+                    }
+                    GradientStop {
+                        position: 0.5
+                        color: root._fadeAt(0.5)
+                    }
+                    GradientStop {
+                        position: 0.6
+                        color: root._fadeAt(0.4)
+                    }
+                    GradientStop {
+                        position: 0.7
+                        color: root._fadeAt(0.3)
+                    }
+                    GradientStop {
+                        position: 0.8
+                        color: root._fadeAt(0.2)
+                    }
+                    GradientStop {
+                        position: 0.9
+                        color: root._fadeAt(0.1)
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: root._fadeAt(0.0)
+                    }
                 }
-                startX: 0; startY: 0
-                PathLine { x: root.fadeWidth; y: 0 }
-                PathLine { x: root.fadeWidth; y: root.fadeWidth }
-                PathLine { x: 0; y: root.fadeWidth }
-                PathLine { x: 0; y: 0 }
+                startX: 0
+                startY: 0
+                PathLine {
+                    x: root.fadeWidth
+                    y: 0
+                }
+                PathLine {
+                    x: root.fadeWidth
+                    y: root.fadeWidth
+                }
+                PathLine {
+                    x: 0
+                    y: root.fadeWidth
+                }
+                PathLine {
+                    x: 0
+                    y: 0
+                }
             }
         }
         // Bottom-right — sits at the BR corner outside inner solid.
@@ -863,32 +1196,81 @@ Item {
         Shape {
             x: root._innerOff + root._innerW
             y: root._innerOff + root._innerH
-            width: root.fadeWidth; height: root.fadeWidth
+            width: root.fadeWidth
+            height: root.fadeWidth
             preferredRendererType: Shape.CurveRenderer
             ShapePath {
                 strokeWidth: 0
                 fillGradient: RadialGradient {
-                    centerX: 0; centerY: 0
+                    centerX: 0
+                    centerY: 0
                     centerRadius: root.fadeWidth
-                    focalX: 0; focalY: 0
+                    focalX: 0
+                    focalY: 0
                     focalRadius: 0
-                    GradientStop { position: 0.0; color: root._fadeAt(1.0) }
-                    GradientStop { position: 0.1; color: root._fadeAt(0.9) }
-                    GradientStop { position: 0.2; color: root._fadeAt(0.8) }
-                    GradientStop { position: 0.3; color: root._fadeAt(0.7) }
-                    GradientStop { position: 0.4; color: root._fadeAt(0.6) }
-                    GradientStop { position: 0.5; color: root._fadeAt(0.5) }
-                    GradientStop { position: 0.6; color: root._fadeAt(0.4) }
-                    GradientStop { position: 0.7; color: root._fadeAt(0.3) }
-                    GradientStop { position: 0.8; color: root._fadeAt(0.2) }
-                    GradientStop { position: 0.9; color: root._fadeAt(0.1) }
-                    GradientStop { position: 1.0; color: root._fadeAt(0.0) }
+                    GradientStop {
+                        position: 0.0
+                        color: root._fadeAt(1.0)
+                    }
+                    GradientStop {
+                        position: 0.1
+                        color: root._fadeAt(0.9)
+                    }
+                    GradientStop {
+                        position: 0.2
+                        color: root._fadeAt(0.8)
+                    }
+                    GradientStop {
+                        position: 0.3
+                        color: root._fadeAt(0.7)
+                    }
+                    GradientStop {
+                        position: 0.4
+                        color: root._fadeAt(0.6)
+                    }
+                    GradientStop {
+                        position: 0.5
+                        color: root._fadeAt(0.5)
+                    }
+                    GradientStop {
+                        position: 0.6
+                        color: root._fadeAt(0.4)
+                    }
+                    GradientStop {
+                        position: 0.7
+                        color: root._fadeAt(0.3)
+                    }
+                    GradientStop {
+                        position: 0.8
+                        color: root._fadeAt(0.2)
+                    }
+                    GradientStop {
+                        position: 0.9
+                        color: root._fadeAt(0.1)
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: root._fadeAt(0.0)
+                    }
                 }
-                startX: 0; startY: 0
-                PathLine { x: root.fadeWidth; y: 0 }
-                PathLine { x: root.fadeWidth; y: root.fadeWidth }
-                PathLine { x: 0; y: root.fadeWidth }
-                PathLine { x: 0; y: 0 }
+                startX: 0
+                startY: 0
+                PathLine {
+                    x: root.fadeWidth
+                    y: 0
+                }
+                PathLine {
+                    x: root.fadeWidth
+                    y: root.fadeWidth
+                }
+                PathLine {
+                    x: 0
+                    y: root.fadeWidth
+                }
+                PathLine {
+                    x: 0
+                    y: 0
+                }
             }
         }
     }
@@ -903,6 +1285,15 @@ Item {
         width: root.paintedWidth
         height: root.paintedHeight
         z: root.arrivalSeq + 0.5
+
+        // Mirror the SDF blob's velocity deform onto the content so it stretches
+        // WITH the background instead of staying rectangular. bgRect.deformMatrix
+        // is the centred deform in the blob's local px space (same paintedWidth ×
+        // paintedHeight as contentRoot), so it maps 1:1. Composes on top of
+        // scalingRoot's size-fit Scale below.
+        transform: Matrix4x4 {
+            matrix: bgRect.deformMatrix
+        }
 
         Item {
             id: scalingRoot
@@ -949,10 +1340,18 @@ Item {
     }
     Connections {
         target: root
-        function onXChanged()              { root._publishSlotRect() }
-        function onYChanged()              { root._publishSlotRect() }
-        function onPaintedWidthChanged()   { root._publishSlotRect() }
-        function onPaintedHeightChanged()  { root._publishSlotRect() }
+        function onXChanged() {
+            root._publishSlotRect();
+        }
+        function onYChanged() {
+            root._publishSlotRect();
+        }
+        function onPaintedWidthChanged() {
+            root._publishSlotRect();
+        }
+        function onPaintedHeightChanged() {
+            root._publishSlotRect();
+        }
     }
 
     Component.onCompleted: {

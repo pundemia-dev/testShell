@@ -63,6 +63,9 @@ Singleton {
         property list<real> bubblyWidth: [0.23, 1.76, 0.05, 1.00, 1, 1]
         property list<real> bubblyHeight: [0.43, 1.72, 0.35, 0.96, 1, 1]
         property list<real> bubblyMove: [0.22, 1.84, 0.24, 0.93, 1, 1]
+        property list<real> bubblyLongSide: [0.23, 1.76, 0.05, 1.00, 1, 1]
+        property list<real> bubblyShortSide: [0.43, 1.72, 0.35, 0.96, 1, 1]
+
         readonly property list<real> emphasized: [0.05, 0, 2 / 15, 0.06, 1 / 6, 0.4, 5 / 24, 0.82, 0.25, 1, 1, 1]
         readonly property list<real> emphasizedAccel: [0.3, 0, 0.8, 0.15, 1, 1]
         readonly property list<real> emphasizedDecel: [0.05, 0.7, 0.1, 1, 1, 1]
