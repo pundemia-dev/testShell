@@ -47,6 +47,8 @@ Item {
             anchor: rail.anchor
             wrapper: modelData.wrapper
             arrivalSeq: modelData.arrivalSeq
+            dying: modelData.dying ?? false
+            deathRect: modelData.deathRect ?? null
             layerIdx: index + 1
             railRef: rail
             group: rail.group

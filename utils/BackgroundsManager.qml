@@ -7,10 +7,23 @@ import Quickshell
 // machinery is gone — Backgrounds.qml now consumes `rails` directly via
 // per-anchor Rail instances.
 //
-// Lifecycle (Phase C simple form, no close-anim latching):
-//   requestBackground(wrapper)  → append to rails[anchor]
-//   removeBackground(wrapper)   → immediately splice from rails; Repeater
-//                                 destroys the delegate, BlobRect deregisters.
+// Lifecycle (close-anim latching):
+//   requestBackground(wrapper)  → append to rails[anchor]; if a dying entry
+//                                 for this wrapper exists, REVIVE it (clear the
+//                                 dying flag) so its in-flight collapse reverses
+//                                 into a re-open instead of finishing.
+//   removeBackground(wrapper)   → DON'T splice. Mark the entry `dying:true` and
+//                                 stash its last painted rect (`deathRect`). The
+//                                 WindowSlot delegate stays alive and collapses
+//                                 its size to 0 (mirror of the appear); siblings
+//                                 on the same rail re-pack smoothly because they
+//                                 track prevSlot.paintedWidth as it shrinks.
+//   finalizeRemoval(arrivalSeq) → called by the slot once collapsed; now the
+//                                 real splice happens, the Repeater destroys the
+//                                 delegate, BlobRect deregisters.
+// Dying entries are excluded from layout-affecting queries (reserved-edge,
+// zone interaction targets) so a closing panel releases its exclusion and stops
+// catching interaction the moment it starts collapsing.
 QtObject {
     id: root
 
@@ -125,8 +138,21 @@ QtObject {
     function requestBackground(wrapper /*, isolate, excludeBarArea */) {
         if (!wrapper) return -1;
         const i = determineRailIndex(wrapper);
-        const existing = rails[i].find(e => e.wrapper === wrapper);
-        if (existing) return existing.arrivalSeq;
+        const idx = rails[i].findIndex(e => e.wrapper === wrapper);
+        if (idx >= 0) {
+            const existing = rails[i][idx];
+            // Re-requested while still collapsing → revive: drop the dying flag
+            // (new entry object so the delegate's modelData binding re-evaluates)
+            // and keep the same arrivalSeq so subscriptions stay valid.
+            if (existing.dying) {
+                const newRail = rails[i].slice();
+                newRail[idx] = { wrapper: wrapper, arrivalSeq: existing.arrivalSeq };
+                const newRails = rails.slice();
+                newRails[i] = newRail;
+                rails = newRails;
+            }
+            return existing.arrivalSeq;
+        }
         const seq = _seq++;
         const newRails = rails.slice();
         newRails[i] = [...rails[i], { wrapper: wrapper, arrivalSeq: seq }];
@@ -134,11 +160,41 @@ QtObject {
         return seq;
     }
 
+    // Latch the wrapper's slot into a dying state instead of splicing it out.
+    // The WindowSlot delegate collapses to 0 then calls finalizeRemoval.
     function removeBackground(wrapper) {
         if (!wrapper) return;
         for (let i = 0; i < 9; i++) {
             const idx = rails[i].findIndex(e => e.wrapper === wrapper);
             if (idx >= 0) {
+                if (rails[i][idx].dying) return; // already collapsing
+                const seq = rails[i][idx].arrivalSeq;
+                const r = slotRects[seq] ?? null;
+                const newRail = rails[i].slice();
+                newRail[idx] = {
+                    wrapper: wrapper,
+                    arrivalSeq: seq,
+                    dying: true,
+                    // Last painted rect — lets a freshly (re)created delegate seed
+                    // its collapse start size even before the live target resolves.
+                    deathRect: r ? { x: r.x, y: r.y, w: r.w, h: r.h } : null
+                };
+                const newRails = rails.slice();
+                newRails[i] = newRail;
+                rails = newRails;
+                return;
+            }
+        }
+    }
+
+    // Called by a WindowSlot once its dying collapse has reached zero. Performs
+    // the real splice. No-op if the entry was revived (no longer dying) or is
+    // already gone, so a late call is harmless.
+    function finalizeRemoval(arrivalSeq) {
+        for (let i = 0; i < 9; i++) {
+            const idx = rails[i].findIndex(e => e.arrivalSeq === arrivalSeq);
+            if (idx >= 0) {
+                if (!rails[i][idx].dying) return; // revived — keep it
                 const newRail = rails[i].slice();
                 newRail.splice(idx, 1);
                 const newRails = rails.slice();
@@ -169,6 +225,7 @@ QtObject {
         let sum = 0;
         for (let i = 0; i < 9; i++) {
             for (const entry of rails[i]) {
+                if (entry.dying) continue; // collapsing → release its exclusion now
                 const w = entry.wrapper;
                 if (!w || !w.pinned || !w.reservesSpace) continue;
                 if (side === "top" && w.aTop) {
@@ -248,12 +305,12 @@ QtObject {
         const rail = rails[r];
         if (!rail || rail.length === 0) return [];
 
-        const pinned = rail.filter(e => e.wrapper && e.wrapper.pinned)
+        const pinned = rail.filter(e => e.wrapper && !e.dying && e.wrapper.pinned)
                            .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        const push = rail.filter(e => e.wrapper && !e.wrapper.pinned
+        const push = rail.filter(e => e.wrapper && !e.dying && !e.wrapper.pinned
                                        && (e.wrapper.mode ?? "push") !== "overlay")
                          .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        const overlay = rail.filter(e => e.wrapper && !e.wrapper.pinned
+        const overlay = rail.filter(e => e.wrapper && !e.dying && !e.wrapper.pinned
                                           && e.wrapper.mode === "overlay")
                             .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
 

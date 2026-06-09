@@ -35,6 +35,18 @@ Item {
     required property int arrivalSeq
     required property var manager
 
+    // ── Close animation (dying) ──────────────────────────────────────
+    // Set by the manager via the Rail delegate. While true, the slot collapses
+    // its size to 0 (mirror of the appear) and, once collapsed, asks the manager
+    // to finalise the real removal. `deathRect` is the slot's last painted rect,
+    // used to seed the collapse start size if this delegate was (re)created after
+    // the dying flag flipped and the live target hasn't resolved yet.
+    property bool dying: false
+    property var deathRect: null
+    property bool _collapseStarted: false
+    property bool _finalized: false
+    property bool _sizeNoAnim: false   // gate to snap _rawWidth/_rawHeight (no spring)
+
     // ── Content sizing ───────────────────────────────────────────────
     property Item contentLoader: null
 
@@ -79,12 +91,35 @@ Item {
     readonly property int paintedWidth: Math.max(0, _rawWidth)
     readonly property int paintedHeight: Math.max(0, _rawHeight)
 
+    // ── Appear/collapse content blur (see utils/Liquid.qml §4) ───────
+    // Time-based blur amount (0..1), decoupled from the size spring so it stays
+    // visible on the full-size panel. Driven by the two animations below; fed to
+    // the content MultiEffect in the content tree. Appear blur is gated to NON-
+    // pinned panels (a pinned bar that merely re-instantiates on a sibling change
+    // must not blur-flash; only real opens/closes blur).
+    property real _blurAmt: 0
+    NumberAnimation {
+        id: appearBlurAnim
+        target: root; property: "_blurAmt"
+        from: 1.0; to: 0.0
+        duration: Liquid.appearBlurDuration
+        easing.type: Easing.InQuad   // linger blurry, then resolve crisp
+    }
+    NumberAnimation {
+        id: collapseBlurAnim
+        target: root; property: "_blurAmt"
+        to: 1.0
+        duration: Liquid.appearBlurDuration
+        easing.type: Easing.OutQuad
+    }
+
     // Size follow: one brisk spring per axis, both sharing Liquid's params. The
     // visible "liquid glass" squash/stretch is NOT produced here — it's the SDF
     // deform engine on the BlobRect below, driven by the centre velocity this
     // motion generates (resize from an edge moves the centre toward that edge, so
     // the stretch direction encodes the expansion origin). See utils/Liquid.qml.
     Behavior on _rawWidth {
+        enabled: !root._sizeNoAnim
         SpringAnimation {
             spring: Liquid.sizeSpring
             damping: Liquid.sizeDamping
@@ -92,11 +127,104 @@ Item {
         }
     }
     Behavior on _rawHeight {
+        enabled: !root._sizeNoAnim
         SpringAnimation {
             spring: Liquid.sizeSpring
             damping: Liquid.sizeDamping
             epsilon: Liquid.sizeEpsilon
         }
+    }
+
+    // ── Collapse-on-close ────────────────────────────────────────────
+    // Drive the size springs to 0 (mirror of the appear) while `dying`. The
+    // existing edge-anchored position formulas make the slot collapse toward its
+    // growth origin, the content Scale (paintedWidth/lastTargetWidth) shrinks the
+    // content with it, and same-rail siblings re-pack as they track this slot's
+    // shrinking paintedWidth via prevSlot. When the collapse reaches 0 we ask the
+    // manager to perform the real splice.
+    onDyingChanged: {
+        if (root.dying)
+            root._startCollapse();
+        else
+            root._cancelCollapse();
+    }
+
+    function _startCollapse() {
+        if (root._collapseStarted)
+            return;
+        root._collapseStarted = true;
+        root._finalized = false;
+        // Seed the start size from the live target, falling back to the captured
+        // death rect (delegate may have been recreated by the Repeater after the
+        // dying flip, before its content/target resolved). Snapped without spring.
+        const startW = root.targetWrapperWidth > 0 ? root.targetWrapperWidth
+                     : (root.deathRect ? root.deathRect.w : root._rawWidth);
+        const startH = root.targetWrapperHeight > 0 ? root.targetWrapperHeight
+                     : (root.deathRect ? root.deathRect.h : root._rawHeight);
+        root._sizeNoAnim = true;
+        root._rawWidth = startW;
+        root._rawHeight = startH;
+        root._sizeNoAnim = false;
+        // Next tick so the snapped start size lands before the collapse animates.
+        Qt.callLater(() => {
+            if (!root.dying)
+                return;
+            root._rawWidth = 0;
+            root._rawHeight = 0;
+        });
+        // Build the dissolve blur as it shrinks away.
+        if (Liquid.appearBlurMax > 0) {
+            appearBlurAnim.stop();
+            collapseBlurAnim.restart();
+        }
+        finalizeTimer.restart();
+    }
+
+    function _cancelCollapse() {
+        // Revived mid-collapse → reverse into a re-open by restoring the live
+        // target bindings (broken by the imperative assignments above).
+        finalizeTimer.stop();
+        root._collapseStarted = false;
+        root._finalized = false;
+        root._rawWidth = Qt.binding(() => root.targetWrapperWidth);
+        root._rawHeight = Qt.binding(() => root.targetWrapperHeight);
+        // Re-open blur (reverse the dissolve).
+        collapseBlurAnim.stop();
+        if (!root.isPinned && Liquid.appearBlurMax > 0)
+            appearBlurAnim.restart();
+        else
+            root._blurAmt = 0;
+    }
+
+    function _maybeFinalize() {
+        if (!root.dying || root._finalized)
+            return;
+        if (root.paintedWidth <= 1 && root.paintedHeight <= 1)
+            root._finalize();
+    }
+
+    function _finalize() {
+        if (root._finalized)
+            return;
+        root._finalized = true;
+        finalizeTimer.stop();
+        // Defer the splice — it reassigns the manager's rails, which regenerates
+        // this rail's Repeater and destroys this very delegate. Doing that from
+        // inside the delegate's own call stack is asking for trouble.
+        const seq = root.arrivalSeq;
+        const mgr = root.manager;
+        Qt.callLater(() => {
+            if (mgr && mgr.finalizeRemoval)
+                mgr.finalizeRemoval(seq);
+        });
+    }
+
+    // Fallback: if the spring stalls above the 1px finalize threshold, force the
+    // splice so a dying slot can never get stuck on the rail.
+    Timer {
+        id: finalizeTimer
+        interval: Appearance.anim.durations.extraLarge
+        onTriggered: root._finalize()
     }
 
     // ── Anchor flags ─────────────────────────────────────────────────
@@ -1289,6 +1417,21 @@ Item {
         height: root.paintedHeight
         z: root.arrivalSeq + 0.5
 
+        // Time-based blur on the content (appear & collapse). Applied HERE
+        // (contentRoot is at paintedWidth = on-screen size, content already
+        // size-fitted by scalingRoot's Scale below) so the blur radius is in
+        // SCREEN px — NOT scaled away with the content the way it would be if
+        // captured before the Scale. Layer only switches on while actually
+        // blurring → no steady-state GPU cost.
+        layer.enabled: root._blurAmt > 0.01
+        layer.smooth: true
+        layer.effect: MultiEffect {
+            blurEnabled: true
+            blur: root._blurAmt
+            blurMax: Liquid.appearBlurMax
+            autoPaddingEnabled: true
+        }
+
         // Mirror the SDF blob's velocity deform onto the content so it stretches
         // WITH the background instead of staying rectangular. bgRect.deformMatrix
         // is the centred deform in the blob's local px space (same paintedWidth ×
@@ -1351,9 +1494,11 @@ Item {
         }
         function onPaintedWidthChanged() {
             root._publishSlotRect();
+            root._maybeFinalize();
         }
         function onPaintedHeightChanged() {
             root._publishSlotRect();
+            root._maybeFinalize();
         }
     }
 
@@ -1370,6 +1515,14 @@ Item {
         InputManager.addRegion(bridgeBottom);
         InputManager.addRegion(bridgeLeft);
         InputManager.addRegion(bridgeRight);
+        // Delegate (re)created already dying — the dying flag flip regenerated
+        // the Repeater, so onDyingChanged won't fire. Kick off the collapse here.
+        if (root.dying)
+            root._startCollapse();
+        else if (!root.isPinned && Liquid.appearBlurMax > 0)
+            // Real open → materialise blur. Pinned panels (bar) are skipped: they
+            // re-instantiate on any sibling rail change and must not blur-flash.
+            appearBlurAnim.start();
     }
     Component.onDestruction: {
         InputManager.removeRegion(inputRegion);
