@@ -13,6 +13,11 @@ class BlobRect : public BlobShape {
     Q_PROPERTY(qreal stiffness READ stiffness WRITE setStiffness NOTIFY stiffnessChanged)
     Q_PROPERTY(qreal damping READ damping WRITE setDamping NOTIFY dampingChanged)
     Q_PROPERTY(qreal deformScale READ deformScale WRITE setDeformScale NOTIFY deformScaleChanged)
+    // Overall deform magnitude multiplier (0..1). Set from QML per panel size so
+    // big panels deform less. Applied AFTER the stretch cap, so it tames even the
+    // cap-saturated corner-appear. Keyed in QML on the panel's STABLE target size
+    // (not the animating size), so the grow-through-small-sizes is attenuated too.
+    Q_PROPERTY(qreal deformAtten READ deformAtten WRITE setDeformAtten NOTIFY deformAttenChanged)
     Q_PROPERTY(QQmlListProperty<BlobRect> exclude READ exclude NOTIFY excludeChanged)
     Q_PROPERTY(qreal topLeftRadius READ topLeftRadius WRITE setTopLeftRadius NOTIFY topLeftRadiusChanged)
     Q_PROPERTY(qreal topRightRadius READ topRightRadius WRITE setTopRightRadius NOTIFY topRightRadiusChanged)
@@ -53,6 +58,15 @@ public:
         }
     }
 
+    qreal deformAtten() const { return m_deformAtten; }
+
+    void setDeformAtten(qreal v) {
+        if (!qFuzzyCompare(m_deformAtten, v)) {
+            m_deformAtten = v;
+            emit deformAttenChanged();
+        }
+    }
+
     QQmlListProperty<BlobRect> exclude();
 
     bool isExcluded(const BlobShape* other) const override;
@@ -82,6 +96,7 @@ signals:
     void stiffnessChanged();
     void dampingChanged();
     void deformScaleChanged();
+    void deformAttenChanged();
     void excludeChanged();
     void topLeftRadiusChanged();
     void topRightRadiusChanged();
@@ -116,6 +131,7 @@ private:
     qreal m_stiffness = 200.0;
     qreal m_damping = 16.0;
     qreal m_deformScale = 0.0005;
+    qreal m_deformAtten = 1.0;
 
     qreal m_topLeftRadius = -1;
     qreal m_topRightRadius = -1;

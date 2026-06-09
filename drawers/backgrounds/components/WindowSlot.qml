@@ -616,6 +616,9 @@ Item {
         deformScale: Liquid.deformScale
         stiffness: Liquid.deformStiffness
         damping: Liquid.deformDamping
+        // Per-panel deform attenuation, keyed on the STABLE target size (not the
+        // animating size) so a will-be-large panel is tamed all through its appear.
+        deformAtten: Liquid.deformSizeScale(root.lastTargetWidth, root.lastTargetHeight)
         zoneIndex: root.manager ? root.manager.zoneForRail(root.railRef ? root.railRef.railIndex : -1) : -1
     }
 

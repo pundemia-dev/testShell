@@ -83,7 +83,12 @@ void BlobRect::updatePhysics() {
     float target11 = 1.0f;
 
     if (speed > 5.0f) {
-        const float targetStretch = 1.0f + std::min(speed * kStretchFactor, kMaxStretch);
+        // deformAtten (0..1) is set from QML per panel size so big panels deform
+        // less. It's keyed there on the STABLE target size (not this rect's live,
+        // still-growing size), so it tames the corner-appear too; and it's applied
+        // AFTER the stretch cap, so it reduces even the cap-saturated appear.
+        const float mag = std::min(speed * kStretchFactor, kMaxStretch) * static_cast<float>(m_deformAtten);
+        const float targetStretch = 1.0f + mag;
         const float targetCompress = 1.0f / targetStretch;
 
         const float cosA = velX / speed;

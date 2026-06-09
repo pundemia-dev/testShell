@@ -41,4 +41,31 @@ Singleton {
     property real deformScale: 0.0004     // stretch per (px/sec) of centre speed; 0 disables
     property real deformStiffness: 200    // spring pulling the deform back to identity (higher = snappier)
     property real deformDamping: 16 //16       // lower = more liquid wobble on stop; higher = calmer
+
+    // 3 ── Size attenuation (BlobRect.deformAtten) ─────────────────────────────
+    // The deform looks fun on small panels but turns big ones into an obvious
+    // parallelogram on diagonal motion (worst on a corner appear). Attenuate the
+    // magnitude by panel size, CONTINUOUSLY (every px over `full` counts, so mid-
+    // size panels respond too — not just past some threshold):
+    //
+    //     atten = full / (full + (size − full)·strength)   , floored at `floor`
+    //
+    //   • deformSizeFull   — size at/below which the effect is full (atten = 1).
+    //   • deformSizeStrength — master "how much size matters" multiplier:
+    //         0   → size ignored (full effect at every size)
+    //         1   → at 2×full the effect is halved
+    //         higher → big panels killed harder.
+    //   • deformSizeFloor  — minimum multiplier (0 = can vanish entirely).
+    property real deformSizeFull: 250      // px ≤ this → full effect
+    property real deformSizeStrength: 7.0  // how strongly size beyond `full` cuts the effect
+    property real deformSizeFloor: 0.0     // minimum multiplier (0 = can fully vanish)
+
+    // Magnitude multiplier for a panel of (target) size w×h. Feed BlobRect.deformAtten.
+    // Keyed on the STABLE target size so a panel that WILL be large is attenuated
+    // throughout its appear, not only once it has finished growing.
+    function deformSizeScale(w: real, h: real): real {
+        const over = Math.max(0, Math.max(w, h) - deformSizeFull);
+        const a = deformSizeFull / (deformSizeFull + over * deformSizeStrength);
+        return Math.max(deformSizeFloor, a);
+    }
 }
