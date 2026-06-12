@@ -119,6 +119,7 @@ QSGNode* BlobInvertedRect::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData
     material->m_color = m_group->color();
     material->m_hasInverted = m_cachedHasInverted ? 1 : 0;
     material->m_invertedRadius = m_cachedInvertedRadius;
+    material->m_cornerGuard = m_cachedCornerGuard;
     memcpy(material->m_invertedOuter, m_cachedInvertedOuter, sizeof(m_cachedInvertedOuter));
     memcpy(material->m_invertedInner, m_cachedInvertedInner, sizeof(m_cachedInvertedInner));
     memcpy(material->m_zoneRoundings, m_cachedZoneRoundings, sizeof(m_cachedZoneRoundings));
@@ -191,4 +192,13 @@ void BlobInvertedRect::registerWithGroup() {
 void BlobInvertedRect::unregisterFromGroup() {
     if (m_group)
         m_group->clearInvertedRect(this);
+}
+
+void BlobInvertedRect::setCornerGuard(qreal v) {
+    if (qFuzzyCompare(m_cornerGuard, v))
+        return;
+    m_cornerGuard = v;
+    emit cornerGuardChanged();
+    if (m_group)
+        m_group->markDirty();
 }

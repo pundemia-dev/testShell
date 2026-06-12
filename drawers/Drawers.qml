@@ -139,8 +139,6 @@ Variants {
             Item {
                 anchors.fill: parent
 
-                Corners {}
-
                 Backgrounds {
                     manager: scope.backgroundsManager
                     border_area: scope.border_area
@@ -193,6 +191,13 @@ Variants {
                     right_area: scope.right_area
                     bottom_area: scope.bottom_area
                 }
+
+                // BLACK screen-corner rounding — topmost, so neither the
+                // SDF frame (border rounding, bg-coloured, with присасывание)
+                // nor any panel can paint over it. Purely visual chrome, no
+                // input handling, so sitting above the BorderZone strips is
+                // harmless.
+                Corners {}
 
             }
         }

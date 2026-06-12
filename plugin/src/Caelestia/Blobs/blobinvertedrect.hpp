@@ -17,6 +17,11 @@ class BlobInvertedRect : public BlobShape {
     // 0 = disabled (bg in that zone does NOT pull the frame's inner edge inward).
     // 1 = unscaled (full sink, current default behavior).
     Q_PROPERTY(QList<qreal> zoneRoundings READ zoneRoundings WRITE setZoneRoundings NOTIFY zoneRoundingsChanged)
+    // Guard band width (px) around the inner-cutout corner arcs. Inside it
+    // the shader gates the присасывание sink and collapses the frame smin to
+    // a hard min, so the border rounding (radius) is never overridden by
+    // sinking bgs. 0 disables.
+    Q_PROPERTY(qreal cornerGuard READ cornerGuard WRITE setCornerGuard NOTIFY cornerGuardChanged)
 
 public:
     explicit BlobInvertedRect(QQuickItem* parent = nullptr);
@@ -42,12 +47,17 @@ public:
 
     void setZoneRoundings(const QList<qreal>& v);
 
+    qreal cornerGuard() const { return m_cornerGuard; }
+
+    void setCornerGuard(qreal v);
+
 signals:
     void borderLeftChanged();
     void borderRightChanged();
     void borderTopChanged();
     void borderBottomChanged();
     void zoneRoundingsChanged();
+    void cornerGuardChanged();
 
 protected:
     bool isInvertedRect() const override { return true; }
@@ -62,5 +72,6 @@ private:
     qreal m_borderRight = 0;
     qreal m_borderTop = 0;
     qreal m_borderBottom = 0;
+    qreal m_cornerGuard = 0;
     QList<qreal> m_zoneRoundings;
 };

@@ -48,8 +48,15 @@ Item {
     //   0 = bgs in that zone do NOT pull the frame's inner edge inward
     //   1 = full sink (legacy unscaled behavior)
     readonly property int _invertedFrameMargin: 50
+    // Border rounding (bg-coloured inner cutout of the frame) — shared with
+    // the visible border chrome (Border.qml). Independent from BOTH the
+    // window rounding (Config.backgrounds.rounding) and the BLACK
+    // screen-corner rounding (Config.corners.rounding, drawn by Corners
+    // ABOVE the backgrounds — the shader never affects it).
+    // Config.backgrounds.invertBaseRounding gates whether window
+    // присасывание gets a rounded cutout at all.
     readonly property int _invertedRadius: (Config.backgrounds.invertBaseRounding ?? false)
-                                            ? (Config.backgrounds.rounding ?? 0)
+                                            ? (Config.border.rounding ?? 0)
                                             : 0
 
     Item {
@@ -78,6 +85,12 @@ Item {
             anchors.margins: -root._invertedFrameMargin
             group: blobGroup
             radius: root._invertedRadius
+            // Присасывание never overrides the border rounding: inside this
+            // band around the cutout arcs the shader mutes the sink and
+            // hardens the frame smin. Auto = radius + smoothing.
+            cornerGuard: (Config.backgrounds.cornerGuard ?? -1) >= 0
+                         ? Config.backgrounds.cornerGuard
+                         : root._invertedRadius + blobGroup.smoothing
             borderLeft: root._invertedFrameMargin
             borderRight: root._invertedFrameMargin
             borderTop: root._invertedFrameMargin

@@ -16,6 +16,11 @@ layout(std140, binding = 0) uniform buf {
     vec4 color;
     int hasInverted;
     float invertedRadius;
+    // Guard band width (px) protecting the border-rounding arcs from
+    // присасывание; 0 disables. Occupies the former std140 padding slot, so
+    // the buffer layout/size is unchanged.
+    float cornerGuard;
+    float pad0;
     vec4 invertedOuter;
     vec4 invertedInner;
     vec4 zoneRoundingsLow;   // zones 0..3 (topLeft, top, topRight, right)
@@ -77,6 +82,19 @@ float smaxSharpA(float a, float b, float k) {
     float blend = h * h * h * k * (1.0/6.0);
     blend *= smoothstep(0.0, k * 0.5, -a);
     return max(a, b) + blend;
+}
+
+// Corner guard: 1 away from the inner-cutout corner arcs, falling to 0 on
+// the arcs themselves. Gates the sink and the final smin-with-frame so
+// присасывание only deforms the straight border runs — the configured
+// border rounding (invertedRadius) is never overridden. The abs() fold maps
+// all four arc centers onto one, so a single distance covers every corner.
+float cornerGuardAt(vec2 p) {
+    if (cornerGuard <= 0.0)
+        return 1.0;
+    vec2 ac = max(invertedInner.zw - vec2(invertedRadius), vec2(0.0));
+    float d = length(abs(p - invertedInner.xy) - ac);
+    return smoothstep(invertedRadius, invertedRadius + cornerGuard, d);
 }
 
 void main() {
@@ -195,6 +213,8 @@ void main() {
     }
 
     if (hasInverted != 0) {
+        float guard = cornerGuardAt(pixel);
+
         float dOuter = sdBox(pixel, invertedOuter.xy, invertedOuter.zw) - 1.0;
         float dInner = sdRoundedBox(pixel, invertedInner.xy, invertedInner.zw, invertedRadius);
 
@@ -259,7 +279,8 @@ void main() {
             sinkValue = max(sinkValue, sink * zs);
         }
 
-        dInner -= sinkValue;
+        // Corner guard: sinks never reshape the border-rounding arcs.
+        dInner -= sinkValue * guard;
 
         float dFrame = smaxSharpA(dOuter, -dInner, smoothFactor);
 
@@ -272,7 +293,10 @@ void main() {
             winnerZs = zoneStrength(wzi);
         }
         if (winnerZs > 0.0) {
-            mergedSdf = smin(mergedSdf, dFrame, smoothFactor);
+            // The smin k collapses toward a hard min inside the corner-guard
+            // band, so the merge fillet cannot roll over the rounding arcs.
+            float kGuard = max(smoothFactor * guard, 1.0);
+            mergedSdf = smin(mergedSdf, dFrame, kGuard);
             if (dFrame < minDist) {
                 owner = -1;
             }
