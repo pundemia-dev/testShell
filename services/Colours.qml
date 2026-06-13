@@ -156,6 +156,27 @@ Singleton {
         property color on_magenta: "#B8C4FF"
         property color on_magenta_container: "#B8C4FF"
 
+        property color orange: "#B8C4FF"
+        property color orange_container: "#B8C4FF"
+        property color orange_source: "#B8C4FF"
+        property color orange_value: "#B8C4FF"
+        property color on_orange: "#B8C4FF"
+        property color on_orange_container: "#B8C4FF"
+
+        property color purple: "#B8C4FF"
+        property color purple_container: "#B8C4FF"
+        property color purple_source: "#B8C4FF"
+        property color purple_value: "#B8C4FF"
+        property color on_purple: "#B8C4FF"
+        property color on_purple_container: "#B8C4FF"
+
+        property color black: "#B8C4FF"
+        property color black_container: "#B8C4FF"
+        property color black_source: "#B8C4FF"
+        property color black_value: "#B8C4FF"
+        property color on_black: "#B8C4FF"
+        property color on_black_container: "#B8C4FF"
+
         property color red: "#B8C4FF"
         property color red_container: "#B8C4FF"
         property color red_source: "#B8C4FF"

@@ -32,6 +32,15 @@ LauncherModule {
     property var selectedApp: null
     property var _pendingApp: null
 
+    // Текущий запрос и сырые результаты последнего handleInput
+    property string _query: ""
+    property var _results: []
+
+    // Кэш элементов модели по DesktopEntry: ScriptModel диффит значения
+    // по идентичности, поэтому повторные запросы должны отдавать те же
+    // объекты — иначе ListView полностью пересоздаётся на каждый символ
+    property var _entryCache: new Map()
+
     Timer {
         id: debounceTimer
         interval: 80
@@ -42,8 +51,8 @@ LauncherModule {
 
     // Если панель открыли кнопкой, автоматически выбираем первое приложение
     onHasRightPanelChanged: {
-        if (hasRightPanel && !selectedApp && internalModel.count > 0) {
-            selectedApp = internalModel.get(0).rawApp;
+        if (hasRightPanel && !selectedApp && _results.length > 0) {
+            selectedApp = _results[0];
         }
     }
 
@@ -52,17 +61,15 @@ LauncherModule {
         handleInput(initialQuery)
     }
 
-    // Добавь:
     Connections {
         target: DesktopEntries.applications
         function onValuesChanged() {
-            if (root.isActive) handleInput("")
+            // DesktopEntry-объекты могли пересоздаться — кэш недействителен
+            root._entryCache = new Map()
+            if (root.isActive) root.handleInput(root._query)
         }
     }
 
-    // Убери эти две строки:
-    // listModel: internalModel
-    // ListModel { id: internalModel }
     property bool isPinned: false
     property bool isHidden: false
 
@@ -84,7 +91,7 @@ LauncherModule {
         console.log("Hiding app:", selectedApp.name, isHidden)
         if (isHidden) {
             hasRightPanel = false
-            handleInput("")
+            handleInput(_query)
         }
     }
 
@@ -97,41 +104,53 @@ LauncherModule {
 
     listModel: internalModel
 
-    function handleInput(query) {
-        selectedApp = null
-        let results = Apps.query(query).slice(0, 50)
-
-        internalModel.values = results.map(app => ({
-            header: app.name ?? "Unknown App",
-            text: app.comment || app.genericName || "",
-            leftIcon: app.icon ?? "",
-            isLeftIconImage: true,
-            rightIcon: "\uea61",
-            rightText: "",
-            onClicked: function() {
-                Apps.launch(app)
-                requestClose(true)
-            },
-            onAltClicked: function() {
-                if (root.selectedApp === app && root.hasRightPanel) {
-                    root.hasRightPanel = false
-                    root.selectedApp = null
-                } else {
-                    root.selectedApp = app
-                    root.hasRightPanel = true
-                }
-            },
-            onSelected: function() {
-                if (root.hasRightPanel) {
-                    root._pendingApp = app
-                    debounceTimer.restart()
+    function _modelEntry(app) {
+        let entry = _entryCache.get(app)
+        if (!entry) {
+            entry = {
+                header: app.name ?? "Unknown App",
+                text: app.comment || app.genericName || "",
+                leftIcon: app.icon ?? "",
+                isLeftIconImage: true,
+                rightIcon: "\uea61",
+                rightText: "",
+                onClicked: function() {
+                    Apps.launch(app)
+                    root.requestClose(true)
+                },
+                onAltClicked: function() {
+                    if (root.selectedApp === app && root.hasRightPanel) {
+                        root.hasRightPanel = false
+                        root.selectedApp = null
+                    } else {
+                        root.selectedApp = app
+                        root.hasRightPanel = true
+                    }
+                },
+                onSelected: function() {
+                    if (root.hasRightPanel) {
+                        root._pendingApp = app
+                        debounceTimer.restart()
+                    }
                 }
             }
+            _entryCache.set(app, entry)
+        }
+        return entry
+    }
 
-            // onSelected: function() {
-            //     if (root.hasRightPanel) root.selectedApp = app
-            // }
-        }))
+    function handleInput(query) {
+        _query = query
+        _results = Apps.query(query)
+        internalModel.values = _results.map(app => _modelEntry(app))
+
+        if (hasRightPanel) {
+            // \u041d\u0435 \u0431\u0440\u043e\u0441\u0430\u0435\u043c \u043f\u0440\u0430\u0432\u0443\u044e \u043f\u0430\u043d\u0435\u043b\u044c \u043f\u0443\u0441\u0442\u043e\u0439: \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u043c \u043f\u0435\u0440\u0432\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442
+            _pendingApp = _results[0] ?? null
+            debounceTimer.restart()
+        } else {
+            selectedApp = null
+        }
     }
 
     // ==========================================

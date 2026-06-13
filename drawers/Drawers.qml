@@ -15,6 +15,7 @@ import qs.modules.bar
 import qs.modules.launcher
 import qs.modules.notifications
 import qs.modules.stash
+import qs.modules.capture
 
 import qs.config
 import qs.components
@@ -179,6 +180,10 @@ Variants {
                     manager: scope.backgroundsManager
                     screen: scope.modelData
                     anchors.fill: parent
+                }
+                RecordWrapper {
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
                 }
 
                 // Border zone strips + visible chrome — last so MouseAreas

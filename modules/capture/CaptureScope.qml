@@ -50,7 +50,7 @@ Scope {
         if (!name)
             return;
         screenProc.screenName = name;
-        screenProc.command = Capture.grabOutputCommand(name);
+        screenProc.command = Capture.grabOutputCommand(name, "");
         screenProc.running = true;
     }
 
@@ -75,10 +75,8 @@ Scope {
                     root.dismissOverlay();
                     root.window();
                 }
-                onPicked: (r, g, b) => {
-                    Capture.addRecent(r, g, b);
-                    root.pickedColor = ({ r, g, b });
-                }
+                onRequestRecord: (screenName, x, y, w, h) => Capture.requestRecordRegion(screenName, x, y, w, h)
+                onRequestLens: (src, x, y, w, h) => Capture.lensSearch(src, x, y, w, h, root.focusedScreenName())
             }
         }
     }
@@ -127,18 +125,6 @@ Scope {
         }
     }
 
-    // ── Colour result chip (fed by the loupe overlay) ───────────────
-    property var pickedColor: null  // { r, g, b }
-
-    Loader {
-        active: root.pickedColor !== null
-        sourceComponent: ColorResult {
-            screen: root.focusedScreen()
-            colour: root.pickedColor
-            onRequestClose: root.pickedColor = null
-        }
-    }
-
     // ── IPC ─────────────────────────────────────────────────────────
     IpcHandler {
         target: "capture"
@@ -147,5 +133,7 @@ Scope {
         function window(): void { root.window(); }
         function screen(): void { root.screenshotScreen(); }
         function color(): void { root.color(); }
+        function record(): void { Capture.toggleRecord(); }
+        function stopRecord(): void { Capture.stopRecord(); }
     }
 }

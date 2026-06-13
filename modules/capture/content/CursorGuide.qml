@@ -55,14 +55,14 @@ Item {
             id: contentRow
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
-            anchors.leftMargin: pill.pad
+            anchors.leftMargin: Appearance.padding.smaller
             spacing: Appearance.spacing.normal
 
             StyledIcon {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.glyph
                 color: Colours.palette.on_primary
-                font.pointSize: Appearance.font.size.large
+                font.pointSize: Appearance.font.size.larger
             }
 
             StyledText {

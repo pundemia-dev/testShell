@@ -2,6 +2,7 @@ pragma Singleton
 
 import qs.config
 import Quickshell
+import Quickshell.Io
 import QtQuick
 
 // Capture helpers: path resolution, shell-command builders for crop/copy/save,
@@ -40,11 +41,34 @@ Singleton {
         return String(s).replace(/'/g, "'\\''");
     }
 
+    // Output PNG for the annotated composite (grabToImage result).
+    function annotatedPng(screenName: string): string {
+        return `${tempDir}/out-${screenName}.png`;
+    }
+
     // ── Command builders ────────────────────────────────────────────
-    // grim the whole output into the temp source PNG (shown frozen + cropped later).
-    function grabOutputCommand(screenName: string): var {
-        const out = tempPng(screenName);
-        return ["bash", "-c", `mkdir -p '${shq(tempDir)}' && grim -o '${shq(screenName)}' '${shq(out)}'`];
+    // grim the whole output into the temp source image (shown frozen + cropped
+    // later). outPath may be "" → default per-screen temp path. Stale stamped
+    // grabs of this output are removed first. Both formats are lossless: a
+    // .ppm outPath skips PNG encoding entirely (the encode dominates overlay
+    // open latency; the raw write goes to tmpfs), .png outputs use fast
+    // compression (-l only trades CPU for file size, never quality).
+    function grabOutputCommand(screenName: string, outPath: string): var {
+        const out = outPath ? outPath : tempPng(screenName);
+        const fmt = out.endsWith(".ppm") ? "-t ppm" : "-l 1";
+        return ["bash", "-c", `mkdir -p '${shq(tempDir)}' && rm -f '${shq(tempDir)}/src-${shq(screenName)}-'* && grim ${fmt} -o '${shq(screenName)}' '${shq(out)}'`];
+    }
+
+    // Clipboard only (the editor's Copy button / Enter), with feedback.
+    function copyFileCommand(file: string): var {
+        return ["bash", "-c", `wl-copy -t image/png < '${shq(file)}' && notify-send -a pShell 'Screenshot copied'`];
+    }
+
+    // File only (the editor's Save button / Ctrl+S).
+    function saveFileCommand(file: string): var {
+        const dir = saveDir !== "" ? saveDir : `${home}/Pictures`;
+        const path = `${dir}/screenshot-${timestamp()}.png`;
+        return ["bash", "-c", `mkdir -p '${shq(dir)}' && cp '${shq(file)}' '${shq(path)}' && notify-send -a pShell 'Screenshot saved' '${shq(path)}'`];
     }
 
     // Crop the source PNG to the selection (physical px) → clipboard, and save if
@@ -91,6 +115,205 @@ Singleton {
     function run(cmd: var): void {
         if (cmd)
             Quickshell.execDetached(cmd);
+    }
+
+    // ── OCR ─────────────────────────────────────────────────────────
+    // Tesseract languages installed on this system ("osd" is a script
+    // detector, not a language). Filled once at startup; empty
+    // Config.capture.ocrLangs means "all of these joined with +".
+    property var ocrLangsAvailable: []
+
+    Process {
+        running: true
+        command: ["bash", "-c", "tesseract --list-langs 2>/dev/null | tail -n +2"]
+        stdout: StdioCollector {
+            id: langsOut
+            onStreamFinished: root.ocrLangsAvailable = langsOut.text.trim().split("\n").filter(l => l && l !== "osd")
+        }
+    }
+
+    function ocrPng(screenName: string): string {
+        return `${tempDir}/ocr-${screenName}.png`;
+    }
+
+    // Crop the pure source grab (no annotations) into a PNG for tesseract.
+    function ocrCropCommand(src: string, x: int, y: int, w: int, h: int, out: string): var {
+        return ["bash", "-c", `magick '${shq(src)}' -crop ${w}x${h}+${x}+${y} +repage '${shq(out)}'`];
+    }
+
+    // ── Google Lens ─────────────────────────────────────────────────
+    // Crop the pure source → upload to uguu.se (temp host, ~3h retention,
+    // end-4's approach) → open Lens with the URL in the browser.
+    function lensSearch(src: string, x: int, y: int, w: int, h: int, screenName: string): void {
+        const file = `${tempDir}/lens-${screenName}.png`;
+        const cmd = `magick '${shq(src)}' -crop ${w}x${h}+${x}+${y} +repage '${shq(file)}'` + ` && url="$(curl -sf -F 'files[]=@${shq(file)}' https://uguu.se/upload | jq -r '.files[0].url')"` + ` && [ -n "$url" ] && [ "$url" != null ]` + ` && xdg-open "https://lens.google.com/uploadbyurl?url=$url"` + ` || notify-send -a pShell 'Google Lens' 'Upload failed'`;
+        Quickshell.execDetached(["bash", "-c", cmd]);
+        Quickshell.execDetached(["notify-send", "-a", "pShell", "Google Lens", "Uploading the crop…"]);
+    }
+
+    // ── Recording (wf-recorder via scripts/capture_record.sh) ───────
+    // State lives here (not in CaptureScope) so the rails RecordWrapper in
+    // Drawers can gate the indicator panel on it.
+    //
+    // Flow: a record request (editor region / IPC) only opens the top rails
+    // panel in PENDING state with the audio chooser; recording starts when
+    // an audio chip is clicked there. Pause is segment-based (see the script).
+    property bool recording: false
+    property bool recordPaused: false
+    property bool recordPending: false
+    property string recordScreen: ""
+    property string recordFile: ""
+    property string recordAudio: "none"    // current audio source (live-switchable)
+    property double recordStartedAt: 0
+    property double recordPausedAccum: 0   // ms recorded before the current segment
+    property string pendingGeom: ""
+    property string pendingOutput: ""
+    property bool discardRequested: false
+
+    // Published by the active RecordWrapper so RecordPill can read the rails
+    // slot's envelope hover (manager.slotHover[seq]) — a STABLE, un-scaled
+    // hover signal, unlike a local HoverHandler inside the spring-scaled slot.
+    // Only one wrapper is ever active (gated on recordScreen), so a singleton
+    // pair is safe across monitors.
+    property var recordManager: null
+    property int recordSlotSeq: -1
+
+    function recordPath(): string {
+        const dir = resolvePath(Config.capture.recordDir) || `${home}/Videos`;
+        return `${dir}/recording_${timestamp()}.mp4`;
+    }
+
+    // Audio mode for a new recording: "auto" default resolves to the last
+    // used choice, an explicit config value overrides.
+    function resolveRecordAudio(): string {
+        const def = Config.capture.recordAudioDefault;
+        if (def === "auto")
+            return Config.capture.recordLastAudio || "none";
+        return def;
+    }
+
+    // Region from the editor: output-local logical → global logical, then
+    // open the pending chooser in the top panel (no recording yet).
+    function requestRecordRegion(screenName: string, x: real, y: real, w: real, h: real): void {
+        if (recording)
+            return;
+        const scr = Quickshell.screens.find(s => s.name === screenName) ?? null;
+        const mon = Niri.monitorFor(scr);
+        const gx = Math.round((mon?.logical?.x ?? 0) + x);
+        const gy = Math.round((mon?.logical?.y ?? 0) + y);
+        pendingGeom = `${gx},${gy} ${Math.max(1, Math.round(w))}x${Math.max(1, Math.round(h))}`;
+        pendingOutput = "";
+        recordScreen = screenName;
+        recordPending = true;
+    }
+
+    function requestRecordOutput(name: string): void {
+        if (recording)
+            return;
+        pendingGeom = "";
+        pendingOutput = name;
+        recordScreen = name;
+        recordPending = true;
+    }
+
+    function cancelPending(): void {
+        recordPending = false;
+    }
+
+    // Audio chip clicked in the top panel → actually start.
+    function startPending(audio: string): void {
+        if (!recordPending || recording)
+            return;
+        recordPending = false;
+        Config.capture.recordLastAudio = audio;
+        recordAudio = audio;
+        discardRequested = false;
+        recordFile = recordPath();
+        const cmd = [`${Quickshell.configDir}/scripts/capture_record.sh`, audio, recordFile];
+        if (pendingGeom)
+            cmd.push("--geometry", pendingGeom);
+        else if (pendingOutput)
+            cmd.push("-o", pendingOutput);
+        if (Config.capture.recordHwAccel && Config.capture.recordHwDevice)
+            cmd.push("--hw", Config.capture.recordHwDevice);
+        recProc.command = cmd;
+        recProc.running = true;
+        recording = true;
+        recordPaused = false;
+        recordPausedAccum = 0;
+        recordStartedAt = Date.now();
+    }
+
+    function stopRecord(): void {
+        if (!recording)
+            return;
+        // SIGINT → the script finalizes the segment and concats (Ctrl+C path).
+        recProc.signal(2);
+    }
+
+    // Live audio switch: the script re-reads "<file>.audioctl" on SIGUSR2 and
+    // restarts the current segment with the new source.
+    function setRecordAudio(audio: string): void {
+        if (audio === recordAudio)
+            return;
+        recordAudio = audio;
+        Config.capture.recordLastAudio = audio;
+        if (recording) {
+            const ctl = recordFile + ".audioctl";
+            Quickshell.execDetached(["bash", "-c", `printf '%s' '${shq(audio)}' > '${shq(ctl)}' && kill -USR2 ${recProc.processId}`]);
+        }
+    }
+
+    // Stop AND delete the result instead of saving it.
+    function discardRecord(): void {
+        if (!recording)
+            return;
+        discardRequested = true;
+        recProc.signal(2);
+    }
+
+    // SIGUSR1 → the script closes the current segment / starts the next one.
+    function togglePause(): void {
+        if (!recording)
+            return;
+        if (recordPaused)
+            recordStartedAt = Date.now();
+        else
+            recordPausedAccum += Date.now() - recordStartedAt;
+        recordPaused = !recordPaused;
+        recProc.signal(10);
+    }
+
+    // IPC toggle: stop if recording; quick-start with the resolved default
+    // if the chooser is already pending; otherwise open the chooser for the
+    // focused output.
+    function toggleRecord(): void {
+        if (recording) {
+            stopRecord();
+            return;
+        }
+        if (recordPending) {
+            startPending(resolveRecordAudio());
+            return;
+        }
+        const name = Niri.focusedMonitor?.name ?? (Quickshell.screens[0]?.name ?? "");
+        requestRecordOutput(name);
+    }
+
+    Process {
+        id: recProc
+
+        onExited: (code, status) => {
+            const file = root.recordFile;
+            const discard = root.discardRequested;
+            root.recording = false;
+            root.recordPaused = false;
+            root.discardRequested = false;
+            if (discard)
+                Quickshell.execDetached(["bash", "-c", `rm -f '${root.shq(file)}' && notify-send -a pShell 'Recording discarded'`]);
+            else
+                Quickshell.execDetached(["bash", "-c", `[ -s '${root.shq(file)}' ] && notify-send -a pShell 'Recording saved' '${root.shq(file)}' || notify-send -a pShell 'Recording failed' 'wf-recorder exited without a file'`]);
+        }
     }
 
     // ── Colour picker ───────────────────────────────────────────────
@@ -150,5 +373,10 @@ Singleton {
 
     function copyText(text: string): void {
         Quickshell.execDetached(["bash", "-c", `printf '%s' '${shq(text)}' | wl-copy`]);
+    }
+
+    // Manual copy actions: same, plus a notification so the click has feedback.
+    function copyTextNotify(text: string, summary: string): void {
+        Quickshell.execDetached(["bash", "-c", `printf '%s' '${shq(text)}' | wl-copy && notify-send -a pShell '${shq(summary)}'`]);
     }
 }
