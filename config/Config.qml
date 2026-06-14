@@ -12,6 +12,7 @@ import "backgroundsconfig"
 import "notifsconfig"
 import "stashconfig"
 import "captureconfig"
+import "popoutsconfig"
 
 Singleton {
     id: root
@@ -24,6 +25,7 @@ Singleton {
     property alias notifs: adapter.notifs
     property alias stash: adapter.stash
     property alias capture: adapter.capture
+    property alias popouts: adapter.popouts
 
     FileView {
         id: fileview
@@ -44,6 +46,7 @@ Singleton {
             property NotifsConfig notifs: NotifsConfig {}
             property StashConfig stash: StashConfig {}
             property CaptureConfig capture: CaptureConfig {}
+            property PopoutsConfig popouts: PopoutsConfig {}
         }
     }
 }

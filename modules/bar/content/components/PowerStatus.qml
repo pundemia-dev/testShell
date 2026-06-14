@@ -4,6 +4,7 @@ import qs.services
 import Quickshell
 import Quickshell.Services.UPower
 import QtQuick
+import "../popouts" as BarPopouts
 
 
 RadialSliderIcon {
@@ -35,4 +36,11 @@ RadialSliderIcon {
     }
     progressColor: !UPower.onBattery || UPower.displayDevice.percentage > 0.2 ? Colours.palette.primary : Colours.palette.error
     labelColor: root.colour
+
+    PopoutHandle {
+        edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
+        popoutContent: Component {
+            BarPopouts.Power {}
+        }
+    }
 }

@@ -6,6 +6,7 @@ import Quickshell
 import QtQuick
 import Quickshell.Bluetooth
 import QtQuick.Layouts
+import "../popouts" as BarPopouts
 
 
 FlexboxLayout {
@@ -17,6 +18,13 @@ FlexboxLayout {
     property color colour: Colours.palette.secondary
 
     gap: Appearance.spacing.smaller / 2
+
+    PopoutHandle {
+        edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
+        popoutContent: Component {
+            BarPopouts.Bluetooth {}
+        }
+    }
 
     property var connectedDevices: Bluetooth.devices.values.filter(d => d.state !== BluetoothDeviceState.Disconnected)
     property var firstDevice: connectedDevices.length > 0 ? connectedDevices[0] : null

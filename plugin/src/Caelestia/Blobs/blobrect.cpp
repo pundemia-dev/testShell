@@ -102,21 +102,34 @@ void BlobRect::updatePhysics() {
         target11 = targetStretch * sin2 + targetCompress * cos2;
     }
 
-    // Underdamped spring on each matrix component
+    // Underdamped spring on each matrix component, SUB-STEPPED. Explicit Euler
+    // on a stiff spring (stiffness 200) is only stable while dt ≲ 2/√stiffness
+    // ≈ 0.14 s. A single frame's dt can sit near the 0.1 s clamp when the GPU is
+    // saturated — e.g. a VAAPI screen recording encoding on the same node the
+    // compositor uses — and at that step size the integrator overshoots and the
+    // deform "rocks" / blows up. Fixed ~4 ms sub-steps keep each integration
+    // step well inside the stability region at any frame rate (dt is already
+    // clamped ≤ 0.1 s above, so this is at most ~25 cheap scalar iterations).
     const float kStiffness = static_cast<float>(m_stiffness);
     const float kDamping = static_cast<float>(m_damping);
 
-    const float accel00 = -kStiffness * (m_dm00 - target00) - kDamping * m_dmVel00;
-    m_dmVel00 += accel00 * dt;
-    m_dm00 += m_dmVel00 * dt;
+    constexpr float kMaxSubStep = 1.0f / 240.0f;
+    const int subSteps = std::min(64, std::max(1, static_cast<int>(std::ceil(dt / kMaxSubStep))));
+    const float h = dt / static_cast<float>(subSteps);
 
-    const float accel01 = -kStiffness * (m_dm01 - target01) - kDamping * m_dmVel01;
-    m_dmVel01 += accel01 * dt;
-    m_dm01 += m_dmVel01 * dt;
+    for (int i = 0; i < subSteps; ++i) {
+        const float accel00 = -kStiffness * (m_dm00 - target00) - kDamping * m_dmVel00;
+        m_dmVel00 += accel00 * h;
+        m_dm00 += m_dmVel00 * h;
 
-    const float accel11 = -kStiffness * (m_dm11 - target11) - kDamping * m_dmVel11;
-    m_dmVel11 += accel11 * dt;
-    m_dm11 += m_dmVel11 * dt;
+        const float accel01 = -kStiffness * (m_dm01 - target01) - kDamping * m_dmVel01;
+        m_dmVel01 += accel01 * h;
+        m_dm01 += m_dmVel01 * h;
+
+        const float accel11 = -kStiffness * (m_dm11 - target11) - kDamping * m_dmVel11;
+        m_dmVel11 += accel11 * h;
+        m_dm11 += m_dmVel11 * h;
+    }
 
     m_deformMatrix = QMatrix4x4(m_dm00, m_dm01, 0, 0, m_dm01, m_dm11, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     emit rawDeformMatrixChanged();

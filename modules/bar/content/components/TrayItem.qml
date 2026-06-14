@@ -7,6 +7,7 @@ import qs.config
 import qs.utils
 import Quickshell.Services.SystemTray
 import QtQuick
+import "../popouts" as BarPopouts
 
 MouseArea {
     id: root
@@ -23,6 +24,19 @@ MouseArea {
             modelData.activate();
         else
             modelData.secondaryActivate();
+    }
+
+    // Per-item popout: each tray item gets its own context-menu popout. Items
+    // without a menu stay inert (contentReady false), so they never summon an
+    // empty popout.
+    PopoutHandle {
+        edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
+        contentReady: root.modelData.hasMenu
+        popoutContent: Component {
+            BarPopouts.TrayMenu {
+                trayItem: root.modelData.menu
+            }
+        }
     }
 
     ColouredIcon {

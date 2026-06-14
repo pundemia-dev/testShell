@@ -56,17 +56,11 @@ Item {
 
         sourceComponent: Item {
             Component.onCompleted: {
-                const seq = root.manager.requestBackground(root.content);
-                // Publish the slot handle so RecordPill can read the envelope
-                // hover (stable, un-scaled) for its controls-reveal latch.
-                Capture.recordManager = root.manager;
-                Capture.recordSlotSeq = seq;
+                root.manager.requestBackground(root.content);
             }
 
             Component.onDestruction: {
                 root.manager.removeBackground(root.content);
-                Capture.recordSlotSeq = -1;
-                Capture.recordManager = null;
             }
         }
     }

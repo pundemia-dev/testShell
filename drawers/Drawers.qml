@@ -186,6 +186,14 @@ Variants {
                     screen: scope.modelData
                 }
 
+                // Popout coordinator (bar/dock widget popouts). Non-visual:
+                // renders reused backgrounds via the manager; widgets trigger
+                // it through the Popouts singleton + PopoutHandle.
+                PopoutsManager {
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
+                }
+
                 // Border zone strips + visible chrome — last so MouseAreas
                 // sit above all wrapper content in z-order.
                 Borders {

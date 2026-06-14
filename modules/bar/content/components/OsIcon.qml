@@ -15,6 +15,21 @@ Item {
     implicitWidth: implicitHeight
     implicitHeight: icon.implicitHeight + Appearance.padding.small * 2
 
+    // ── DEMO: top-edge popout attached to this widget. Hover to open;
+    // hover another popout-enabled widget to watch the bg slide + morph.
+    PopoutHandle {
+        // Match the bar's current edge (orientation false = vertical).
+        edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
+        popoutContent: Component {
+            StyledText {
+                text: "OS popout\n" + Time.format("hh:mm:ss")
+                horizontalAlignment: Text.AlignHCenter
+                font.pointSize: Appearance.font.size.normal
+                color: Colours.palette.tertiary
+            }
+        }
+    }
+
     StateLayer {
         // Cursed workaround to make the height larger than the parent
         anchors.fill: undefined

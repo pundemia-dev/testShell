@@ -170,14 +170,6 @@ Singleton {
     property string pendingOutput: ""
     property bool discardRequested: false
 
-    // Published by the active RecordWrapper so RecordPill can read the rails
-    // slot's envelope hover (manager.slotHover[seq]) — a STABLE, un-scaled
-    // hover signal, unlike a local HoverHandler inside the spring-scaled slot.
-    // Only one wrapper is ever active (gated on recordScreen), so a singleton
-    // pair is safe across monitors.
-    property var recordManager: null
-    property int recordSlotSeq: -1
-
     function recordPath(): string {
         const dir = resolvePath(Config.capture.recordDir) || `${home}/Videos`;
         return `${dir}/recording_${timestamp()}.mp4`;

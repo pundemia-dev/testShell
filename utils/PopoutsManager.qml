@@ -1,114 +1,36 @@
-// BackgroundsApi.qml
 pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
+import qs.utils
 
-QtObject {
+// Per-screen popout coordinator. Instantiated once per Drawers scope with the
+// screen's BackgroundsManager. Owns one EdgeChannel per edge; each channel
+// reads the active handle for (screen, edge) from the Popouts singleton and
+// drives a reused rails background.
+//
+// Non-visual (no geometry of its own). Widgets never touch this directly —
+// they talk to the Popouts singleton via PopoutHandle; this side only renders.
+Item {
     id: root
 
-    property var slots: null
-    property var isolatedBackgrounds: []
-    property var pendingRequests: []
+    required property var manager          // BackgroundsManager
+    required property ShellScreen screen
 
-    function registerSlots(slotsArray) {
-        root.slots = slotsArray;
-        // console.log("BackgroundsApi: Registered", slotsArray.length, "background slots");
+    readonly property int screenWidth: screen ? screen.width : 0
+    readonly property int screenHeight: screen ? screen.height : 0
 
-        if (root.pendingRequests.length > 0) {
-            // console.log("BackgroundsApi: Processing", root.pendingRequests.length, "pending requests");
-            for (let i = 0; i < root.pendingRequests.length; i++) {
-                const req = root.pendingRequests[i];
-                root.requestBackground(req.wrapper, req.isolate, req.excludeBarArea);
-            }
-            root.pendingRequests = [];
-        }
-    }
-
-    function determineSlotIndex(wrapper) {
-        const left = wrapper.aLeft ?? false;
-        const right = wrapper.aRight ?? false;
-        const top = wrapper.aTop ?? false;
-        const bottom = wrapper.aBottom ?? false;
-        const hCenter = wrapper.aHorizontalCenter ?? false;
-        const vCenter = wrapper.aVerticalCenter ?? false;
-
-        if (top && !vCenter) {
-            if (left && !hCenter)
-                return 0;
-            if (hCenter)
-                return 1;
-            if (right && !hCenter)
-                return 2;
-        }
-
-        if (vCenter || (!top && !bottom)) {
-            if (left && !hCenter)
-                return 3;
-            if (hCenter || (!left && !right))
-                return 4;
-            if (right && !hCenter)
-                return 5;
-        }
-
-        if (bottom && !vCenter) {
-            if (left && !hCenter)
-                return 6;
-            if (hCenter)
-                return 7;
-            if (right && !hCenter)
-                return 8;
-        }
-
-        return 4;
-    }
-
-    function requestBackground(wrapper, isolate = false, excludeBarArea = true) {
-        if (!wrapper) {
-            // console.error("BackgroundsApi: wrapper is null!");
-            return;
-        }
-
-        if (!root.slots && !isolate) {
-            // console.warn("BackgroundsApi: Slots not registered yet. Queuing request.");
-            root.pendingRequests.push({
-                wrapper: wrapper,
-                isolate: isolate,
-                excludeBarArea: excludeBarArea
-            });
-            return;
-        }
-
-        if (isolate) {
-            // console.log("BackgroundsApi: Creating isolated background");
-            // root.isolatedBackgrounds.push({
-            //     wrapper: wrapper,
-            //     excludeBarArea: excludeBarArea
-            // });
-            // root.isolatedBackgrounds = root.isolatedBackgrounds;
-            root.isolatedBackgrounds = [...root.isolatedBackgrounds,
-                {
-                    wrapper: wrapper,
-                    excludeBarArea: excludeBarArea
-                }
-            ];
-        } else {
-            const slotIndex = determineSlotIndex(wrapper);
-            const slot = root.slots[slotIndex];
-
-            if (!slot) {
-                // console.error("BackgroundsApi: Slot", slotIndex, "not found");
-                return;
-            }
-
-            // console.log("BackgroundsApi: Assigning wrapper to slot", slotIndex);
-
-            // Просто присваиваем wrapper - биндинги сделают всё остальное
-            slot.wrapper = wrapper;
-            slot.excludeBarArea = excludeBarArea;
-
-            if (!slot.active) {
-                slot.active = true;
-            }
+    Instantiator {
+        model: ["top", "bottom", "left", "right"]
+        delegate: EdgeChannel {
+            required property string modelData
+            edge: modelData
+            manager: root.manager
+            screen: root.screen
+            screenWidth: root.screenWidth
+            screenHeight: root.screenHeight
+            // Reactive: activeMap is reassigned wholesale on every change.
+            activeHandle: Popouts.activeMap[(root.screen ? root.screen.name : "?") + "|" + modelData] ?? null
         }
     }
 }

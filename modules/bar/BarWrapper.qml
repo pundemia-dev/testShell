@@ -83,10 +83,8 @@ Item {
         readonly property int layer: 0
         property int windowRounding: Config.bar.rounding.all
         property int invertedJoinRounding: (Config.bar.invertBaseRounding.all ?? false) ? Config.bar.rounding.all : 0
-        property Component content: Component {
-            StyledRect {
-                color: "green"
-            }
+        property Component content: Combined {
+            screen: root.screen
         }
     }
     property QtObject begin: QtObject {
@@ -192,6 +190,62 @@ Item {
     anchors.rightMargin: Config.bar.orientation ? Config.bar.shortSideMargin : Config.bar.longSideMargin
     anchors.bottomMargin: Config.bar.orientation ? Config.bar.longSideMargin : Config.bar.shortSideMargin
 
+    // Whether backgrounds are currently registered, and under which mode they
+    // were registered. Tracked so a later `separated` change (e.g. once the
+    // async JSON config finishes loading) can tear down the old set with the
+    // mode it was actually created in before requesting the new one.
+    property bool _bgsActive: false
+    property bool _bgsSeparated: false
+
+    function _requestBgs(): void {
+        if (Config.bar.separated) {
+            root.manager.requestBackground(root.begin);
+            root.manager.requestBackground(root.center);
+            root.manager.requestBackground(root.end);
+        } else {
+            root.manager.requestBackground(root.position);
+        }
+    }
+
+    function _removeBgs(separated: bool): void {
+        if (separated) {
+            root.manager.removeBackground(root.begin);
+            root.manager.removeBackground(root.center);
+            root.manager.removeBackground(root.end);
+        } else {
+            root.manager.removeBackground(root.position);
+        }
+    }
+
+    // (Re)register backgrounds for the current `separated` mode, tearing down
+    // any previously-registered set first. Safe to call on initial load and on
+    // every later `separated` flip.
+    function _applyBgs(): void {
+        if (!barLoader.active)
+            return;
+        if (root._bgsActive)
+            root._removeBgs(root._bgsSeparated);
+        root._requestBgs();
+        root._bgsActive = true;
+        root._bgsSeparated = Config.bar.separated;
+    }
+
+    function _clearBgs(): void {
+        if (!root._bgsActive)
+            return;
+        root._removeBgs(root._bgsSeparated);
+        root._bgsActive = false;
+    }
+
+    // `separated` arrives late from the async JSON config and may be toggled at
+    // runtime — re-apply instead of latching the value once in onCompleted.
+    Connections {
+        target: Config.bar
+        function onSeparatedChanged(): void {
+            root._applyBgs();
+        }
+    }
+
     Loader {
         id: barLoader
         active: root.barVisible
@@ -200,25 +254,8 @@ Item {
         sourceComponent: Item {
             anchors.fill: parent
 
-            Component.onCompleted: {
-                if (Config.bar.separated) {
-                    root.manager.requestBackground(root.begin);
-                    root.manager.requestBackground(root.center);
-                    root.manager.requestBackground(root.end);
-                } else {
-                    root.manager.requestBackground(root.position);
-                }
-            }
-
-            Component.onDestruction: {
-                if (Config.bar.separated) {
-                    root.manager.removeBackground(root.begin);
-                    root.manager.removeBackground(root.center);
-                    root.manager.removeBackground(root.end);
-                } else {
-                    root.manager.removeBackground(root.position);
-                }
-            }
+            Component.onCompleted: root._applyBgs()
+            Component.onDestruction: root._clearBgs()
         }
     }
 }

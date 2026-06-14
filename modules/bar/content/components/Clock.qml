@@ -14,6 +14,21 @@ FlexboxLayout {
 
     gap: Appearance.spacing.small
 
+    // ── DEMO: top-edge popout. Shares the same bg as OsIcon's popout in
+    // reuse mode — hovering one then the other slides + morphs it across.
+    PopoutHandle {
+        // Match the bar's current edge (orientation false = vertical).
+        edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
+        popoutContent: Component {
+            StyledText {
+                text: "Clock popout\n" + Time.format("dddd, dd MMMM\nhh:mm:ss")
+                horizontalAlignment: Text.AlignHCenter
+                font.pointSize: Appearance.font.size.normal
+                color: Colours.palette.primary
+            }
+        }
+    }
+
     Loader {
         active: !Config.bar.orientation
         visible: active

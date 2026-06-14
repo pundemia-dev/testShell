@@ -22,8 +22,7 @@ Item {
     // Both axes derive from the active state's content (the rails slot is sized
     // bar-height by the wrapper and centres this content in it). Must NOT bind
     // height to parent.height: the WindowSlot Loader is size-less and adopts
-    // this item's implicit size, so parent.height → 0 (circular). Hover is NOT
-    // taken from this geometry — see pillHovered below.
+    // this item's implicit size, so parent.height → 0 (circular).
     implicitWidth: view.item ? view.item.implicitWidth : 0
     implicitHeight: view.item ? view.item.implicitHeight : 0
 
@@ -89,38 +88,6 @@ done`;
             onRead: data => {
                 root.levels = data.split(";").filter(s => s !== "").map(Number);
             }
-        }
-    }
-
-    // Controls-reveal latch: opened by hovering the stop area, kept open while
-    // the cursor is ANYWHERE on the pill, closed on a short grace after it
-    // leaves. The keep-open signal is the rails slot envelope (manager.slotHover)
-    // — NOT a local HoverHandler. WindowSlot renders this content SCALED by its
-    // size spring, so on expand the painted size lags the target and a local
-    // handler's hit area transiently shrinks below the cursor → drop-out →
-    // collapse → re-expand → oscillation (the pill swelled to fill the screen).
-    // The envelope is sized from the STABLE target and lives un-scaled in
-    // contentLayer, so it never yanks out from under the cursor.
-    property bool ctlOpen: false
-
-    readonly property bool pillHovered: {
-        const m = Capture.recordManager;
-        const s = Capture.recordSlotSeq;
-        return (m && s >= 0) ? (m.slotHover[s] ?? false) : false;
-    }
-
-    onPillHoveredChanged: {
-        if (!pillHovered)
-            pillGrace.restart();
-    }
-
-    Timer {
-        id: pillGrace
-
-        interval: Appearance.anim.durations.normal
-        onTriggered: {
-            if (!root.pillHovered)
-                root.ctlOpen = false;
         }
     }
 
@@ -297,50 +264,14 @@ done`;
                 }
             }
 
-            // ── Controls: hidden until the stop button is hovered ───
-            // One hover container = the cursor can cross between buttons.
-            Item {
-                id: controls
-
+            // ── Controls: trash / audio / pause / stop, ALWAYS visible.
+            // No hover-reveal: resizing the pill on hover fought the rails
+            // size-spring (resize → re-centre → scale ring) and dropped the
+            // hover → oscillation. A stable footprint keeps every button
+            // reachable and the pill calm.
+            Row {
                 anchors.verticalCenter: parent.verticalCenter
-                implicitWidth: ctlRow.implicitWidth
-                implicitHeight: ctlRow.implicitHeight
-
-                readonly property bool expanded: root.ctlOpen
-
-                HoverHandler {
-                    id: ctlHover
-
-                    onHoveredChanged: {
-                        if (hovered)
-                            root.ctlOpen = true;
-                    }
-                }
-
-                Row {
-                    id: ctlRow
-
-                    spacing: 0
-
-                    // Sliding reveal: trash / audio / pause.
-                    Item {
-                        anchors.verticalCenter: parent.verticalCenter
-                        clip: true
-                        implicitWidth: controls.expanded ? revealRow.implicitWidth + Appearance.spacing.smaller : 0
-                        implicitHeight: revealRow.implicitHeight
-
-                        Behavior on implicitWidth {
-                            Anim {
-                                easing.bezierCurve: Appearance.anim.curves.expressiveDefaultSpatial
-                            }
-                        }
-
-                        Row {
-                            id: revealRow
-
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.small
 
                             TablerButton {
                                 anchors.verticalCenter: parent.verticalCenter
@@ -383,11 +314,8 @@ done`;
                                 iconSize: Appearance.font.size.normal
                                 onClicked: Capture.togglePause()
                             }
-                        }
-                    }
 
-                    // Stop: always visible, error-tonal.
-                    TablerButton {
+                            TablerButton {
                         anchors.verticalCenter: parent.verticalCenter
                         icon: "" // player-stop-filled
                         color: Colours.palette.error_container
@@ -395,7 +323,6 @@ done`;
                         iconSize: Appearance.font.size.normal
                         onClicked: Capture.stopRecord()
                     }
-                }
             }
         }
     }
