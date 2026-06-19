@@ -80,9 +80,16 @@ projects their union onto the touched edge. The strip:
   top/bottom, `yMax - yMin` for left/right); when empty, falls back
   to `Config.border.defaultZoneLength`. Empty corner zones anchor
   at the corner; empty side zones center on the edge.
-- **Thickness** perpendicular to edge = `Config.border.thickness +
-  topmostBg.<facing>Margin`, falling back to
-  `Config.border.defaultMouseAreaThickness` when the sum is 0.
+- **Thickness** perpendicular to edge (`_stripThickness`), with
+  `def = Config.border.defaultMouseAreaThickness`:
+  - topmost bg is **pinned or overlay** → `facingMargin + def` (drops the
+    border thickness, since both sit flush at `edge=0` under the border —
+    adding `Config.border.thickness` would push the strip onto them);
+  - otherwise (push / empty zone) →
+    `facingMargin + Config.border.thickness + def`.
+
+  `def` is always an additive base band (not a fallback), and
+  `facingMargin` is `0` when the zone is empty.
 
 Per-slot live painted rects are read from
 `BackgroundsManager.slotRects[arrivalSeq]` (published by

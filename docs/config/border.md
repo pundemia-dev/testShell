@@ -149,8 +149,19 @@ no edge-nearest bgs. For corner zones, the strip is anchored at the
 corner; for side zones, centred on the edge.
 
 ### `defaultMouseAreaThickness` (int, default `10`)
-Fallback thickness (perpendicular to edge) used when `thickness +
-topmost-bg-margin` would be 0.
+Base trigger-strip thickness (perpendicular to edge), **always added**
+to the strip. The full per-strip thickness is:
+
+| Topmost edge-nearest bg | Strip thickness |
+|---|---|
+| **pinned or overlay** (sits flush at `edge=0`, under the border) | `facingMargin + defaultMouseAreaThickness` |
+| push, or empty zone | `facingMargin + Config.border.thickness + defaultMouseAreaThickness` |
+
+The pinned/overlay case drops the `Config.border.thickness` term so a
+thick border never pushes the strip onto the bg's content — pinned and
+overlay bgs are at `edge=0` (under the border), unlike push bgs which
+are already inset by it. `facingMargin` is the topmost bg's edge-facing
+margin (`mTop`/`mRight`/`mBottom`/`mLeft`); `0` when the zone is empty.
 
 ### `zoneRoundings` (list of 8 reals, default `[0, 0, 0, 0, 0, 0, 0, 0]`)
 Per-zone SDF присасывание (sticking) strength — how aggressively

@@ -219,10 +219,18 @@ Item {
     }
 
     function _stripThickness(side) {
-        const t = (Config.border.thickness ?? 0) + _topmostMargin(side);
-        if (t > 0)
-            return t;
-        return Config.border.defaultMouseAreaThickness ?? 10;
+        const def = Config.border.defaultMouseAreaThickness ?? 10;
+        const margin = _topmostMargin(side);
+        // Pinned AND overlay bgs sit flush at edge=0 (under the border), so
+        // adding the full border thickness would push the strip onto the bg.
+        // Give them only the facing margin (gap to the edge) + a small default
+        // band. Push bgs (inset by the border) and empty zones also get the
+        // border thickness floor.
+        const w = _topmost ? _topmost.wrapper : null;
+        const noEdge = !!w && ((w.pinned ?? false) || ((w.mode ?? "push") === "overlay"));
+        if (noEdge)
+            return margin + def;
+        return margin + (Config.border.thickness ?? 0) + def;
     }
 
     readonly property int _defaultLen: Config.border.defaultZoneLength ?? 100
@@ -312,16 +320,90 @@ Item {
     }
     readonly property int _rightStripW: touchRight ? _stripThickness("right") : 0
 
+    // ── Same-edge neighbour clipping ─────────────────────────────────
+    // Two adjacent zones on one edge can overlap along it (e.g. a full-height
+    // side bar's strip vs the empty corner zones' fallback strips). Rule: the
+    // LONGER strip is clipped to the shorter one's boundary + zoneGap, so the
+    // shorter (corner trigger) is always preserved. Each zone publishes its
+    // RAW (unclipped) extent and clips itself against neighbours' RAW extents,
+    // so there is no feedback loop.
+    function _sideOrder(side) {
+        // Zones along an edge, ordered by increasing coordinate (x for
+        // top/bottom, y for left/right).
+        if (side === "top")
+            return [0, 1, 2];
+        if (side === "bottom")
+            return [6, 5, 4];
+        if (side === "left")
+            return [0, 7, 6];
+        return [2, 3, 4]; // right
+    }
+
+    function _clip(side, lo, hi) {
+        void manager.zoneStrips;            // re-evaluate when neighbours change
+        const gap = Config.border.zoneGap ?? 8;
+        const order = _sideOrder(side);
+        const i = order.indexOf(zoneIdx);
+        if (i < 0)
+            return { lo: lo, hi: hi };
+        const myLen = hi - lo;
+        let clo = lo, chi = hi;
+        // lo-side neighbour (smaller coordinate)
+        if (i > 0) {
+            const n = manager.zoneStripExtent(order[i - 1], side);
+            if (n && n.hi > clo) {
+                const nLen = n.hi - n.lo;
+                if (myLen > nLen || (myLen === nLen && zoneIdx > order[i - 1]))
+                    clo = n.hi + gap;
+            }
+        }
+        // hi-side neighbour (larger coordinate)
+        if (i < order.length - 1) {
+            const n = manager.zoneStripExtent(order[i + 1], side);
+            if (n && n.lo < chi) {
+                const nLen = n.hi - n.lo;
+                if (myLen > nLen || (myLen === nLen && zoneIdx > order[i + 1]))
+                    chi = n.lo - gap;
+            }
+        }
+        if (chi < clo)
+            chi = clo;
+        return { lo: clo, hi: chi };
+    }
+
+    // RAW extents per touched side — published for neighbours to read.
+    readonly property var _rawExtents: ({
+            top: touchTop ? { lo: _topStripX, hi: _topStripX + _topStripW } : null,
+            bottom: touchBottom ? { lo: _botStripX, hi: _botStripX + _botStripW } : null,
+            left: touchLeft ? { lo: _leftStripY, hi: _leftStripY + _leftStripH } : null,
+            right: touchRight ? { lo: _rightStripY, hi: _rightStripY + _rightStripH } : null
+        })
+    on_RawExtentsChanged: _publishExtents()
+    Component.onCompleted: _publishExtents()
+    function _publishExtents() {
+        for (const side of ["top", "bottom", "left", "right"]) {
+            const e = _rawExtents[side];
+            if (e)
+                manager.publishZoneStrip(zoneIdx, side, e.lo, e.hi);
+        }
+    }
+
+    // Clipped extents fed to the strips (along the edge axis).
+    readonly property var _clipTop: touchTop ? _clip("top", _topStripX, _topStripX + _topStripW) : null
+    readonly property var _clipBot: touchBottom ? _clip("bottom", _botStripX, _botStripX + _botStripW) : null
+    readonly property var _clipLeft: touchLeft ? _clip("left", _leftStripY, _leftStripY + _leftStripH) : null
+    readonly property var _clipRight: touchRight ? _clip("right", _rightStripY, _rightStripY + _rightStripH) : null
+
     // ── Debug visual colour (cycle through palette by zoneIdx) ───────
     readonly property color _debugColor: {
-        const palette = [Qt.rgba(1, 0.3, 0.3, 0)  // 0 topLeft   red
-            , Qt.rgba(1, 0.6, 0.2, 0)  // 1 top       orange
-            , Qt.rgba(1, 0.9, 0.2, 0)  // 2 topRight  yellow
-            , Qt.rgba(0.5, 1, 0.3, 0)  // 3 right     green
-            , Qt.rgba(0.3, 1, 0.8, 0)  // 4 botRight  teal
-            , Qt.rgba(0.3, 0.6, 1, 0)  // 5 bottom    blue
-            , Qt.rgba(0.6, 0.4, 1, 0)  // 6 botLeft   purple
-            , Qt.rgba(1, 0.4, 0.9, 0)   // 7 left      pink
+        const palette = [Qt.rgba(1, 0.3, 0.3, 0.35)  // 0 topLeft   red
+            , Qt.rgba(1, 0.6, 0.2, 0.35)  // 1 top       orange
+            , Qt.rgba(1, 0.9, 0.2, 0.35)  // 2 topRight  yellow
+            , Qt.rgba(0.5, 1, 0.3, 0.35)  // 3 right     green
+            , Qt.rgba(0.3, 1, 0.8, 0.35)  // 4 botRight  teal
+            , Qt.rgba(0.3, 0.6, 1, 0.35)  // 5 bottom    blue
+            , Qt.rgba(0.6, 0.4, 1, 0.35)  // 6 botLeft   purple
+            , Qt.rgba(1, 0.4, 0.9, 0.35)   // 7 left      pink
 
         // Qt.rgba(1, 0.3, 0.3, 1.0)  // 0 topLeft   red
         // , Qt.rgba(1, 0.6, 0.2, 1.0)  // 1 top       orange
@@ -481,33 +563,33 @@ Item {
     // ── Strips ───────────────────────────────────────────────────────
     InteractionStrip {
         visible: root.touchTop
-        targetX: root._topStripX
+        targetX: root._clipTop ? root._clipTop.lo : root._topStripX
         targetY: 0
-        targetWidth: root._topStripW
+        targetWidth: root._clipTop ? (root._clipTop.hi - root._clipTop.lo) : root._topStripW
         targetHeight: root._topStripH
     }
 
     InteractionStrip {
         visible: root.touchRight
         targetX: root.zWidth - root._rightStripW
-        targetY: root._rightStripY
+        targetY: root._clipRight ? root._clipRight.lo : root._rightStripY
         targetWidth: root._rightStripW
-        targetHeight: root._rightStripH
+        targetHeight: root._clipRight ? (root._clipRight.hi - root._clipRight.lo) : root._rightStripH
     }
 
     InteractionStrip {
         visible: root.touchBottom
-        targetX: root._botStripX
+        targetX: root._clipBot ? root._clipBot.lo : root._botStripX
         targetY: root.zHeight - root._botStripH
-        targetWidth: root._botStripW
+        targetWidth: root._clipBot ? (root._clipBot.hi - root._clipBot.lo) : root._botStripW
         targetHeight: root._botStripH
     }
 
     InteractionStrip {
         visible: root.touchLeft
         targetX: 0
-        targetY: root._leftStripY
+        targetY: root._clipLeft ? root._clipLeft.lo : root._leftStripY
         targetWidth: root._leftStripW
-        targetHeight: root._leftStripH
+        targetHeight: root._clipLeft ? (root._clipLeft.hi - root._clipLeft.lo) : root._leftStripH
     }
 }

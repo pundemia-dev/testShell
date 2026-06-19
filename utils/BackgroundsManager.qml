@@ -58,6 +58,27 @@ QtObject {
         return slotRects[arrivalSeq] ?? null;
     }
 
+    // ── Per-zone strip RAW extents (along the touched edge) ──────────
+    // Each BorderZone publishes its unclipped strip extent per side here so
+    // same-edge neighbours can clip themselves against it (longer clipped to
+    // shorter + gap). Keyed "<zoneIdx>:<side>" → {lo, hi}. Clipping always
+    // reads RAW extents (never the post-clip geometry), so there is no
+    // feedback loop. See drawers/border/BorderZone.qml.
+    property var zoneStrips: ({})
+
+    function publishZoneStrip(zoneIdx, side, lo, hi) {
+        const key = zoneIdx + ":" + side;
+        const cur = zoneStrips[key];
+        if (cur && cur.lo === lo && cur.hi === hi) return;
+        const updated = Object.assign({}, zoneStrips);
+        updated[key] = { lo: lo, hi: hi };
+        zoneStrips = updated;
+    }
+
+    function zoneStripExtent(zoneIdx, side) {
+        return zoneStrips[zoneIdx + ":" + side] ?? null;
+    }
+
     // Per-arrivalSeq hover state — true while cursor is over the slot's bg
     // OR any of its bridge regions. Written by WindowSlot. Modules subscribe
     // to this for "is cursor anywhere on my slot's input region" auto-hide
