@@ -14,6 +14,8 @@ Source: [`config/backgroundsconfig/BackgroundsConfig.qml`](../../config/backgrou
 |---|---|---|---|
 | `rounding` | `int` | `30` | [Geometry](#geometry) |
 | `invertBaseRounding` | `bool` | `false` | [Geometry](#geometry) |
+| `cornerGuard` | `real` | `0` | [Geometry](#geometry) |
+| `stickSmooth` | `real` | `1.5` | [Присасывание](#присасывание-sticking) |
 | `margins.{left,right,top,bottom}` | `int` | `0` | [Geometry](#geometry) |
 | `paddings.{left,right,top,bottom}` | `int` | `15` | [Geometry](#geometry) |
 | `offsets.{vCenterOffset,hCenterOffset}` | `int` | `0` | [Geometry](#geometry) |
@@ -52,6 +54,11 @@ are rounded to `Config.border.rounding`, so a bg присасывающийся 
 frame meets it through a rounded inner corner. When `false`, the cutout
 is square (radius 0) — sharp inner corners where bgs join the frame.
 
+### `cornerGuard` (real, default `0`)
+Guard band (px) around the frame's inner-cutout rounding arcs where
+присасывание is muted, so a sinking bg never reshapes those arcs.
+`-1` = auto (`invertedRadius + SDF smoothing`); `0` disables the guard.
+
 ### `margins` (Directions, default all `0`)
 Outer offsets (px) between this background and screen edge or
 neighbouring rails. Each side independently:
@@ -73,6 +80,54 @@ Manual offset for centred anchors:
 
 Used by wrappers whose contract sets `aVerticalCenter`/
 `aHorizontalCenter` — shifts them along the centred axis.
+
+---
+
+## Присасывание (sticking)
+
+«Присасывание» is the SDF merge between a bg and its neighbours
+(other bgs on the same rail) and the screen-edge frame. It is the
+sum of two independent controls:
+
+### Per-window: the `sticks` contract field (`bool`, default `true`)
+
+Each wrapper's [contract](../../CLAUDE.md#wrapper-contract) carries
+`property bool sticks`. The end user toggles it per module (and per
+popout handle via `overrides.sticks` / `Config.popouts.sticks`):
+
+- **`sticks: true`** — the bg merges with adjacent bgs and the frame.
+  Across a real gap to a neighbour (e.g. a popout to the bar) the
+  shader widens the `smin` into a **tight capsule neck** instead of a
+  thin pinch (fatness = `stickSmooth`, below).
+- **`sticks: false`** — a **clean floating panel**: full rounding on
+  all corners, real gap, **no** neck and **no** "magnet" corner-shrink
+  toward the frame. The shader skips the inter-rect `smin` for the
+  pair and zeroes the boost / sink / frame-merge for this rect.
+
+Implemented as a per-rect flag on `BlobRect` (`sticks`), packed into
+the shader's spare `rectData[i*5+3].w` slot — no uniform-buffer size
+change. See [border-zones.md](../development/border-zones.md) for the
+shader gating.
+
+> `sticks` only gates the **merge**; whether a zoned bg pulls the
+> frame at all is still governed by `Config.border.zoneRoundings`
+> (per-zone strength). A bg with `sticks: true` but zone strength `0`
+> still merges with rail neighbours but not the frame.
+
+### Global: `stickSmooth` (real, default `1.5`)
+
+Neck fatness when a **sticking** bg bridges a gap to a neighbour.
+Multiplier on the SDF smoothing radius used for the `smin` between
+two sticking rects:
+
+| Value | Effect |
+|---|---|
+| `1.0` | Legacy thin join — the bridge across a gap reads as a pinch. |
+| `1.5` (default) | Fuller waist — a tight capsule neck across a small gap. |
+| `> 2` | Very fat neck; may start clipping at the per-rect AABB cull on large gaps. |
+
+Set on the shared `BlobGroup` (`stickSmooth`) from
+`Config.backgrounds.stickSmooth`.
 
 ---
 

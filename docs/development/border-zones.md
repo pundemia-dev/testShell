@@ -13,26 +13,34 @@ Every zone has independent control over:
 
 ```
 Drawers (WlrLayershell)
+├── Border                   ← visible chrome (StyledRect + mask),
+│                                FIRST child → lowest z (below content)
 ├── Backgrounds
 │   ├── BlobGroup (shared SDF compositor)
 │   ├── bgRenderHost (layer.enabled FBO)
 │   │   ├── BlobInvertedRect  ← the screen-edge frame, with
-│   │   │                         per-zone zoneRoundings
+│   │   │                         per-zone zoneRoundings; inner cutout
+│   │   │                         inset to the border's inner edge
 │   │   └── Repeater of 9 Rails → WindowSlots
 │   └── contentLayer (z=100)
 │       └── per-slot envelope Items (HoverHandler + DropArea)
-└── Borders                   ← orchestrator (8 BorderZones + visible Border)
-    ├── Repeater (model: 8)
-    │   └── BorderZone        ← 1 (side) or 2 (corner) InteractionStrips
-    └── Border                ← visible chrome (StyledRect + mask)
+└── Borders                   ← 8 BorderZone INPUT strips only (last/topmost)
+    └── Repeater (model: 8)
+        └── BorderZone        ← 1 (side) or 2 (corner) InteractionStrips
 ```
 
-The visible `Border` is drawn last so it sits above everything as the
-**9th instance** that the spec calls for; the 8 invisible
-`BorderZone`s carry interaction. The single `BlobInvertedRect`
-inside `Backgrounds.bgRenderHost` replaces the legacy
-`RailBorder.qml` (deleted) and exposes 8 `zoneRoundings` to the
-shader.
+The visible `Border` chrome was moved OUT of `Borders` to the bottom
+of the z-stack (first child of `Drawers`) so it no longer covers the
+content of `pinned`/`overlay` panels sitting at `edge=0`. `Borders`
+now holds only the 8 invisible `BorderZone` interaction strips, still
+instantiated last so they stay topmost for hover/click/slide/drop.
+
+The single `BlobInvertedRect` inside `Backgrounds.bgRenderHost`
+replaces the legacy `RailBorder.qml` (deleted) and exposes 8
+`zoneRoundings` to the shader. Its inner cutout is **inset to the
+visible border's inner edge** (`_frameInset*` in `Backgrounds.qml`,
+mirroring `Border.qml`'s mask / `fillBar`), so bgs присасываются to
+the border edge, not the bare screen edge.
 
 ## Zone indexing
 
@@ -138,6 +146,30 @@ the per-rect corner radius reduction toward the frame's inner
 boundary is also gated by `zs > 0.0f`. Bgs in disabled zones keep
 their full corner radius regardless of proximity to the frame.
 
+### Per-window `sticks` gating + capsule bridge
+
+Orthogonal to the per-zone strength, each `BlobRect` carries a
+`sticks` bool (default `true`), packed into the spare
+`rectData[i*5+3].w` slot (no uniform-buffer size change). A new scalar
+uniform `stickSmooth` (from `Config.backgrounds.stickSmooth`, the
+former `pad0` slot) controls the neck fatness.
+
+In `blob.frag`:
+
+- **Frame effects** — `sticks` is folded into the zone strength
+  (`zs *= st`) in both the boost (Phase 1) and sink loops, and into
+  `winnerZs` for the final frame `smin`. So `sticks: false` zeroes all
+  three frame effects → no "magnet" corner-shrink, natural contour.
+- **Inter-rect merge** (Phase 3 pairwise `smin`) — for each pair the
+  two `sticks` flags are read: if **either** is `0`, the pair is
+  skipped (plain `min`, no merge) → a floating panel keeps its own
+  clean rounded shape. If **both** stick, the blend radius is widened
+  to `kPair = smoothFactor * stickSmooth`, turning the bridge across a
+  gap into a tight capsule neck instead of a thin pinch.
+
+See [`config/backgrounds.md`](../config/backgrounds.md#присасывание-sticking)
+for the user-facing knobs.
+
 ## Slot envelope (hover/drag in contentLayer)
 
 Each `WindowSlot` adds an invisible **envelope Item** parented to
@@ -172,7 +204,8 @@ when the cursor is on the bg painted rect.
 | Concern | File |
 |---|---|
 | Config schema (8 zone roundings, defaults) | [`config/borderconfig/BorderConfig.qml`](../../config/borderconfig/BorderConfig.qml) |
-| Orchestrator (8 BorderZones + visible Border) | [`drawers/border/Borders.qml`](../../drawers/border/Borders.qml) |
+| Orchestrator (8 BorderZone input strips only) | [`drawers/border/Borders.qml`](../../drawers/border/Borders.qml) |
+| Visible chrome (bottom of z-stack, in Drawers) | [`drawers/border/Border.qml`](../../drawers/border/Border.qml), [`drawers/Drawers.qml`](../../drawers/Drawers.qml) |
 | Zone strip + resize-union + interaction wiring | [`drawers/border/BorderZone.qml`](../../drawers/border/BorderZone.qml) |
 | Visible chrome | [`drawers/border/Border.qml`](../../drawers/border/Border.qml) |
 | Single `BlobInvertedRect` driver | [`drawers/backgrounds/Backgrounds.qml`](../../drawers/backgrounds/Backgrounds.qml) |

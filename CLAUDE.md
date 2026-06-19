@@ -48,14 +48,19 @@ Screen
 └── Drawers (WlrLayershell)
     ├── Exclusions          ← per-side ExclusionZone windows (border floor)
     ├── Corners             ← visual rounded-corner chrome
+    ├── Border              ← visible border chrome, FIRST (lowest z)
     ├── Backgrounds         ← SDF Rails system (see below)
     ├── BarWrapper, LauncherWrapper, NotificationsWrapper, StashWrapper
-    ├── Borders             ← 8 BorderZones (interaction strips) + 1 visible Border (chrome)
+    ├── Borders             ← 8 BorderZones (interaction strips only)
     └── NiriFocusGrab       ← Niri-specific focus capture
 ```
 
-`Borders` is instantiated LAST so its 8 BorderZone strips sit above
-all wrapper content in z-order — strips drive
+The visible `Border` chrome is the FIRST child (lowest z) so it renders
+BELOW all panel content (contentLayer z=100): pinned/overlay panels sit
+at edge=0 (into the border strip) and their content must paint above the
+chrome, never covered. `Borders` (only the 8 BorderZone INPUT strips now)
+is instantiated LAST so its strips sit above all wrapper content in
+z-order — strips drive
 [InteractionManager](docs/development/interaction-manager.md) and
 must catch hover/click/slide/drop before the bgs do.
 
@@ -178,14 +183,14 @@ Singletons in `services/`:
 
 `plugin/src/Caelestia/Blobs/` — SDF panel renderer adapted from upstream caelestia. Builds a single Qt scene-graph material that merges multiple `BlobRect`s and one `BlobInvertedRect` into one shader pass with optional inverted-corner joins. Exposed types:
 
-- `BlobGroup` — shared SDF compositor.
-- `BlobRect` — rounded rectangle in the group. Properties: `radius`, `deformScale`, per-corner radii (`topLeft/topRight/bottomLeft/bottomRightRadius`), `exclude` (list), **`zoneIndex: int`** (0..7 = zone for per-zone присасывание; -1 = no zone → strength 0).
+- `BlobGroup` — shared SDF compositor. Properties: `smoothing`, **`stickSmooth: real`** (neck-fatness multiplier on the smin radius between two sticking rects; 1 = legacy, >1 = capsule).
+- `BlobRect` — rounded rectangle in the group. Properties: `radius`, `deformScale`, per-corner radii (`topLeft/topRight/bottomLeft/bottomRightRadius`), `exclude` (list), **`zoneIndex: int`** (0..7 = zone for per-zone присасывание; -1 = no zone → strength 0), **`sticks: bool`** (default true; false → no SDF merge with neighbours/frame, no boost/sink → clean floating contour).
 - `BlobInvertedRect` — frame with rounded inner cutout. Properties: `borderLeft/Right/Top/Bottom`, **`zoneRoundings: list<real>`** (8 elements; per-zone присасывание strength, see [docs/development/border-zones.md](docs/development/border-zones.md)).
-- `BlobShape` (base) — exposes `virtual int zoneIndex() const` (default -1, overridden in `BlobRect`).
+- `BlobShape` (base) — exposes `virtual int zoneIndex() const` and `virtual bool sticks() const` (defaults -1 / true, overridden in `BlobRect`).
 
-**Cap: 16 rects per `BlobGroup`.** All shell panels share one group in `Backgrounds.qml`. The single `BlobInvertedRect` carries the per-zone roundings; the shader reads each rect's packed `zoneIndex` (float-encoded in the unused `rectData[i*5+3].z` slot) and looks up the matching strength to gate three effects: per-rect SDF boost scale, sink loop, and final smin-with-frame.
+**Cap: 16 rects per `BlobGroup`.** All shell panels share one group in `Backgrounds.qml`. The single `BlobInvertedRect` carries the per-zone roundings; the shader reads each rect's packed `zoneIndex` (float-encoded in `rectData[i*5+3].z`) and looks up the matching strength to gate three effects: per-rect SDF boost scale, sink loop, and final smin-with-frame. The `.w` slot of the same vec4 carries the per-rect **`sticks`** flag: it's ANDed into the zone strength (kills boost/sink/frame-merge when 0) and gates the inter-rect pairwise smin (skip if either rect doesn't stick; widen to `smoothFactor * stickSmooth` when both do → capsule neck). See [docs/development/border-zones.md](docs/development/border-zones.md).
 
-The uniform buffer is **1472 bytes** (up from 1440) after adding two `vec4` slots (`zoneRoundingsLow/High`). Both `blob.vert` and `blob.frag` declare the same layout.
+The uniform buffer is **1472 bytes** (up from 1440) after adding two `vec4` slots (`zoneRoundingsLow/High`); the per-rect `sticks` flag reuses the spare `.w` slot and `stickSmooth` reuses the former `pad0` scalar, so neither changed the buffer size. Both `blob.vert` and `blob.frag` declare the same layout.
 
 ## Key Files by Task
 
@@ -205,6 +210,8 @@ The uniform buffer is **1472 bytes** (up from 1440) after adding two `vec4` slot
 | LocalSend receive | `services/LocalSend.qml` (singleton: owns receive server, accept/reject state), `modules/stash/content/IncomingRequest.qml` (accept/reject card), `scripts/localsend_receive.py` (HTTPS server), `scripts/localsend_pickdir.sh` (folder dialog) |
 | Dashed-border component | `components/DashedRect.qml` (Canvas-based, configurable dash / gap / radius) |
 | Per-zone shader logic (sink + boost + frame smin gating) | `plugin/src/Caelestia/Blobs/shaders/blob.frag`, `plugin/src/Caelestia/Blobs/blobmaterial.{hpp,cpp}` |
+| Per-window присасывание toggle (`sticks`) + capsule (`stickSmooth`) | `plugin/src/Caelestia/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
+| SDF frame inset to border inner edge | `drawers/backgrounds/Backgrounds.qml` (`_frameInset*`) |
 
 ---
 

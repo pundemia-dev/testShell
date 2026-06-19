@@ -39,9 +39,19 @@ Example `shell.json` overrides:
 
 ## Chrome
 
-The **visible** chrome — a single masked StyledRect drawn above all
-wrappers as the 9th instance inside [`drawers/border/Borders.qml`](../../drawers/border/Borders.qml).
-The MultiEffect mask cuts out the interior, leaving only a frame.
+The **visible** chrome — a single masked StyledRect in
+[`drawers/border/Border.qml`](../../drawers/border/Border.qml). The
+MultiEffect mask cuts out the interior, leaving only a frame.
+
+It is instantiated as the **first child** of the content `Item` in
+[`drawers/Drawers.qml`](../../drawers/Drawers.qml), i.e. at the
+**lowest z** — below all panel content (`contentLayer`, z=100).
+`pinned`/`overlay` panels sit at `edge=0` (into the border strip), so
+keeping the chrome at the bottom means their content always paints
+**above** it and is never covered. The 8 `BorderZone` input strips
+(`Borders.qml`) stay last/topmost so they still catch hover/click
+before the bgs. (The chrome used to be the "9th instance" on top of
+`Borders.qml`; it was moved down to stop covering content.)
 
 ### `enabled` (bool, default `false`)
 When `false`, the chrome paints nothing (`StyledRect` color uses
@@ -49,22 +59,54 @@ fully-transparent mask). The 8 invisible zonal interaction surfaces
 remain active regardless.
 
 ### `thickness` (int, default `10`)
-Frame thickness in pixels. Also defines the **per-zone trigger
-strip thickness** (combined with each topmost edge-nearest bg's
-facing margin — see [Zones](#zones)).
+Frame thickness in pixels. Also:
+- defines the **per-zone trigger strip thickness** (combined with each
+  topmost edge-nearest bg's facing margin — see [Zones](#zones));
+- **insets the invisible SDF frame's inner cutout** by the same amount,
+  so bgs присасываются to the border's **inner edge**, not the bare
+  screen edge (see [Frame inset](#frame-inset)).
 
 ### `rounding` (int, default `15`)
 Corner radius (px) of the inner-cutout rounded rectangle of the
-visible chrome. Independent from the SDF inner-corner radius of
-the invisible `BlobInvertedRect` (which comes from
-`Config.backgrounds.rounding`).
+visible chrome. This is **also** the SDF inner-corner radius of the
+invisible `BlobInvertedRect` — gated by
+`Config.backgrounds.invertBaseRounding` (`true` → use this value,
+`false` → square cutout, radius 0). Independent from the panels' own
+`Config.backgrounds.rounding`.
 
 ### `fillBar` (bool, default `false`)
-When `true`, the chrome's mask uses per-side `left_area / top_area /
-right_area / bottom_area` (the layershell's reserved edges, picked
-up from pinned wrappers' exclusion zones) instead of a uniform
-`thickness`. Effect: the chrome fills any reserved bar area solid
-instead of cutting around it.
+When `true`, both the visible chrome's mask **and** the SDF frame's
+inner-cutout inset use per-side `left_area / top_area / right_area /
+bottom_area` (the layershell's reserved edges, picked up from pinned
+wrappers' exclusion zones) instead of a uniform `thickness`. Effect:
+the border fills any reserved bar area solid instead of cutting
+around it, and bgs присасываются to that filled edge.
+
+---
+
+## Frame inset
+
+The invisible `BlobInvertedRect` (the SDF frame that bgs sink/merge
+into) has its **inner cutout inset to the visible border's inner
+edge**, mirroring the chrome's mask:
+
+- `fillBar: false` → inset by a uniform `Config.border.thickness` on
+  every side.
+- `fillBar: true` → inset per-side by `left_area / top_area /
+  right_area / bottom_area`.
+
+Computed in [`drawers/backgrounds/Backgrounds.qml`](../../drawers/backgrounds/Backgrounds.qml)
+as `_frameInset{Left,Right,Top,Bottom}` and added to the frame's
+`border*` margins. Without this, the frame's inner edge sat at the
+bare screen edge and bgs присасывались **under** the border instead of
+to its inner edge.
+
+Consequence: with the inset, the SDF frame's solid band now paints the
+border strip **inside** the viewport (colour `surface`, same as the
+static chrome) and merges with sticking panels — so a panel rounds
+into the border's inner corner (radius `rounding`, gated by
+`Config.backgrounds.invertBaseRounding`). The static `Border` chrome
+sits below it as a base fill.
 
 ---
 
@@ -132,6 +174,12 @@ render as plain rounded rectangles even when their margin is `0`.
 three effects linearly. zoneIndex `-1` (bgs in the center rail, or
 bgs that never reported a zone) also gets strength `0`.
 
+This is **ANDed** with the per-window
+[`sticks`](backgrounds.md#присасывание-sticking) flag: a bg pulls the
+frame only when its zone strength `> 0` **and** `sticks: true`. A
+floating bg (`sticks: false`) ignores the frame regardless of its
+zone's `zoneRoundings` value.
+
 ### `minMouseArea` (int, default `1`)
 Reserved for [InteractionManager](../development/interaction-manager.md)
 slide/drop semantics. Currently unused.
@@ -142,10 +190,13 @@ slide/drop semantics. Currently unused.
 
 - Config schema:
   [`config/borderconfig/BorderConfig.qml`](../../config/borderconfig/BorderConfig.qml)
-- Visible chrome:
+- Visible chrome (instantiated at the bottom of the z-stack in
+  [`drawers/Drawers.qml`](../../drawers/Drawers.qml)):
   [`drawers/border/Border.qml`](../../drawers/border/Border.qml)
-- Zone orchestrator (8 BorderZone + 1 visible Border):
+- Zone orchestrator (8 BorderZone input strips only):
   [`drawers/border/Borders.qml`](../../drawers/border/Borders.qml)
+- SDF frame inset to the border inner edge:
+  [`drawers/backgrounds/Backgrounds.qml`](../../drawers/backgrounds/Backgrounds.qml)
 - Zone strip implementation (per-side projection, resize-union,
   hover/click/slide/drop wiring):
   [`drawers/border/BorderZone.qml`](../../drawers/border/BorderZone.qml)

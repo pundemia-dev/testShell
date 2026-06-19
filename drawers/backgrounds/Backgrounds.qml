@@ -42,9 +42,11 @@ Item {
         stickSmooth: Config.backgrounds.stickSmooth
     }
 
-    // Screen-edge SDF frame. Lives entirely OUTSIDE the visible viewport
-    // (anchors.margins: -marginAbs), so nothing visible is painted by it —
-    // the shader still uses its inverted geometry for per-bg sink. Per-zone
+    // Screen-edge SDF frame. Its outer edge sits OUTSIDE the viewport
+    // (anchors.margins: -marginAbs); its inner cutout is inset to the visible
+    // border's inner edge (see _frameInset* below), so the frame's solid band
+    // covers the border strip and bgs присасываются to the border, not the bare
+    // screen edge. The shader uses its inverted geometry for per-bg sink. Per-zone
     // присасывание strengths come from Config.border.zoneRoundings:
     //   0 = bgs in that zone do NOT pull the frame's inner edge inward
     //   1 = full sink (legacy unscaled behavior)
@@ -59,6 +61,14 @@ Item {
     readonly property int _invertedRadius: (Config.backgrounds.invertBaseRounding ?? false)
                                             ? (Config.border.rounding ?? 0)
                                             : 0
+
+    // Inset the frame's inner cutout to the VISIBLE border's inner edge so bgs
+    // присасываются to the border, not the bare screen edge. Mirrors the mask
+    // in Border.qml (fillBar → per-side reserved area, else uniform thickness).
+    readonly property int _frameInsetLeft: Config.border.fillBar ? left_area : border_area
+    readonly property int _frameInsetRight: Config.border.fillBar ? right_area : border_area
+    readonly property int _frameInsetTop: Config.border.fillBar ? top_area : border_area
+    readonly property int _frameInsetBottom: Config.border.fillBar ? bottom_area : border_area
 
     Item {
         id: bgRenderHost
@@ -92,10 +102,10 @@ Item {
             cornerGuard: (Config.backgrounds.cornerGuard ?? -1) >= 0
                          ? Config.backgrounds.cornerGuard
                          : root._invertedRadius + blobGroup.smoothing
-            borderLeft: root._invertedFrameMargin
-            borderRight: root._invertedFrameMargin
-            borderTop: root._invertedFrameMargin
-            borderBottom: root._invertedFrameMargin
+            borderLeft: root._invertedFrameMargin + root._frameInsetLeft
+            borderRight: root._invertedFrameMargin + root._frameInsetRight
+            borderTop: root._invertedFrameMargin + root._frameInsetTop
+            borderBottom: root._invertedFrameMargin + root._frameInsetBottom
             zoneRoundings: Config.border.zoneRoundings
         }
 

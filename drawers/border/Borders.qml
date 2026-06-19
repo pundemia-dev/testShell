@@ -2,13 +2,14 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
-// Orchestrator: 8 BorderZone MouseArea strips (per zone) + the existing
-// visible Border chrome rendered on top.
+// Orchestrator: 8 BorderZone MouseArea input strips (per zone). The visible
+// Border chrome lives at the bottom of the stack (in Drawers.qml, below all
+// content) so it never covers panel content — only the input strips stay on
+// top here.
 Item {
     id: root
 
     required property var manager
-    required property int border_area
     required property int left_area
     required property int top_area
     required property int right_area
@@ -32,13 +33,5 @@ Item {
             right_area: root.right_area
             bottom_area: root.bottom_area
         }
-    }
-
-    Border {
-        border_area: root.border_area
-        left_area: root.left_area
-        top_area: root.top_area
-        right_area: root.right_area
-        bottom_area: root.bottom_area
     }
 }

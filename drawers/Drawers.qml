@@ -140,6 +140,21 @@ Variants {
             Item {
                 anchors.fill: parent
 
+                // Visible border chrome — FIRST child so it renders BELOW all
+                // panel content (contentLayer z=100 inside Backgrounds). Pinned/
+                // overlay panels sit at edge=0, i.e. into the border strip;
+                // keeping the chrome at the bottom means their content always
+                // paints above it and is never covered. The BorderZone input
+                // strips stay in Borders (instantiated last) so they keep
+                // catching hover/click above content.
+                Border {
+                    border_area: scope.border_area
+                    left_area: scope.left_area
+                    top_area: scope.top_area
+                    right_area: scope.right_area
+                    bottom_area: scope.bottom_area
+                }
+
                 Backgrounds {
                     manager: scope.backgroundsManager
                     border_area: scope.border_area
@@ -194,11 +209,11 @@ Variants {
                     screen: scope.modelData
                 }
 
-                // Border zone strips + visible chrome — last so MouseAreas
-                // sit above all wrapper content in z-order.
+                // Border zone INPUT strips — last so the MouseAreas sit above
+                // all wrapper content in z-order. The visible chrome moved to
+                // the bottom (see Border above) so it no longer covers content.
                 Borders {
                     manager: scope.backgroundsManager
-                    border_area: scope.border_area
                     left_area: scope.left_area
                     top_area: scope.top_area
                     right_area: scope.right_area
