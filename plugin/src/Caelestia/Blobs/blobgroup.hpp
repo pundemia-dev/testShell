@@ -12,6 +12,7 @@ class BlobGroup : public QObject {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(qreal smoothing READ smoothing WRITE setSmoothing NOTIFY smoothingChanged)
+    Q_PROPERTY(qreal stickSmooth READ stickSmooth WRITE setStickSmooth NOTIFY stickSmoothChanged)
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
 
 public:
@@ -21,6 +22,10 @@ public:
     qreal smoothing() const { return m_smoothing; }
 
     void setSmoothing(qreal s);
+
+    qreal stickSmooth() const { return m_stickSmooth; }
+
+    void setStickSmooth(qreal s);
 
     QColor color() const { return m_color; }
 
@@ -42,10 +47,12 @@ public:
 
 signals:
     void smoothingChanged();
+    void stickSmoothChanged();
     void colorChanged();
 
 private:
     qreal m_smoothing = 32.0;
+    qreal m_stickSmooth = 1.0;
     QColor m_color{ 0x44, 0x88, 0xff };
     QList<BlobShape*> m_shapes;
     BlobInvertedRect* m_invertedRect = nullptr;

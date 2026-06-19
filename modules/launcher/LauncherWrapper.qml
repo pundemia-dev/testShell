@@ -121,7 +121,6 @@ Item {
         property bool reservesSpace: false
         readonly property int layer: 0
         property int windowRounding: Config.launcher.rounding ?? Config.backgrounds.rounding ?? 0
-        property int invertedJoinRounding: Config.launcher.invertBaseRounding ?? Config.backgrounds.rounding ?? 0
 
         property Component content: FlexboxLayout {
                     id: flexLayout

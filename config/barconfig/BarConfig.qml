@@ -26,10 +26,6 @@ JsonObject {
         center: 70
         // begin: 15
     }
-    property SeparatedData invertBaseRounding: SeparatedData {
-        all: true
-        center: true
-    }
     property SeparatedData reusability: SeparatedData {
         all: false
     }

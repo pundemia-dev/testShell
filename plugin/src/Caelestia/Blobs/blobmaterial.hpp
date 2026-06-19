@@ -20,6 +20,10 @@ struct BlobRectData {
     // Zone index 0..7 (topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left).
     // -1 means "no zone" — bg does NOT participate in inverted-frame sink (no присасывание).
     int zoneIndex = -1;
+    // Whether this rect присасывается: merges (smin) with neighbours + frame.
+    // false → renders as a clean standalone contour (floating panel). Packed into
+    // the shader's spare rectData[i*5+3].w slot.
+    bool sticks = true;
 };
 
 class BlobMaterial : public QSGMaterial {
@@ -41,6 +45,10 @@ public:
     // Guard band width (px) protecting the border-rounding arcs from
     // присасывание (sink + frame smin); 0 disables.
     float m_cornerGuard = 0;
+    // Multiplier on smoothFactor used as the smin blend radius between two
+    // sticking rects. >1 widens/deepens the bridge into a tight capsule neck
+    // across a gap instead of a thin pinch. Occupies the former pad0 slot.
+    float m_stickSmooth = 1.0f;
     float m_invertedOuter[4] = {};
     float m_invertedInner[4] = {};
     // Per-zone присасывание strength (sink multiplier in fragment shader).

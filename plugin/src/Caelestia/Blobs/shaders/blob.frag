@@ -20,7 +20,9 @@ layout(std140, binding = 0) uniform buf {
     // присасывание; 0 disables. Occupies the former std140 padding slot, so
     // the buffer layout/size is unchanged.
     float cornerGuard;
-    float pad0;
+    // Multiplier on smoothFactor used as the smin blend radius between two
+    // sticking rects (>1 widens the bridge into a tight capsule neck). 1 = legacy.
+    float stickSmooth;
     vec4 invertedOuter;
     vec4 invertedInner;
     vec4 zoneRoundingsLow;   // zones 0..3 (topLeft, top, topRight, right)
@@ -117,6 +119,11 @@ void main() {
         int zi = int(sh.z);
         float zs = zoneStrength(zi);
 
+        // Per-rect stick flag (sh.w): 0 → this bg floats (no boost / sink /
+        // frame-merge). Folded into zs so the магнит corner-shrink vanishes.
+        float st = sh.w;
+        zs *= st;
+
         // Offset center for asymmetric deformation
         vec2 center = rect.xy + props.yz;
 
@@ -200,15 +207,24 @@ void main() {
         if (dArr[i] >= 1e9)
             continue;
         int excludeMask = floatBitsToInt(rectData[i * 5 + 1].x);
+        float sti = rectData[i * 5 + 3].w;
         for (int j = i + 1; j < rectCount; j++) {
             if (dArr[j] >= 1e9)
                 continue;
             if ((excludeMask & (1 << j)) != 0)
                 continue;
-            // smin only deviates from min within smoothFactor
-            if (abs(dArr[i] - dArr[j]) >= smoothFactor)
+            // A floating rect (sticks == 0) never smin-merges with a neighbour —
+            // it keeps its own clean rounded contour.
+            float stj = rectData[j * 5 + 3].w;
+            if (sti < 0.5 || stj < 0.5)
                 continue;
-            mergedSdf = min(mergedSdf, smin(dArr[i], dArr[j], smoothFactor));
+            // Sticking pair: widen the blend radius so the bridge across a gap
+            // fills into a tight capsule neck rather than a thin pinch.
+            float kPair = smoothFactor * stickSmooth;
+            // smin only deviates from min within kPair
+            if (abs(dArr[i] - dArr[j]) >= kPair)
+                continue;
+            mergedSdf = min(mergedSdf, smin(dArr[i], dArr[j], kPair));
         }
     }
 
@@ -240,6 +256,8 @@ void main() {
             // NOT pull the frame's inner edge inward. -1 (no zone) gets 1.0
             // (legacy unscaled behavior).
             float zs = zoneStrength(zi);
+            // Floating rects (d3.w == 0) don't sink the frame inner edge.
+            zs *= d3.w;
 
             // Screen-space center (with offset) and pre-computed AABB half-extents
             vec2 ctr = rect.xy + sinkProps.yz;
@@ -290,7 +308,8 @@ void main() {
         float winnerZs = 1.0;
         if (owner >= 0) {
             int wzi = int(rectData[owner * 5 + 3].z);
-            winnerZs = zoneStrength(wzi);
+            // Floating winner (d3.w == 0) does not merge with the frame.
+            winnerZs = zoneStrength(wzi) * rectData[owner * 5 + 3].w;
         }
         if (winnerZs > 0.0) {
             // The smin k collapses toward a hard min inside the corner-guard

@@ -13,7 +13,7 @@ Source: [`config/backgroundsconfig/BackgroundsConfig.qml`](../../config/backgrou
 | Property | Type | Default | Section |
 |---|---|---|---|
 | `rounding` | `int` | `30` | [Geometry](#geometry) |
-| `invertBaseRounding` | `bool` | `true` | [Geometry](#geometry) |
+| `invertBaseRounding` | `bool` | `false` | [Geometry](#geometry) |
 | `margins.{left,right,top,bottom}` | `int` | `0` | [Geometry](#geometry) |
 | `paddings.{left,right,top,bottom}` | `int` | `15` | [Geometry](#geometry) |
 | `offsets.{vCenterOffset,hCenterOffset}` | `int` | `0` | [Geometry](#geometry) |
@@ -45,9 +45,12 @@ that doesn't override them in its own contract.
 Corner radius (px) for the painted background rectangle. Each wrapper
 can override via its contract's `windowRounding`.
 
-### `invertBaseRounding` (bool, default `true`)
-When `true`, wrappers joining a screen-edge frame use an inverted-rect
-SDF join — the rounded edge meets the screen border seamlessly.
+### `invertBaseRounding` (bool, default `false`)
+Controls the corner radius of the screen-edge frame's **inner cutout**
+(the `BlobInvertedRect`'s rounded hole). When `true`, the cutout corners
+are rounded to `Config.border.rounding`, so a bg присасывающийся to the
+frame meets it through a rounded inner corner. When `false`, the cutout
+is square (radius 0) — sharp inner corners where bgs join the frame.
 
 ### `margins` (Directions, default all `0`)
 Outer offsets (px) between this background and screen edge or

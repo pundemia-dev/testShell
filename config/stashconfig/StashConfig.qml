@@ -94,7 +94,6 @@ JsonObject {
 
     // Rounding (falls back to backgrounds.rounding if -1).
     property int rounding: -1
-    property int invertedJoinRounding: -1
 
     component AnchorsData: JsonObject {
         property bool left: false

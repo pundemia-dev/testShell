@@ -9,7 +9,6 @@ JsonObject {
     property int gap: 10
     property string giphyApiKey: ""
     // property int rounding: 10
-    property int invertBaseRounding: 0
     property bool excludeBareArea: true
     property bool reusability: false
     property var modules: ["AppListModule", "GifListModule", "WallListModule"]

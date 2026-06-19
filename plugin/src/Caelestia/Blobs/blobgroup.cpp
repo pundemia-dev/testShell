@@ -20,6 +20,14 @@ void BlobGroup::setSmoothing(qreal s) {
     markDirty();
 }
 
+void BlobGroup::setStickSmooth(qreal s) {
+    if (qFuzzyCompare(m_stickSmooth, s))
+        return;
+    m_stickSmooth = s;
+    emit stickSmoothChanged();
+    markDirty();
+}
+
 void BlobGroup::setColor(const QColor& c) {
     if (m_color == c)
         return;

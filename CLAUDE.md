@@ -96,9 +96,9 @@ QtObject {
     property string mode: "push"        // "push" displaces siblings; "overlay" covers
     property bool pinned: false         // visually fixed at layer 1
     property bool reservesSpace: false  // → wlr-layer-shell exclusion zone
+    property bool sticks: true          // false → clean floating contour (no SDF merge with neighbours/frame, no magnet)
     readonly property int layer: 0      // assigned by Rail
     property int windowRounding: -1
-    property int invertedJoinRounding: -1
 
     property Component content: null
 }

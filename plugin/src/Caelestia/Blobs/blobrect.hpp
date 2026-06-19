@@ -26,6 +26,8 @@ class BlobRect : public BlobShape {
         qreal bottomRightRadius READ bottomRightRadius WRITE setBottomRightRadius NOTIFY bottomRightRadiusChanged)
     // Zone index 0..7 (TL, T, TR, R, BR, B, BL, L). -1 means "no zone" — no присасывание.
     Q_PROPERTY(int zoneIndex READ zoneIndex WRITE setZoneIndex NOTIFY zoneIndexChanged)
+    // Whether this rect присасывается (merges with neighbours + frame). Default true.
+    Q_PROPERTY(bool sticks READ sticks WRITE setSticks NOTIFY sticksChanged)
 
 public:
     explicit BlobRect(QQuickItem* parent = nullptr);
@@ -92,6 +94,10 @@ public:
 
     void setZoneIndex(int i);
 
+    bool sticks() const override { return m_sticks; }
+
+    void setSticks(bool s);
+
 signals:
     void stiffnessChanged();
     void dampingChanged();
@@ -103,6 +109,7 @@ signals:
     void bottomLeftRadiusChanged();
     void bottomRightRadiusChanged();
     void zoneIndexChanged();
+    void sticksChanged();
 
 protected:
     void updatePolish() override;
@@ -139,6 +146,7 @@ private:
     qreal m_bottomRightRadius = -1;
 
     int m_zoneIndex = -1;
+    bool m_sticks = true;
 
     QList<QPointer<BlobRect>> m_exclude;
 

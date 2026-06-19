@@ -214,6 +214,7 @@ void BlobShape::updatePolish() {
             r.screenHalfY = std::abs(b) * r.hw + std::abs(d) * r.hh;
 
             r.zoneIndex = other->zoneIndex();
+            r.sticks = other->sticks();
 
             m_cachedRects.append(r);
             rectShapes.append(other);
@@ -392,6 +393,7 @@ QSGNode* BlobShape::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
     material->m_hasInverted = m_cachedHasInverted ? 1 : 0;
     material->m_invertedRadius = m_cachedInvertedRadius;
     material->m_cornerGuard = m_cachedCornerGuard;
+    material->m_stickSmooth = static_cast<float>(m_group->stickSmooth());
     memcpy(material->m_invertedOuter, m_cachedInvertedOuter, sizeof(m_cachedInvertedOuter));
     memcpy(material->m_invertedInner, m_cachedInvertedInner, sizeof(m_cachedInvertedInner));
     memcpy(material->m_zoneRoundings, m_cachedZoneRoundings, sizeof(m_cachedZoneRoundings));

@@ -11,7 +11,6 @@ JsonObject {
     property bool openExpanded: false
     property Sizes sizes: Sizes {}
     property int rounding: -1
-    property bool invertBaseRounding: false
     property bool excludeBarArea: true
     property AnchorsData anchors: AnchorsData {
         right: true

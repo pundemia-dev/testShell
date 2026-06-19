@@ -250,6 +250,9 @@ Item {
     readonly property int windowRounding: wrapper?.windowRounding ?? Config.backgrounds.rounding ?? 0
     readonly property int effectiveRounding: Math.min(windowRounding, paintedWidth / 2, paintedHeight / 2)
     readonly property string mode: wrapper?.mode ?? "push"
+    // Whether this bg присасывается (merges with neighbours + frame). false →
+    // clean floating contour. Default true preserves legacy merge behaviour.
+    readonly property bool sticks: wrapper?.sticks ?? true
     readonly property bool isPinned: wrapper?.pinned ?? false
     readonly property bool isOverlay: mode === "overlay"
 
@@ -776,6 +779,7 @@ Item {
         // animating size) so a will-be-large panel is tamed all through its appear.
         deformAtten: Liquid.deformSizeScale(root.lastTargetWidth, root.lastTargetHeight)
         zoneIndex: root.manager ? root.manager.zoneForRail(root.railRef ? root.railRef.railIndex : -1) : -1
+        sticks: root.sticks
     }
 
     // ── Fade-aura: opaque inner rect with halo ring OUTSIDE it. Drawn

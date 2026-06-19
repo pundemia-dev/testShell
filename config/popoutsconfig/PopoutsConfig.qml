@@ -16,7 +16,12 @@ JsonObject {
 
     // Rounding (-1 → falls back to backgrounds.rounding).
     property int rounding: -1
-    property int invertedJoinRounding: -1
+
+    // Whether the popout присасывается to its host (bar/dock): true → liquid
+    // capsule neck across the gap (fatness = backgrounds.stickSmooth); false →
+    // clean floating panel with full rounding, no neck, no magnet corner-shrink.
+    // Per-handle overridable via overrides.sticks.
+    property bool sticks: true
 
     // Stacking mode. "push" = layer below/above the host on its rail (the
     // popout sits just past the host). Overridable per-handle.

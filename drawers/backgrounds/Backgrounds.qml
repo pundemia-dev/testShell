@@ -39,6 +39,7 @@ Item {
         id: blobGroup
         color: Colours.palette.surface
         smoothing: 32
+        stickSmooth: Config.backgrounds.stickSmooth
     }
 
     // Screen-edge SDF frame. Lives entirely OUTSIDE the visible viewport

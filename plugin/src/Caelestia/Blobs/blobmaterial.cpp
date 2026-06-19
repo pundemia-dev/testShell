@@ -73,8 +73,12 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
     memcpy(buf->data() + 116, &mat->m_invertedRadius, 4);
 
     // Corner guard (offset 120; occupies the former padding slot — buffer
-    // size and all later offsets are unchanged). 124-127 stays padding.
+    // size and all later offsets are unchanged).
     memcpy(buf->data() + 120, &mat->m_cornerGuard, 4);
+
+    // Stick-smooth multiplier (offset 124; the former pad0 slot — buffer size
+    // and all later offsets are unchanged).
+    memcpy(buf->data() + 124, &mat->m_stickSmooth, 4);
 
     // Inverted outer (offset 128, 16 bytes)
     memcpy(buf->data() + 128, mat->m_invertedOuter, 16);
@@ -97,8 +101,11 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
         memcpy(&maskAsFloat, &r.excludeMask, sizeof(float));
         const float d0[4] = { r.cx, r.cy, r.hw, r.hh };
         const float d1[4] = { maskAsFloat, r.offsetX, r.offsetY, r.minEig };
-        // d3.x = screenHalfX, d3.y = screenHalfY, d3.z = zoneIndex (float-encoded, -1 = no zone), d3.w unused
-        const float d3[4] = { r.screenHalfX, r.screenHalfY, static_cast<float>(r.zoneIndex), 0.0f };
+        // d3.x = screenHalfX, d3.y = screenHalfY, d3.z = zoneIndex (float-encoded, -1 = no zone),
+        // d3.w = sticks (1.0 = присасывается/merges, 0.0 = floating/standalone)
+        const float d3[4] = {
+            r.screenHalfX, r.screenHalfY, static_cast<float>(r.zoneIndex), r.sticks ? 1.0f : 0.0f
+        };
         memcpy(buf->data() + base, d0, 16);
         memcpy(buf->data() + base + 16, d1, 16);
         memcpy(buf->data() + base + 32, r.invDeform, 16);

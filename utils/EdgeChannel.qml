@@ -174,16 +174,13 @@ Item {
         property int pBottom: ch._pad
 
         property string mode: ch._ovr("mode", Config.popouts.mode)
+        property bool sticks: ch._ovr("sticks", Config.popouts.sticks)
         property bool pinned: false
         property bool reservesSpace: false
         readonly property int layer: 0
 
         property int windowRounding: {
             const r = ch._ovr("rounding", Config.popouts.rounding);
-            return r >= 0 ? r : (Config.backgrounds.rounding ?? 0);
-        }
-        property int invertedJoinRounding: {
-            const r = ch._ovr("invertedJoinRounding", Config.popouts.invertedJoinRounding);
             return r >= 0 ? r : (Config.backgrounds.rounding ?? 0);
         }
 

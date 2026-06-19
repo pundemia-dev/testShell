@@ -2,11 +2,16 @@ import Quickshell.Io
 
 JsonObject {
     property int rounding: 30
-    property bool invertBaseRounding: true
+    property bool invertBaseRounding: false
     // Guard band (px) around the border-rounding arcs where присасывание is
     // muted, so sinking bgs never reshape the arcs. -1 = auto (rounding +
     // SDF smoothing).
     property real cornerGuard: 0
+    // Neck fatness when a sticking bg bridges a gap to a neighbour. Multiplier
+    // on the SDF smoothing radius used for the smin between two sticking rects:
+    // 1.0 = legacy thin join, >1 widens it into a tight capsule neck across the
+    // gap. Global default; per-bg "присосан/нет" is the `sticks` toggle.
+    property real stickSmooth: 1.5
     property Directions margins: Directions {}
     property Directions paddings: Directions {
         left: 15

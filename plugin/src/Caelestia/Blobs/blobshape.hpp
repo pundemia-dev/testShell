@@ -53,6 +53,12 @@ protected:
     // BlobRect overrides to expose this as a QML property.
     virtual int zoneIndex() const { return -1; }
 
+    // Whether this shape participates in присасывание: inter-rect smin merge
+    // with neighbours AND the inverted-frame boost/sink/merge. true by default;
+    // BlobRect overrides to expose this as a QML property. false → the shape
+    // renders as a clean standalone rounded contour (floating panel).
+    virtual bool sticks() const { return true; }
+
     virtual void cornerRadii(float out[4]) const;
 
     virtual void updatePhysics() {}

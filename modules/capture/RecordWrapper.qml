@@ -46,7 +46,6 @@ Item {
         property bool reservesSpace: false
         readonly property int layer: 0
         property int windowRounding: Appearance.rounding.large
-        property int invertedJoinRounding: -1
 
         property Component content: RecordPill {}
     }

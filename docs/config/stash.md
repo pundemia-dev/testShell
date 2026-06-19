@@ -38,7 +38,6 @@ Source: [`config/stashconfig/StashConfig.qml`](../../config/stashconfig/StashCon
 | `mTop` / `mBottom` / `mLeft` / `mRight` | `int` | `0` | [Geometry](#geometry) |
 | `padding` | `int` | `12` | [Geometry](#geometry) |
 | `rounding` | `int` | `-1` (inherit) | [Geometry](#geometry) |
-| `invertedJoinRounding` | `int` | `-1` (inherit) | [Geometry](#geometry) |
 
 Example `shell.json` overrides:
 
@@ -287,10 +286,6 @@ content (same value applied to all four sides).
 ### `rounding` (int, default `-1`)
 Override for the painted background's corner radius. `-1` inherits
 from `Config.backgrounds.rounding`.
-
-### `invertedJoinRounding` (int, default `-1`)
-Override for SDF-inverted-join corners when the panel touches a
-screen-edge frame. `-1` inherits from `Config.backgrounds.rounding`.
 
 ---
 

@@ -275,7 +275,6 @@ Item {
         property bool reservesSpace: false
         readonly property int layer: 0
         property int windowRounding: Config.stash.rounding >= 0 ? Config.stash.rounding : (Config.backgrounds.rounding ?? 0)
-        property int invertedJoinRounding: Config.stash.invertedJoinRounding >= 0 ? Config.stash.invertedJoinRounding : (Config.backgrounds.rounding ?? 0)
         // Content
         property Component content: StashContent {
             stash: root

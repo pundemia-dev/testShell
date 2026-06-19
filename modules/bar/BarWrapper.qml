@@ -82,7 +82,6 @@ Item {
         property bool reservesSpace: true
         readonly property int layer: 0
         property int windowRounding: Config.bar.rounding.all
-        property int invertedJoinRounding: (Config.bar.invertBaseRounding.all ?? false) ? Config.bar.rounding.all : 0
         property Component content: Combined {
             screen: root.screen
         }
@@ -114,8 +113,6 @@ Item {
         property bool reservesSpace: true
         readonly property int layer: 0
         property int windowRounding: Config.bar.rounding.begin ?? Config.bar.rounding.all ?? 0
-        property int invertedJoinRounding: (Config.bar.invertBaseRounding.begin ?? Config.bar.invertBaseRounding.all ?? false) ? (Config.bar.rounding.begin ?? Config.bar.rounding.all ?? 0) : 0
-
         property Component content: Begin {
             screen: root.screen
         }
@@ -147,7 +144,6 @@ Item {
         property bool reservesSpace: true
         readonly property int layer: 0
         property int windowRounding: Config.bar.rounding.center ?? Config.bar.rounding.all ?? 0
-        property int invertedJoinRounding: (Config.bar.invertBaseRounding.center ?? Config.bar.invertBaseRounding.all ?? false) ? (Config.bar.rounding.center ?? Config.bar.rounding.all ?? 0) : 0
         property Component content: Center {
             screen: root.screen
         }
@@ -179,7 +175,6 @@ Item {
         property bool reservesSpace: true
         readonly property int layer: 0
         property int windowRounding: Config.bar.rounding.end ?? Config.bar.rounding.all ?? 0
-        property int invertedJoinRounding: (Config.bar.invertBaseRounding.end ?? Config.bar.invertBaseRounding.all ?? false) ? (Config.bar.rounding.end ?? Config.bar.rounding.all ?? 0) : 0
         property Component content: End {
             screen: root.screen
         }
