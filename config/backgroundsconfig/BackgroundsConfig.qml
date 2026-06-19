@@ -6,7 +6,7 @@ JsonObject {
     // Guard band (px) around the border-rounding arcs where присасывание is
     // muted, so sinking bgs never reshape the arcs. -1 = auto (rounding +
     // SDF smoothing).
-    property real cornerGuard: -1
+    property real cornerGuard: 0
     property Directions margins: Directions {}
     property Directions paddings: Directions {
         left: 15

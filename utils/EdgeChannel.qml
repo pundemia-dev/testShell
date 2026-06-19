@@ -24,9 +24,8 @@ import qs.utils
 // rails seq, so there is no open→seq→hover→open feedback loop:
 //   • engaged     — a content handle is hovered (opens + drives content/offset)
 //   • panelHovered — cursor on the popout itself (HoverHandler in the content,
-//                    with a margin that reaches across the gap to the host)
-//   • hostHovered  — cursor anywhere on the host bar strip (sensor in
-//                    PopoutsManager) → bridges traversal across the whole bar
+//                    with a margin that reaches across the gap to the host);
+//                    holds the popout open AND can recover/revive it mid-close
 // Non-visual: instantiated by PopoutsManager with no visual parent.
 Item {
     id: ch
@@ -95,24 +94,41 @@ Item {
     // ── Open state + lifecycle ───────────────────────────────────────
     // A content handle is actively hovered → (re)opens + drives content/offset.
     readonly property bool engaged: activeHandle !== null
-    // HOLDS the popout open while the cursor is on the popout itself. Holds
-    // only — never initiates (panelHovered can't be true unless already open),
-    // so it can't summon an empty popout. No rails-seq input → no feedback loop.
+    // HOLDS the popout open while the cursor is on the popout itself (its content
+    // HoverHandler). Holds only — panelHovered can't be true unless the popout is
+    // already open, so it can't summon an empty popout.
     readonly property bool keepAlive: panelHovered
 
-    property bool shown: false
+    // Instantaneous intent. Recoverable (OR of both inputs), so reaching the
+    // popout re-asserts it even if the widget hover momentarily dropped.
+    readonly property bool _wantOpen: engaged || keepAlive
+
+    property bool open: false
     property bool _live: false      // bg currently requested (one-way; snap gate)
-    onEngagedChanged: _reeval()
-    onKeepAliveChanged: _reeval()
-    function _reeval() {
-        if (engaged)
-            shown = true;          // a content handle opens / keeps it open
-        else if (!keepAlive)
-            shown = false;         // left the widget and the popout → close
-        // engaged=false but keepAlive=true → hold (cursor still on the popout)
+
+    // Close DEBOUNCE. Opening a popout perturbs the layershell input mask near
+    // the bar's inner seam (and the popout's own hover margin overlaps that
+    // strip), so the compositor briefly fires wl_pointer.leave on the host
+    // widget AND the popout — a multi-frame round-trip that flaps _wantOpen
+    // false→true with a stationary cursor. We open immediately but defer the
+    // CLOSE by a short grace; if intent returns within it (it does, because the
+    // cursor never actually left), the close is cancelled → no open/close
+    // oscillation. This is scoped to the popout's own churn — NOT a cross-module
+    // transit bridge. Doubles as the revive-on-re-hover window.
+    on_WantOpenChanged: {
+        if (_wantOpen) {
+            closeTimer.stop();
+            open = true;
+        } else {
+            closeTimer.restart();
+        }
+    }
+    Timer {
+        id: closeTimer
+        interval: Appearance.anim.durations.small
+        onTriggered: ch.open = false
     }
 
-    readonly property bool open: shown
     onOpenChanged: {
         if (open) {
             manager.requestBackground(wrapper);

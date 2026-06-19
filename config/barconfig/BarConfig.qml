@@ -2,6 +2,7 @@ import Quickshell.Io
 import qs.config
 
 import "components"
+
 //
 
 JsonObject {
@@ -26,7 +27,7 @@ JsonObject {
         // begin: 15
     }
     property SeparatedData invertBaseRounding: SeparatedData {
-        all: false
+        all: true
         center: true
     }
     property SeparatedData reusability: SeparatedData {
@@ -52,28 +53,67 @@ JsonObject {
     }
 
     property list<var> beginLayout: [
-        { "type": "widget", "name": "OsIcon" },
-        { "type": "group", "children": [
-            { "type": "widget", "name": "Tray" },
-        ]},
-        { "type": "widget", "name": "Utilities" },
+        {
+            "type": "widget",
+            "name": "OsIcon"
+        },
+        {
+            "type": "group",
+            "children": [
+                {
+                    "type": "widget",
+                    "name": "Tray"
+                },
+            ]
+        },
+        {
+            "type": "widget",
+            "name": "Utilities"
+        },
     ]
 
     property list<var> centerLayout: [
-        { "type": "widget", "name": "Workspaces" }
+        {
+            "type": "widget",
+            "name": "Workspaces"
+        }
     ]
 
     property list<var> endLayout: [
-        { "type": "group", "children": [
-            { "type": "widget", "name": "KeyboardPreview" },
-        ]},
-        { "type": "widget", "name": "Clock" },
-        { "type": "group", "children": [
-            { "type": "widget", "name": "BluetoothStatus" },
-            { "type": "widget", "name": "NetworkStatus" },
-            { "type": "widget", "name": "PowerStatus" },
-        ]},
-        { "type": "widget", "name": "Power" },
+        {
+            "type": "group",
+            "children": [
+                {
+                    "type": "widget",
+                    "name": "KeyboardPreview"
+                },
+            ]
+        },
+        {
+            "type": "widget",
+            "name": "Clock"
+        },
+        {
+            "type": "group",
+            "children": [
+                {
+                    "type": "widget",
+                    "name": "BluetoothStatus"
+                },
+                {
+                    "type": "widget",
+                    "name": "NetworkStatus"
+                },
+                {
+                    "type": "widget",
+                    "name": "PowerStatus"
+                },
+            ]
+        },
+        {
+            "type": "widget",
+            "name": "Power"
+        },
     ]
     property bool isEditing: false
     property KbPreviewConfig kbPreview: KbPreviewConfig {}

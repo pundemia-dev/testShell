@@ -292,10 +292,38 @@ Item {
         return (manager.reservedEdge(_sideForCorner) || 0) > 0;
     }
 
+    // ── Centre-offset clamping ──────────────────────────────────────
+    // The free-axis offset (h/vCenterOffset) may shift a centred bg until
+    // the gap on the side it moves toward shrinks to that side's margin —
+    // then it stops. This stops an over-large offset from driving the bg
+    // off-screen: the facing margin is the hard floor on the gap to the
+    // edge. Width/height are passed in because the envelope uses a stable
+    // size while ownX/ownY use the animated painted size.
+    function _clampHOffset(off, w) {
+        if (off === 0)
+            return 0;
+        const half = (zWidth - w) / 2;
+        const lo = (mLeft + edgeLeft) - half;    // left edge reaches mLeft
+        const hi = half - (mRight + edgeRight);  // right edge reaches mRight
+        if (lo > hi)                              // no room → stay centred
+            return 0;
+        return Math.max(lo, Math.min(hi, off));
+    }
+    function _clampVOffset(off, h) {
+        if (off === 0)
+            return 0;
+        const half = (zHeight - h) / 2;
+        const lo = (mTop + edgeTop) - half;        // top edge reaches mTop
+        const hi = half - (mBottom + edgeBottom);  // bottom edge reaches mBottom
+        if (lo > hi)
+            return 0;
+        return Math.max(lo, Math.min(hi, off));
+    }
+
     // ── Own-anchor formulas (used when overlay or for non-growth axis) ──
     readonly property int ownX: {
         if (aHCenter && !aLeft && !aRight) {
-            return (zWidth / 2) - (paintedWidth / 2) + hCenterOffset;
+            return (zWidth / 2) - (paintedWidth / 2) + _clampHOffset(hCenterOffset, paintedWidth);
         }
         if (aLeft)
             return mLeft + edgeLeft;
@@ -305,7 +333,7 @@ Item {
     }
     readonly property int ownY: {
         if (aVCenter && !aTop && !aBottom) {
-            return (zHeight / 2) - (paintedHeight / 2) + vCenterOffset;
+            return (zHeight / 2) - (paintedHeight / 2) + _clampVOffset(vCenterOffset, paintedHeight);
         }
         if (aTop)
             return mTop + edgeTop;
@@ -601,7 +629,7 @@ Item {
     function _envStablePos() {
         let sx, sy;
         if (aHCenter && !aLeft && !aRight)
-            sx = (zWidth / 2) - (_envStableW / 2) + hCenterOffset;
+            sx = (zWidth / 2) - (_envStableW / 2) + _clampHOffset(hCenterOffset, _envStableW);
         else if (aLeft)
             sx = mLeft + edgeLeft;
         else if (aRight)
@@ -610,7 +638,7 @@ Item {
             sx = root.x;
 
         if (aVCenter && !aTop && !aBottom)
-            sy = (zHeight / 2) - (_envStableH / 2) + vCenterOffset;
+            sy = (zHeight / 2) - (_envStableH / 2) + _clampVOffset(vCenterOffset, _envStableH);
         else if (aTop)
             sy = mTop + edgeTop;
         else if (aBottom)

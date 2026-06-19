@@ -9,7 +9,7 @@ JsonObject {
     // Gap (px) between the host's bg edge and the popout — i.e. the popout's
     // facing margin toward the host (mTop for a top edge, mBottom for bottom,
     // etc.). The rails system bridges this gap for cursor traversal.
-    property int gap: 8
+    property int gap: 30
 
     // Padding around the popout content inside the bg.
     property int padding: 12

@@ -134,8 +134,21 @@ Item {
         const mR = wrapper.mRight ?? 0;
         const mT = wrapper.mTop ?? 0;
         const mB = wrapper.mBottom ?? 0;
-        const hCO = wrapper.hCenterOffset ?? 0;
-        const vCO = wrapper.vCenterOffset ?? 0;
+        // Clamp the free-axis offset so the strip tracks the bg, which is
+        // itself clamped to keep its facing margin off the screen edge (see
+        // WindowSlot._clampHOffset / _clampVOffset).
+        const clampOff = (off, span, gapLow, gapHigh) => {
+            if (off === 0)
+                return 0;
+            const half = (span) / 2;
+            const lo = gapLow - half;
+            const hi = half - gapHigh;
+            if (lo > hi)
+                return 0;
+            return Math.max(lo, Math.min(hi, off));
+        };
+        const hCO = clampOff(wrapper.hCenterOffset ?? 0, root.zWidth - w, mL + eL, mR + eR);
+        const vCO = clampOff(wrapper.vCenterOffset ?? 0, root.zHeight - h, mT + eT, mB + eB);
 
         let x, y;
         if (aHC && !aLeft && !aRight)
