@@ -218,7 +218,9 @@ Item {
         return 0;
     }
 
-    function _stripThickness(side) {
+    // Self-determined (raw) thickness — no neighbour inheritance. This is what
+    // a zone publishes and what real (occupied) zones render.
+    function _rawThickness(side) {
         const def = Config.border.defaultMouseAreaThickness ?? 10;
         const margin = _topmostMargin(side);
         // Pinned AND overlay bgs sit flush at edge=0 (under the border), so
@@ -231,6 +233,67 @@ Item {
         if (noEdge)
             return margin + def;
         return margin + (Config.border.thickness ?? 0) + def;
+    }
+
+    // Max raw thickness among IMMEDIATE neighbours on `side` that have a bg.
+    // -1 if none.
+    function _bestBgThicknessOnEdge(side) {
+        const order = _sideOrder(side);
+        const i = order.indexOf(zoneIdx);
+        if (i < 0)
+            return -1;
+        let best = -1;
+        for (const j of [i - 1, i + 1]) {
+            if (j < 0 || j >= order.length)
+                continue;
+            const n = manager.zoneStripExtent(order[j], side);
+            if (n && n.hasBg && n.thickness !== undefined && n.thickness > best)
+                best = n.thickness;
+        }
+        return best;
+    }
+
+    // The OTHER edge a corner zone touches (perpendicular to `side`); "" for a
+    // side zone (touches only one edge).
+    function _otherSide(side) {
+        const sides = [];
+        if (touchTop)
+            sides.push("top");
+        if (touchBottom)
+            sides.push("bottom");
+        if (touchLeft)
+            sides.push("left");
+        if (touchRight)
+            sides.push("right");
+        if (sides.length !== 2)
+            return "";
+        return sides[0] === side ? sides[1] : sides[0];
+    }
+
+    // Thickness inherited from a real same-edge neighbour. For a CORNER zone we
+    // also look at the PERPENDICULAR edge: a bg sitting at the corner from the
+    // other side (e.g. a full-height side bar reaching the top corner) occupies
+    // this strip's territory too, so both of the corner's strips take its
+    // thickness — the whole corner stays flush with the bar instead of one axis
+    // bulging out. Real zones never read empty ones → no feedback loop.
+    function _neighborBgThickness(side) {
+        void manager.zoneStrips;
+        let best = _bestBgThicknessOnEdge(side);
+        const other = _otherSide(side);
+        if (other !== "")
+            best = Math.max(best, _bestBgThicknessOnEdge(other));
+        return best;
+    }
+
+    // Final thickness. An EMPTY zone next to a real same-edge bg inherits that
+    // neighbour's thickness, so it doesn't bulge past the bg — the band stays
+    // uniform along the edge. Falls back to the raw (border-floor) thickness
+    // when this zone has a bg, or when no real neighbour exists on this edge.
+    function _stripThickness(side) {
+        if (_topmost)
+            return _rawThickness(side);
+        const nb = _neighborBgThickness(side);
+        return nb >= 0 ? nb : _rawThickness(side);
     }
 
     readonly property int _defaultLen: Config.border.defaultZoneLength ?? 100
@@ -345,7 +408,10 @@ Item {
         const order = _sideOrder(side);
         const i = order.indexOf(zoneIdx);
         if (i < 0)
-            return { lo: lo, hi: hi };
+            return {
+                lo: lo,
+                hi: hi
+            };
         const myLen = hi - lo;
         let clo = lo, chi = hi;
         // lo-side neighbour (smaller coordinate)
@@ -368,15 +434,41 @@ Item {
         }
         if (chi < clo)
             chi = clo;
-        return { lo: clo, hi: chi };
+        return {
+            lo: clo,
+            hi: chi
+        };
     }
 
-    // RAW extents per touched side — published for neighbours to read.
+    // RAW extents (+ raw thickness, hasBg) per touched side — published for
+    // neighbours to read (length clipping uses lo/hi; thickness inheritance
+    // uses t/bg).
+    readonly property bool _hasBg: !!_topmost
     readonly property var _rawExtents: ({
-            top: touchTop ? { lo: _topStripX, hi: _topStripX + _topStripW } : null,
-            bottom: touchBottom ? { lo: _botStripX, hi: _botStripX + _botStripW } : null,
-            left: touchLeft ? { lo: _leftStripY, hi: _leftStripY + _leftStripH } : null,
-            right: touchRight ? { lo: _rightStripY, hi: _rightStripY + _rightStripH } : null
+            top: touchTop ? {
+                lo: _topStripX,
+                hi: _topStripX + _topStripW,
+                t: _rawThickness("top"),
+                bg: _hasBg
+            } : null,
+            bottom: touchBottom ? {
+                lo: _botStripX,
+                hi: _botStripX + _botStripW,
+                t: _rawThickness("bottom"),
+                bg: _hasBg
+            } : null,
+            left: touchLeft ? {
+                lo: _leftStripY,
+                hi: _leftStripY + _leftStripH,
+                t: _rawThickness("left"),
+                bg: _hasBg
+            } : null,
+            right: touchRight ? {
+                lo: _rightStripY,
+                hi: _rightStripY + _rightStripH,
+                t: _rawThickness("right"),
+                bg: _hasBg
+            } : null
         })
     on_RawExtentsChanged: _publishExtents()
     Component.onCompleted: _publishExtents()
@@ -384,7 +476,7 @@ Item {
         for (const side of ["top", "bottom", "left", "right"]) {
             const e = _rawExtents[side];
             if (e)
-                manager.publishZoneStrip(zoneIdx, side, e.lo, e.hi);
+                manager.publishZoneStrip(zoneIdx, side, e.lo, e.hi, e.t, e.bg);
         }
     }
 
@@ -396,14 +488,14 @@ Item {
 
     // ── Debug visual colour (cycle through palette by zoneIdx) ───────
     readonly property color _debugColor: {
-        const palette = [Qt.rgba(1, 0.3, 0.3, 0.35)  // 0 topLeft   red
-            , Qt.rgba(1, 0.6, 0.2, 0.35)  // 1 top       orange
-            , Qt.rgba(1, 0.9, 0.2, 0.35)  // 2 topRight  yellow
-            , Qt.rgba(0.5, 1, 0.3, 0.35)  // 3 right     green
-            , Qt.rgba(0.3, 1, 0.8, 0.35)  // 4 botRight  teal
-            , Qt.rgba(0.3, 0.6, 1, 0.35)  // 5 bottom    blue
-            , Qt.rgba(0.6, 0.4, 1, 0.35)  // 6 botLeft   purple
-            , Qt.rgba(1, 0.4, 0.9, 0.35)   // 7 left      pink
+        const palette = [Qt.rgba(1, 0.3, 0.3, 0)  // 0 topLeft   red
+            , Qt.rgba(1, 0.6, 0.2, 0)  // 1 top       orange
+            , Qt.rgba(1, 0.9, 0.2, 0)  // 2 topRight  yellow
+            , Qt.rgba(0.5, 1, 0.3, 0)  // 3 right     green
+            , Qt.rgba(0.3, 1, 0.8, 0)  // 4 botRight  teal
+            , Qt.rgba(0.3, 0.6, 1, 0)  // 5 bottom    blue
+            , Qt.rgba(0.6, 0.4, 1, 0)  // 6 botLeft   purple
+            , Qt.rgba(1, 0.4, 0.9, 0)   // 7 left      pink
 
         // Qt.rgba(1, 0.3, 0.3, 1.0)  // 0 topLeft   red
         // , Qt.rgba(1, 0.6, 0.2, 1.0)  // 1 top       orange

@@ -155,13 +155,21 @@ to the strip. The full per-strip thickness is:
 | Topmost edge-nearest bg | Strip thickness |
 |---|---|
 | **pinned or overlay** (sits flush at `edge=0`, under the border) | `facingMargin + defaultMouseAreaThickness` |
-| push, or empty zone | `facingMargin + Config.border.thickness + defaultMouseAreaThickness` |
+| push | `facingMargin + Config.border.thickness + defaultMouseAreaThickness` |
+| **empty** zone next to a real same-edge bg | **inherits** that neighbour's thickness |
+| empty zone, no real neighbour on that edge | `Config.border.thickness + defaultMouseAreaThickness` |
 
 The pinned/overlay case drops the `Config.border.thickness` term so a
 thick border never pushes the strip onto the bg's content — pinned and
 overlay bgs are at `edge=0` (under the border), unlike push bgs which
 are already inset by it. `facingMargin` is the topmost bg's edge-facing
 margin (`mTop`/`mRight`/`mBottom`/`mLeft`); `0` when the zone is empty.
+
+The **empty-inherits-neighbour** rule keeps the band uniform along an
+edge: a corner zone next to a full-edge bar (e.g. a non-separated side
+bar) takes the bar strip's thickness instead of bulging out by the full
+`Config.border.thickness`. Real zones never read empty ones, so there's
+no feedback loop.
 
 ### `zoneRoundings` (list of 8 reals, default `[0, 0, 0, 0, 0, 0, 0, 0]`)
 Per-zone SDF присасывание (sticking) strength — how aggressively

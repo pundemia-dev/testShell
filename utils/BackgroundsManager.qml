@@ -66,12 +66,12 @@ QtObject {
     // feedback loop. See drawers/border/BorderZone.qml.
     property var zoneStrips: ({})
 
-    function publishZoneStrip(zoneIdx, side, lo, hi) {
+    function publishZoneStrip(zoneIdx, side, lo, hi, thickness, hasBg) {
         const key = zoneIdx + ":" + side;
         const cur = zoneStrips[key];
-        if (cur && cur.lo === lo && cur.hi === hi) return;
+        if (cur && cur.lo === lo && cur.hi === hi && cur.thickness === thickness && cur.hasBg === hasBg) return;
         const updated = Object.assign({}, zoneStrips);
-        updated[key] = { lo: lo, hi: hi };
+        updated[key] = { lo: lo, hi: hi, thickness: thickness, hasBg: hasBg };
         zoneStrips = updated;
     }
 

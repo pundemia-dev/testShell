@@ -85,11 +85,20 @@ projects their union onto the touched edge. The strip:
   - topmost bg is **pinned or overlay** → `facingMargin + def` (drops the
     border thickness, since both sit flush at `edge=0` under the border —
     adding `Config.border.thickness` would push the strip onto them);
-  - otherwise (push / empty zone) →
-    `facingMargin + Config.border.thickness + def`.
+  - **push** → `facingMargin + Config.border.thickness + def`;
+  - **empty** zone next to a real bg → **inherits** that neighbour's raw
+    thickness (uniform band, no bulge). For a **corner** zone both edges
+    are considered: each of its two strips also looks at the bg on the
+    **perpendicular** edge (a full-height side bar reaching the corner
+    occupies both strips' territory), so the whole corner stays flush;
+  - empty zone with no real neighbour on either edge →
+    `Config.border.thickness + def`.
 
   `def` is always an additive base band (not a fallback), and
-  `facingMargin` is `0` when the zone is empty.
+  `facingMargin` is `0` when the zone is empty. The inheritance reads the
+  same published `zoneStrips` data as the length clipping (each zone
+  publishes its RAW per-side `{lo, hi, thickness, hasBg}`); real zones
+  never read empty ones, so there is no feedback loop.
 
 Per-slot live painted rects are read from
 `BackgroundsManager.slotRects[arrivalSeq]` (published by
