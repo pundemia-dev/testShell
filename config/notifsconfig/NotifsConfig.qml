@@ -5,6 +5,12 @@ import "structures"
 JsonObject {
     property bool expire: true
     property int defaultExpireTimeout: 5000
+    // Max notifications kept in history (persisted to notifs.json and loaded
+    // at startup). Unbounded history was the dominant shell-startup cost:
+    // every entry is a live Notif QObject (Timer + Connections + LazyLoader),
+    // and the derived `notClosed`/`popups` filters recompute per insert → O(n²).
+    // 0 = unlimited (not recommended).
+    property int historyLimit: 100
     property real clearThreshold: 0.3
     property int expandThreshold: 20
     property bool actionOnClick: false

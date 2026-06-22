@@ -63,7 +63,7 @@ Flickable {
 
                 StyledText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "\uf0e5" // tabler settings icon
+                    text: "\ueb20" // tabler settings icon
                     font.family: Appearance.font.family.tabler
                     font.pointSize: 36
                     color: Colours.palette.outline

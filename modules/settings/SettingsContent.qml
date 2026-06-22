@@ -13,90 +13,145 @@ import "pages"
 Item {
     id: root
 
-    signal closeRequested()
+    signal closeRequested
 
     property int currentPage: 0
     property bool navExpanded: true
 
+    // Shared sidebar button metrics. A fixed-width icon box (centered glyph)
+    // keeps every icon on one vertical axis and stops icons shifting while the
+    // rail animates; railPadH adds end-4-style breathing room left and right.
+    readonly property int railPadH: Appearance.padding.large
+    readonly property int railIconBox: 26
+    readonly property int railIconSize: Appearance.font.size.large
+    readonly property int railBtnH: railIconBox + Appearance.padding.normal * 2
+    readonly property int railCollapsedW: railIconBox + railPadH * 2
+
+    // Third-party pages discovered from *.settings.qml schemas.
+    SettingsDiscovery {
+        id: discovery
+    }
+
+    // Official pages + discovered schema pages (appended after the built-ins).
+    readonly property var allPages: root.pages.concat((discovery.schemas ?? []).map(s => ({
+                    name: s.title,
+                    icon: s.icon,
+                    advanced: s.advanced,
+                    schema: s
+                })))
+
+    function _componentFor(i: int): var {
+        const e = root.allPages[i];
+        if (!e)
+            return null;
+        return e.schema ? schemaPage : e.component;
+    }
+
+    // `scope` is the preset scope the sidebar's Presets button targets on each
+    // page ("full" = whole-config snapshot, otherwise that config section).
     property var pages: [
         {
             name: qsTr("General"),
-            icon: "\uf0e5", // tabler settings
+            icon: "\ueb20", // tabler settings
+            scope: "full",
             component: generalPage
         },
         {
+            name: qsTr("Themes"),
+            icon: "\ueb01", // tabler palette
+            scope: "full",
+            component: themesPage
+        },
+        {
             name: qsTr("Bar"),
-            icon: "\uea76", // tabler layout-navbar
+            icon: "\uead7", // tabler layout-navbar
+            scope: "bar",
             component: barPage
         },
         {
             name: qsTr("Backgrounds"),
-            icon: "\ued54", // tabler texture
+            icon: "\uf51b", // tabler texture
+            scope: "backgrounds",
             component: backgroundsPage
         },
         {
             name: qsTr("Borders"),
-            icon: "\uea36", // tabler border-all
+            icon: "\uea3b", // tabler border-all
+            scope: "border",
             component: bordersPage
         },
         {
             name: qsTr("Corners"),
-            icon: "\uf09c", // tabler border-corner-rounded
+            icon: "\ufd63", // tabler border-corner-rounded
+            scope: "corners",
             component: cornersPage
         },
         {
             name: qsTr("Launcher"),
-            icon: "\ueb9b", // tabler rocket
+            icon: "\uec45", // tabler rocket
+            scope: "launcher",
             component: launcherPage
         },
         {
             name: qsTr("About"),
-            icon: "\uea09", // tabler info-circle
+            icon: "\ueac5", // tabler info-circle
+            scope: "full",
             component: aboutPage
         }
     ]
 
-    // Placeholder page components
+    // Page components — bound to Config.* (see modules/settings/pages/).
     Component {
         id: generalPage
-        PlaceholderPage { title: qsTr("General"); description: qsTr("General shell settings") }
+        GeneralPage {}
+    }
+    Component {
+        id: themesPage
+        ThemesPage {}
     }
     Component {
         id: barPage
-        PlaceholderPage { title: qsTr("Bar"); description: qsTr("Configure the status bar") }
+        BarPage {}
     }
     Component {
         id: backgroundsPage
-        PlaceholderPage { title: qsTr("Backgrounds"); description: qsTr("Background shape settings") }
+        BackgroundsPage {}
     }
     Component {
         id: bordersPage
-        PlaceholderPage { title: qsTr("Borders"); description: qsTr("Border settings") }
+        BordersPage {}
     }
     Component {
         id: cornersPage
-        PlaceholderPage { title: qsTr("Corners"); description: qsTr("Screen corner rounding") }
+        CornersPage {}
     }
     Component {
         id: launcherPage
-        PlaceholderPage { title: qsTr("Launcher"); description: qsTr("Application launcher settings") }
+        LauncherPage {}
     }
     Component {
         id: aboutPage
-        PlaceholderPage { title: qsTr("About"); description: qsTr("About pShell") }
+        PlaceholderPage {
+            title: qsTr("About")
+            description: qsTr("About pShell")
+        }
+    }
+    Component {
+        id: schemaPage
+        SchemaPage {}
     }
 
     implicitWidth: 900
     implicitHeight: 600
 
     // Keyboard navigation
-    Keys.onPressed: (event) => {
+    Keys.onPressed: event => {
         if (event.modifiers === Qt.ControlModifier) {
             if (event.key === Qt.Key_PageDown || event.key === Qt.Key_Tab) {
-                root.currentPage = (root.currentPage + 1) % root.pages.length;
+                root.currentPage = (root.currentPage + 1) % root.allPages.length;
                 event.accepted = true;
             } else if (event.key === Qt.Key_PageUp || event.key === Qt.Key_Backtab) {
-                root.currentPage = (root.currentPage - 1 + root.pages.length) % root.pages.length;
+                root.currentPage = (root.currentPage - 1 + root.allPages.length) % root.allPages.length;
                 event.accepted = true;
             }
         }
@@ -106,225 +161,275 @@ Item {
         }
     }
 
-    RowLayout {
+    ColumnLayout {
         anchors.fill: parent
         anchors.margins: 8
         spacing: 8
 
-        // === Navigation Rail ===
-        ColumnLayout {
-            id: navRail
+        // === Titlebar (spans the full window width) ===
+        // Title is centered across the whole strip; close sits at the right
+        // edge. The sidebar collapse toggle now lives at the top of the rail.
+        Item {
+            Layout.fillWidth: true
+            implicitHeight: closeButton.implicitHeight
 
-            Layout.fillHeight: true
-            Layout.preferredWidth: root.navExpanded ? 170 : 52
-            spacing: 4
-
-            Behavior on Layout.preferredWidth {
-                NumberAnimation {
-                    duration: Appearance.anim.durations.small
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Appearance.anim.curves.standard
-                }
+            StyledText {
+                anchors.centerIn: parent
+                text: qsTr("Settings")
+                font.pointSize: Appearance.font.size.large
+                font.weight: Font.DemiBold
+                color: Colours.palette.on_surface
             }
 
-            // Header row: toggle + title
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.bottomMargin: 4
-                spacing: 4
-
-                IconButton {
-                    type: IconButton.Text
-                    icon: root.navExpanded ? "\uea00" : "\uea01" // tabler menu-2 / menu
-                    onClicked: root.navExpanded = !root.navExpanded
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    visible: root.navExpanded
-                    text: qsTr("Settings")
-                    font.pointSize: Appearance.font.size.large
-                    font.weight: Font.DemiBold
-                    color: Colours.palette.on_surface
-                    opacity: root.navExpanded ? 1 : 0
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: Appearance.anim.durations.small
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: Appearance.anim.curves.standard
-                        }
-                    }
-                }
-
-                Item { Layout.fillWidth: !root.navExpanded }
-
-                IconButton {
-                    visible: root.navExpanded
-                    type: IconButton.Text
-                    icon: "\ueb55" // tabler x
-                    onClicked: root.closeRequested()
-                }
+            IconButton {
+                id: closeButton
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                type: IconButton.Text
+                icon: "\ueb55" // tabler x
+                onClicked: root.closeRequested()
             }
-
-            // Separator
-            StyledRect {
-                Layout.fillWidth: true
-                Layout.leftMargin: 4
-                Layout.rightMargin: 4
-                implicitHeight: 1
-                color: Colours.palette.outline_variant
-            }
-
-            // Nav items
-            Flickable {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                contentHeight: navColumn.implicitHeight
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-
-                ColumnLayout {
-                    id: navColumn
-                    width: parent.width
-                    spacing: 2
-
-                    Repeater {
-                        model: root.pages
-
-                        delegate: StyledRect {
-                            id: navItem
-
-                            required property int index
-                            required property var modelData
-
-                            property bool isActive: root.currentPage === index
-                            property bool isHovered: navMouse.containsMouse
-
-                            Layout.fillWidth: true
-                            implicitHeight: navItemRow.implicitHeight + Appearance.padding.smaller * 2
-
-                            radius: Appearance.rounding.small
-                            color: isActive
-                                ? Colours.palette.secondary_container
-                                : isHovered
-                                    ? Qt.alpha(Colours.palette.on_surface, 0.08)
-                                    : "transparent"
-
-                            MouseArea {
-                                id: navMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.currentPage = navItem.index
-                            }
-
-                            RowLayout {
-                                id: navItemRow
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.leftMargin: Appearance.padding.smaller
-                                anchors.rightMargin: Appearance.padding.smaller
-                                spacing: Appearance.spacing.smaller
-
-                                StyledText {
-                                    id: navIcon
-                                    text: navItem.modelData.icon
-                                    font.family: Appearance.font.family.tabler
-                                    font.pointSize: Appearance.font.size.larger
-                                    color: navItem.isActive
-                                        ? Colours.palette.on_secondary_container
-                                        : Colours.palette.on_surface_variant
-                                    horizontalAlignment: Text.AlignHCenter
-                                    Layout.preferredWidth: 32
-                                    Layout.alignment: Qt.AlignVCenter
-                                }
-
-                                StyledText {
-                                    id: navLabel
-                                    visible: root.navExpanded
-                                    text: navItem.modelData.name
-                                    font.pointSize: Appearance.font.size.smaller
-                                    font.weight: navItem.isActive ? Font.DemiBold : Font.Normal
-                                    color: navItem.isActive
-                                        ? Colours.palette.on_secondary_container
-                                        : Colours.palette.on_surface_variant
-                                    Layout.fillWidth: true
-                                    Layout.alignment: Qt.AlignVCenter
-                                    elide: Text.ElideRight
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Bottom spacer
-            Item { Layout.preferredHeight: 4 }
         }
 
-        // === Content Area ===
-        StyledRect {
+        // === Body: navigation rail | content pane ===
+        RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            spacing: 8
 
-            radius: Appearance.rounding.normal
-            color: Colours.palette.surface_container_low
-            clip: true
+            // === Navigation Rail ===
+            // Wrapped in a plain Item driven by implicitWidth (dots-hyprland
+            // pattern): a nested ColumnLayout with Layout.preferredWidth as a
+            // direct RowLayout child mis-sizes, so the rail lives inside an Item.
+            Item {
+                id: navRailWrapper
 
-            Loader {
-                id: pageLoader
-                anchors.fill: parent
-                anchors.margins: Appearance.padding.large
-                sourceComponent: root.pages[root.currentPage].component
+                Layout.fillHeight: true
+                implicitWidth: root.navExpanded ? 170 : root.railCollapsedW
 
-                opacity: 1.0
-
-                Connections {
-                    target: root
-                    function onCurrentPageChanged() {
-                        switchAnim.restart();
+                Behavior on implicitWidth {
+                    NumberAnimation {
+                        duration: Appearance.anim.durations.small
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Appearance.anim.curves.standard
                     }
                 }
 
-                SequentialAnimation {
-                    id: switchAnim
+                ColumnLayout {
+                    id: navRail
 
-                    NumberAnimation {
-                        target: pageLoader
-                        property: "opacity"
-                        to: 0
-                        duration: 100
-                        easing.type: Easing.InQuad
+                    anchors.fill: parent
+                    spacing: 4
+
+                    // Sidebar collapse/expand toggle — icon shares the same
+                    // leading slot as every other rail icon (common axis).
+                    StyledRect {
+                        Layout.alignment: Qt.AlignLeft
+                        implicitWidth: root.railCollapsedW
+                        implicitHeight: root.railBtnH
+                        radius: Appearance.rounding.large
+                        color: collapseMouse.containsMouse ? Qt.alpha(Colours.palette.on_surface, 0.08) : "transparent"
+
+                        StyledText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: root.railPadH
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: root.railIconBox
+                            horizontalAlignment: Text.AlignHCenter
+                            font.family: Appearance.font.family.tabler
+                            font.pointSize: root.railIconSize
+                            color: Colours.palette.on_surface_variant
+                            text: root.navExpanded ? "\uf004" : "\uf005" // tabler layout-sidebar-left-collapse / -expand
+                        }
+
+                        MouseArea {
+                            id: collapseMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.navExpanded = !root.navExpanded
+                        }
                     }
 
-                    PropertyAction {
-                        target: pageLoader
-                        property: "sourceComponent"
-                        value: root.pages[root.currentPage].component
+                    // Presets: apply / save presets for the current page's scope.
+                    PresetButton {
+                        Layout.alignment: Qt.AlignLeft
+                        Layout.bottomMargin: Appearance.spacing.normal
+                        expanded: root.navExpanded
+                        scope: root.pages[root.currentPage].scope ?? "full"
+                        padH: root.railPadH
+                        iconBox: root.railIconBox
+                        iconSize: root.railIconSize
+                        buttonHeight: root.railBtnH
                     }
 
-                    PropertyAction {
-                        target: pageLoader
-                        property: "anchors.topMargin"
-                        value: Appearance.padding.large + 15
+                    // Nav items
+                    Flickable {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        contentHeight: navColumn.implicitHeight
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        ColumnLayout {
+                            id: navColumn
+                            width: parent.width
+                            spacing: 2
+
+                            Repeater {
+                                model: root.allPages
+
+                                delegate: StyledRect {
+                                    id: navItem
+
+                                    required property int index
+                                    required property var modelData
+
+                                    property bool isActive: root.currentPage === index
+
+                                    // Advanced-only pages drop out of the rail in basic mode.
+                                    visible: !navItem.modelData.advanced || Config.general.advanced
+
+                                    // Hug content: pill = padH + icon box (+ gap + label when
+                                    // expanded) + padH. Height matches the Presets button.
+                                    Layout.alignment: Qt.AlignLeft
+                                    implicitWidth: root.navExpanded ? (root.railPadH + root.railIconBox + Appearance.spacing.small + navLabel.implicitWidth + root.railPadH) : root.railCollapsedW
+                                    implicitHeight: root.railBtnH
+                                    clip: true
+
+                                    Behavior on implicitWidth {
+                                        Anim {}
+                                    }
+
+                                    radius: Appearance.rounding.large
+                                    color: isActive ? Colours.palette.secondary_container : navMouse.containsMouse ? Qt.alpha(Colours.palette.on_surface, 0.08) : "transparent"
+
+                                    // Icon pinned to a fixed leading slot: its x never moves while the
+                                    // rail width animates, so icons don't jitter and stay on one axis.
+                                    StyledText {
+                                        id: navIcon
+                                        anchors.left: parent.left
+                                        anchors.leftMargin: root.railPadH
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: root.railIconBox
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: navItem.modelData.icon
+                                        font.family: Appearance.font.family.tabler
+                                        font.pointSize: root.railIconSize
+                                        color: navItem.isActive ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
+                                    }
+
+                                    StyledText {
+                                        id: navLabel
+                                        anchors.left: navIcon.right
+                                        anchors.leftMargin: Appearance.spacing.small
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: root.railPadH
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: navItem.modelData.name
+                                        font.pointSize: Appearance.font.size.smaller
+                                        font.weight: navItem.isActive ? Font.DemiBold : Font.Normal
+                                        color: navItem.isActive ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
+                                        elide: Text.ElideRight
+                                        opacity: root.navExpanded ? 1 : 0
+                                        visible: opacity > 0
+
+                                        Behavior on opacity {
+                                            Anim {}
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: navMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.currentPage = navItem.index
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    ParallelAnimation {
+                    // Bottom spacer
+                    Item {
+                        Layout.preferredHeight: 4
+                    }
+                }
+            }
+
+            // === Content Area ===
+            StyledRect {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                radius: Appearance.rounding.normal
+                color: Colours.palette.surface_container_low
+                clip: true
+
+                Loader {
+                    id: pageLoader
+                    anchors.fill: parent
+                    anchors.margins: Appearance.padding.large
+                    sourceComponent: root._componentFor(root.currentPage)
+
+                    opacity: 1.0
+
+                    Connections {
+                        target: root
+                        function onCurrentPageChanged() {
+                            switchAnim.restart();
+                        }
+                    }
+
+                    SequentialAnimation {
+                        id: switchAnim
+
                         NumberAnimation {
                             target: pageLoader
                             property: "opacity"
-                            to: 1
-                            duration: 200
-                            easing.type: Easing.OutCubic
+                            to: 0
+                            duration: 100
+                            easing.type: Easing.InQuad
                         }
-                        NumberAnimation {
+
+                        PropertyAction {
+                            target: pageLoader
+                            property: "sourceComponent"
+                            value: root._componentFor(root.currentPage)
+                        }
+
+                        ScriptAction {
+                            // schema pages share one component, so a swap may not
+                            // reload — assign the active schema explicitly.
+                            script: {
+                                const e = root.allPages[root.currentPage];
+                                if (pageLoader.item && e && e.schema)
+                                    pageLoader.item.schema = e.schema;
+                            }
+                        }
+
+                        PropertyAction {
                             target: pageLoader
                             property: "anchors.topMargin"
-                            to: Appearance.padding.large
-                            duration: 200
-                            easing.type: Easing.OutCubic
+                            value: Appearance.padding.large + 15
+                        }
+
+                        ParallelAnimation {
+                            NumberAnimation {
+                                target: pageLoader
+                                property: "opacity"
+                                to: 1
+                                duration: 200
+                                easing.type: Easing.OutCubic
+                            }
+                            NumberAnimation {
+                                target: pageLoader
+                                property: "anchors.topMargin"
+                                to: Appearance.padding.large
+                                duration: 200
+                                easing.type: Easing.OutCubic
+                            }
                         }
                     }
                 }

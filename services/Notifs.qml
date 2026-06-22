@@ -28,7 +28,7 @@ Singleton {
         id: saveTimer
 
         interval: 1000
-        onTriggered: storage.setText(JSON.stringify(root.notClosed.map(n => ({
+        onTriggered: storage.setText(JSON.stringify((Config.notifs.historyLimit > 0 ? root.notClosed.slice(0, Config.notifs.historyLimit) : root.notClosed).map(n => ({
                     time: n.time,
                     id: n.id,
                     summary: n.summary,
@@ -62,7 +62,18 @@ Singleton {
                 popup: !root.dnd,
                 notification: notif
             });
-            root.list = [comp, ...root.list];
+            const limit = Config.notifs.historyLimit;
+            const next = [comp, ...root.list];
+            if (limit > 0 && next.length > limit) {
+                const overflow = next.slice(limit);
+                root.list = next.slice(0, limit);
+                // Drop the oldest entries past the cap so the in-memory list
+                // (and the persisted file) stays bounded across a long session.
+                for (const old of overflow)
+                    old.destroy();
+            } else {
+                root.list = next;
+            }
         }
     }
 
@@ -71,10 +82,16 @@ Singleton {
 
         path: `${Paths.state}/notifs.json`
         onLoaded: {
+            // Sort + cap the raw data BEFORE materialising Notif objects, then
+            // assign root.list exactly once. Pushing in a loop made the derived
+            // `notClosed`/`popups` filter bindings recompute on every insert
+            // (O(n²)) and created one live QObject per history entry — with a
+            // large notifs.json this stalled shell startup for 30-50s.
             const data = JSON.parse(text());
-            for (const notif of data)
-                root.list.push(notifComp.createObject(root, notif));
-            root.list.sort((a, b) => b.time - a.time);
+            data.sort((a, b) => b.time - a.time);
+            const limit = Config.notifs.historyLimit;
+            const kept = limit > 0 ? data.slice(0, limit) : data;
+            root.list = kept.map(notif => notifComp.createObject(root, notif));
             root.loaded = true;
         }
         onLoadFailed: err => {
@@ -149,7 +166,9 @@ Singleton {
         property list<var> actions
 
         readonly property Timer timer: Timer {
-            running: true
+            // Only run while the notification is actually a live popup. Loaded
+            // history entries (popup === false) must not each spin up a Timer.
+            running: notif.popup
             interval: notif.expireTimeout > 0 ? notif.expireTimeout : Config.notifs.defaultExpireTimeout
             onTriggered: {
                 if (Config.notifs.expire)

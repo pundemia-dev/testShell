@@ -165,8 +165,23 @@ Each module is `modules/<name>/<Name>Wrapper.qml` + `modules/<name>/content/`. T
 - `Config.border` → `borderconfig/BorderConfig.qml` (visible chrome + 8 zonal `zoneRoundings`)
 - `Config.corners` → `cornersconfig/CornersConfig.qml`
 - `Config.stash` → `stashconfig/StashConfig.qml`
+- `Config.general` → `generalconfig/GeneralConfig.qml` (shell-wide prefs; `advanced` drives the settings basic/advanced disclosure)
+- `Config.custom` → open `var` map for third-party module settings, keyed by `SettingsSchema.key`. Read with `Config.getCustom(key, field, fallback)`, write with `Config.setCustom(key, field, value)` (it reassigns `custom` wholesale so JsonAdapter persists).
+
+Config **presets** (full-config themes + per-section snapshots) live under `~/.config/pShell/presets/<scope>/<name>.json`, managed by `utils/PresetsManager.qml` (IPC target `presets`; apply = write file → `reload()`).
 
 `config/Appearance.qml` is the design-token singleton: `rounding.{small,normal,large,full,scale}`, `padding.*`, `spacing.*`, `font.family.{sans,mono,tabler}`, `font.size.*`, `anim.curves.*`, `anim.durations.*`. **Always reference these — never hardcode pixel/ms values.**
+
+### Settings module
+
+`modules/settings` is a normal `Window` (toggled via the `settings` IPC). Full design + phase log: [docs/development/settings.md](docs/development/settings.md). Pieces:
+
+- **Editing** — pages two-way-bind to `Config.*` (JsonAdapter auto-writes `shell.json`). Official pages are hand-written in `modules/settings/pages/` (`BarPage`, `BackgroundsPage`, …) over `SettingSection` + `SettingRow`; registered in `SettingsContent.qml`'s `pages` array (`name`/`icon`/`scope`/`component`).
+- **Third-party contract** — a module ships a lightweight sibling `<Name>.settings.qml` (a pure `components/SettingsSchema.qml`: `title`/`icon`/`key`/`fields[]`). `SettingsDiscovery.qml` scans `modules/{bar,launcher}/content/components/` for `*.settings.qml` (loads **only the schema**, never the module), and `components/controls/SchemaForm.qml` renders it generically into a `SchemaPage`, persisting values in `Config.custom[key]`. Drop a widget + its `.settings.qml` → its page appears automatically; defaults are seeded into `Config.custom` at discovery.
+- **Presets / themes** — `utils/PresetsManager.qml` (scopes = `full` + each config section). `pages/ThemesPage.qml` manages full-config theme cards (apply/rename/delete/save); the sidebar `PresetButton.qml` is scope-aware (follows the current tab). Destructive delete is two-tap confirmed.
+- **Hints** — `components/controls/Hint.qml` (a `Popup`, so it renders above everything and is never clipped by the content pane) + `HintIcon.qml`. Wire via `hintText`/`hintMedia` on a `SettingRow`, or `hint: { text, media }` on a schema field (media auto-detects GIF/WebP).
+- **basic/advanced** — `Config.general.advanced`; gate any field/section/page with `visible: !advanced || Config.general.advanced`.
+- Sidebar icons are **tabler** glyphs (`Appearance.font.family.tabler`, incl. `IconButton`/`StyledIcon`). Write them as `\uXXXX` escapes (literal PUA chars get stripped by the edit tooling) and verify codepoints against the installed font cmap — see [tabler-icon-codepoints memory].
 
 ### Services
 
@@ -212,6 +227,7 @@ The uniform buffer is **1472 bytes** (up from 1440) after adding two `vec4` slot
 | Per-zone shader logic (sink + boost + frame smin gating) | `plugin/src/Caelestia/Blobs/shaders/blob.frag`, `plugin/src/Caelestia/Blobs/blobmaterial.{hpp,cpp}` |
 | Per-window присасывание toggle (`sticks`) + capsule (`stickSmooth`) | `plugin/src/Caelestia/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
 | SDF frame inset to border inner edge | `drawers/backgrounds/Backgrounds.qml` (`_frameInset*`) |
+| Settings UI (pages, contract, presets, hints) | `modules/settings/{SettingsContent,SettingsDiscovery,PresetButton}.qml`, `modules/settings/pages/*.qml`, `components/{SettingsSchema,SettingRow,SettingSection}.qml`, `components/controls/{SchemaForm,Hint,HintIcon}.qml`, `utils/PresetsManager.qml`, `config/generalconfig/GeneralConfig.qml` — see [docs/development/settings.md](docs/development/settings.md) |
 
 ---
 
@@ -251,6 +267,11 @@ config/<name>config/
 ```
 
 Register the config in `config/Config.qml`'s adapter. Import the wrapper in `drawers/Drawers.qml` and instance it as a sibling of the existing wrappers.
+
+### Settings for a new module
+
+- **Official module**: add `modules/settings/pages/<Name>Page.qml` (a `Flickable` of `SettingSection`/`SettingRow` bound to `Config.<section>.*`) and register it in `SettingsContent.qml`'s `pages` array (`name`/`icon`/`scope`/`component`). Gate rarely-used controls with `advanced: true` on the row/section.
+- **Third-party module**: ship `<Name>.settings.qml` (a `SettingsSchema`) next to the component and read values at runtime via `Config.getCustom(key, field, default)`. No `Config.qml` edit and no settings-page code needed — discovery + `SchemaForm` surface it automatically. **Never widen the rails contract for settings state — it lives in `Config.custom`.**
 
 ### Hover-trigger pattern (auto-hide drawers)
 

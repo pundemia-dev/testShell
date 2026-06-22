@@ -114,7 +114,7 @@ RowLayout {
             id: upIcon
 
             anchors.centerIn: parent
-            text: "keyboard_arrow_up"
+            text: "\uea62"
             color: Colours.palette.on_primary
         }
     }
@@ -149,7 +149,7 @@ RowLayout {
             id: downIcon
 
             anchors.centerIn: parent
-            text: "keyboard_arrow_down"
+            text: "\uea5f"
             color: Colours.palette.on_primary
         }
     }

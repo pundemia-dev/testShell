@@ -10,7 +10,13 @@ StyledRect {
     default property alias content: contentColumn.data
     property string title: ""
     property string description: ""
+    property string icon: ""
     property real contentSpacing: Appearance.spacing.smaller
+
+    // When true, the whole section is hidden unless the UI is in advanced mode.
+    property bool advanced: false
+
+    visible: !advanced || Config.general.advanced
 
     Layout.fillWidth: true
     implicitHeight: outerColumn.implicitHeight + Appearance.padding.larger * 2
@@ -27,14 +33,28 @@ StyledRect {
         anchors.margins: Appearance.padding.larger
         spacing: Appearance.spacing.smaller
 
-        // Section title
-        StyledText {
-            visible: root.title !== ""
-            text: root.title
-            font.pointSize: Appearance.font.size.larger
-            font.weight: Font.DemiBold
-            color: Colours.palette.on_surface
+        // Section title (optional leading icon)
+        RowLayout {
+            visible: root.title !== "" || root.icon !== ""
             Layout.fillWidth: true
+            spacing: Appearance.spacing.small
+
+            StyledText {
+                visible: root.icon !== ""
+                text: root.icon
+                font.family: Appearance.font.family.tabler
+                font.pointSize: Appearance.font.size.larger
+                color: Colours.palette.on_surface
+            }
+
+            StyledText {
+                visible: root.title !== ""
+                text: root.title
+                font.pointSize: Appearance.font.size.larger
+                font.weight: Font.DemiBold
+                color: Colours.palette.on_surface
+                Layout.fillWidth: true
+            }
         }
 
         // Section description

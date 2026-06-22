@@ -1,6 +1,7 @@
 import qs.config
 import qs.services
 import qs.components
+import qs.components.controls
 import QtQuick
 import QtQuick.Layouts
 
@@ -11,6 +12,15 @@ Item {
     property string label: ""
     property string description: ""
     property bool showSeparator: true
+
+    // Optional inline hint shown as an info glyph next to the label.
+    property string hintText: ""
+    property url hintMedia: ""
+
+    // When true, the row is hidden unless the settings UI is in advanced mode.
+    property bool advanced: false
+
+    visible: !advanced || Config.general.advanced
 
     Layout.fillWidth: true
     implicitHeight: rowLayout.implicitHeight + (showSeparator ? separator.height + Appearance.spacing.small : 0)
@@ -49,6 +59,15 @@ Item {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
+            }
+
+            // Hint glyph: anchored a touch above the bottom of the control so it
+            // sits at a stable height instead of drifting with the label line.
+            HintIcon {
+                Layout.alignment: Qt.AlignBottom
+                Layout.bottomMargin: Appearance.padding.small
+                text: root.hintText
+                media: root.hintMedia
             }
 
             // Control slot
