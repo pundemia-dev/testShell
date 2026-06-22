@@ -52,10 +52,6 @@ Item {
     // sub-element handle over its parent's handle). Ties → last-registered.
     property int priority: 0
 
-    // Reuse one shared bg per edge (default) vs a dedicated instance.
-    // (reuse:false is not yet wired — reserved.)
-    property bool reuse: true
-
     readonly property bool hasContent: contentReady && popoutContent !== null
 
     HoverHandler {
