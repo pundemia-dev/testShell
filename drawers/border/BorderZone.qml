@@ -30,6 +30,11 @@ Item {
     // Rail this zone fires events to (1:1 mapping, see BackgroundsManager).
     readonly property int rail: manager.railForZone(zoneIdx)
 
+    // While the bar layout editor is on, the bar's own zones (its side + two
+    // corners) must stop catching hover/drop/click — otherwise their strips sit
+    // over the bar and steal the drag. Their strips are hidden entirely below.
+    readonly property bool _editDisabled: BarEditManager.barZoneActive(zoneIdx)
+
     // Strip-hover dedup: cursor entering ANY of the 1-2 strips of this zone
     // counts as a single rail hover. Transitions from 0 → 1 strip hovered
     // fires fireHover and publishes stripHovered=true; 1 → 0 publishes
@@ -654,7 +659,7 @@ Item {
 
     // ── Strips ───────────────────────────────────────────────────────
     InteractionStrip {
-        visible: root.touchTop
+        visible: root.touchTop && !root._editDisabled
         targetX: root._clipTop ? root._clipTop.lo : root._topStripX
         targetY: 0
         targetWidth: root._clipTop ? (root._clipTop.hi - root._clipTop.lo) : root._topStripW
@@ -662,7 +667,7 @@ Item {
     }
 
     InteractionStrip {
-        visible: root.touchRight
+        visible: root.touchRight && !root._editDisabled
         targetX: root.zWidth - root._rightStripW
         targetY: root._clipRight ? root._clipRight.lo : root._rightStripY
         targetWidth: root._rightStripW
@@ -670,7 +675,7 @@ Item {
     }
 
     InteractionStrip {
-        visible: root.touchBottom
+        visible: root.touchBottom && !root._editDisabled
         targetX: root._clipBot ? root._clipBot.lo : root._botStripX
         targetY: root.zHeight - root._botStripH
         targetWidth: root._clipBot ? (root._clipBot.hi - root._clipBot.lo) : root._botStripW
@@ -678,7 +683,7 @@ Item {
     }
 
     InteractionStrip {
-        visible: root.touchLeft
+        visible: root.touchLeft && !root._editDisabled
         targetX: 0
         targetY: root._clipLeft ? root._clipLeft.lo : root._leftStripY
         targetWidth: root._leftStripW

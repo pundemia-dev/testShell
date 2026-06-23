@@ -112,6 +112,9 @@ JsonObject {
         },
     ]
     property bool isEditing: false
+    // How long (ms) a dragged widget must dwell over another widget's centre
+    // before they're offered to merge into a group (layout editor).
+    property int groupDwellMs: 1000
     property KbPreviewConfig kbPreview: KbPreviewConfig {}
     property TrayConfig tray: TrayConfig {}
     property WorkspacesConfig workspaces: WorkspacesConfig {}

@@ -1,5 +1,6 @@
 import qs.config
 import qs.services
+import qs.utils
 import qs.components
 import qs.components.controls
 import QtQuick
@@ -24,6 +25,33 @@ Flickable {
             font.weight: Font.DemiBold
             color: Colours.palette.on_surface
             Layout.fillWidth: true
+        }
+
+        SettingSection {
+            title: qsTr("Layout editing")
+            icon: "\uead7" // tabler layout-navbar
+
+            SettingRow {
+                label: qsTr("Edit mode")
+                description: qsTr("Jiggle widgets on the bar; delete with the \u2715 badge, drag to reorder.")
+                StyledSwitch {
+                    checked: BarEditManager.editing
+                    onToggled: BarEditManager.editing = checked
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Group hold delay")
+                description: qsTr("Hold a dragged widget over another widget's centre this long (ms) to merge them into a group.")
+                CustomSpinBox {
+                    value: Config.bar.groupDwellMs
+                    min: 0
+                    max: 3000
+                    onValueModified: v => Config.bar.groupDwellMs = v
+                }
+            }
+
+            WidgetPalette {}
         }
 
         SettingSection {

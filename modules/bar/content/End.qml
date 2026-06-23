@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import qs.config
+import qs.utils
 import qs.components
 import qs.widgets
 import "components"
@@ -19,11 +20,12 @@ FlexboxLayout {
     Repeater {
         id: widgetRepeater
         model: ScriptModel {
-            values: Config.bar.endLayout || []
+            values: BarEditManager.displayModel("end", Config.bar.endLayout)
         }
 
         delegate: WidgetHost {
             required property var modelData
+            seg: "end"
             screen: root.screen
         }
     }

@@ -60,7 +60,9 @@ Item {
     }
 
     // hovering folds in hasContent so an inert handle never registers as active.
-    readonly property bool hovering: hover.hovered && handle.hasContent
+    // Suppressed while the bar layout editor is on, so dragging / hovering
+    // widgets in edit mode never summons a popout.
+    readonly property bool hovering: hover.hovered && handle.hasContent && !BarEditManager.editing
     onHoveringChanged: Popouts.refresh(handle)
     onHasContentChanged: Popouts.refresh(handle)
     onScreenChanged: Popouts.refresh(handle)
