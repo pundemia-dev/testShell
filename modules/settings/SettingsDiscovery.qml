@@ -10,6 +10,10 @@ import QtQuick
 // SettingsSchema) and loads only those. The settings UI turns each schema into
 // a generic page via SchemaForm. Drop a widget + its .settings.qml and its
 // page appears. See docs/development/settings.md.
+//
+// Bar widgets are intentionally NOT scanned here — their schemas are surfaced
+// inline as a block at the bottom of the Bar page (pages/WidgetSettings.qml),
+// not as standalone top-level pages.
 Item {
     id: root
 
@@ -18,7 +22,7 @@ Item {
 
     function _rebuild(): void {
         const out = [];
-        for (const fm of [fmBar, fmLauncher]) {
+        for (const fm of [fmLauncher]) {
             const base = String(fm.folder);
             for (let i = 0; i < fm.count; i++) {
                 const name = fm.get(i, "fileName");
@@ -61,15 +65,6 @@ Item {
         }
         if (changed)
             Config.custom = c;
-    }
-
-    FolderListModel {
-        id: fmBar
-        folder: Qt.resolvedUrl("../bar/content/components")
-        nameFilters: ["*.settings.qml"]
-        showDirs: false
-        onStatusChanged: if (status === FolderListModel.Ready)
-            root._rebuild()
     }
 
     FolderListModel {

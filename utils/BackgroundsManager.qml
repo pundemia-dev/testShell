@@ -181,6 +181,32 @@ QtObject {
         return seq;
     }
 
+    // Move an already-registered wrapper to the rail its current anchors imply,
+    // atomically and WITHOUT the dying/collapse path. Used when a wrapper flips
+    // edge at runtime (the bar's orientation/position): _applyBgs would mark the
+    // old slot `dying` (a collapse animation that can stall, leaving a ghost bar)
+    // and request a fresh one. Relocating splices the entry straight into the new
+    // rail with the SAME arrivalSeq (subscriptions stay valid) — no ghost, no
+    // collapse. A skipped `dying` copy in the old rail is left to finish dying.
+    function relocateBackground(wrapper) {
+        if (!wrapper) return;
+        const target = determineRailIndex(wrapper);
+        let curRail = -1, curIdx = -1;
+        for (let i = 0; i < 9; i++) {
+            const idx = rails[i].findIndex(e => e.wrapper === wrapper && !e.dying);
+            if (idx >= 0) { curRail = i; curIdx = idx; break; }
+        }
+        if (curRail < 0) return;            // not registered → nothing to move
+        if (curRail === target) return;     // already on the right rail
+        const entry = rails[curRail][curIdx];
+        const newRails = rails.slice();
+        const fromRail = rails[curRail].slice();
+        fromRail.splice(curIdx, 1);
+        newRails[curRail] = fromRail;
+        newRails[target] = [...rails[target], { wrapper: wrapper, arrivalSeq: entry.arrivalSeq }];
+        rails = newRails;
+    }
+
     // Latch the wrapper's slot into a dying state instead of splicing it out.
     // The WindowSlot delegate collapses to 0 then calls finalizeRemoval.
     function removeBackground(wrapper) {

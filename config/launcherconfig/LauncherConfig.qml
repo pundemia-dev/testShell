@@ -10,7 +10,6 @@ JsonObject {
     property string giphyApiKey: ""
     // property int rounding: 10
     property bool excludeBareArea: true
-    property bool reusability: false
     property var modules: ["AppListModule", "GifListModule", "WallListModule"]
     property int itemHeight: 50      // высота одного элемента делегата
     property int maxShown: 7         // максимум видимых элементов

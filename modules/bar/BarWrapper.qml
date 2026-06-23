@@ -53,8 +53,12 @@ Item {
     // implicitWidth: Config.bar.orientation ? Config.bar.thickness : undefined
     // implicitHeight: Config.bar.orientation ? undefined : Config.bar.thickness
     function isTotalThickness() {
-        // Возвращаем true, если все три свойства undefined, иначе false
-        return (Config.bar.thickness.begin === undefined && Config.bar.thickness.center === undefined && Config.bar.thickness.end === undefined);
+        // True when no per-segment thickness override is set. Uses == null so it
+        // catches BOTH undefined (fresh) and null (how an unset field comes back
+        // from shell.json after a reload) — otherwise the "total" mode would
+        // silently drop on the first reload. Fields only ever hold a number,
+        // null, or undefined, so == null is exactly "unset".
+        return (Config.bar.thickness.begin == null && Config.bar.thickness.center == null && Config.bar.thickness.end == null);
     }
 
     // Объявляем position как property
@@ -232,12 +236,41 @@ Item {
         root._bgsActive = false;
     }
 
+    // Edge flip (orientation/position): the wrapper set is unchanged, only the
+    // rail each one belongs to. Relocate in place — no teardown, no dying ghost.
+    function _relocateBgs(): void {
+        if (!root._bgsActive)
+            return;
+        if (root._bgsSeparated) {
+            root.manager.relocateBackground(root.begin);
+            root.manager.relocateBackground(root.center);
+            root.manager.relocateBackground(root.end);
+        } else {
+            root.manager.relocateBackground(root.position);
+        }
+    }
+
     // `separated` arrives late from the async JSON config and may be toggled at
     // runtime — re-apply instead of latching the value once in onCompleted.
+    //
+    // `orientation`/`position` choose the rail, and a slot's rail is fixed at
+    // requestBackground time — it doesn't move when the bare bool flips, so the
+    // bar stays on its old edge until something re-registers it. (Editing
+    // shell.json masked this: FileView.reload() re-runs the adapter and
+    // incidentally fires onSeparatedChanged → _applyBgs.) Relocate the slots in
+    // place instead — atomic, no dying ghost. Route through Qt.callLater so the
+    // two writes setEdge makes (orientation then position) collapse into ONE
+    // relocate on the next tick, with both bools already final.
     Connections {
         target: Config.bar
         function onSeparatedChanged(): void {
             root._applyBgs();
+        }
+        function onOrientationChanged(): void {
+            Qt.callLater(root._relocateBgs);
+        }
+        function onPositionChanged(): void {
+            Qt.callLater(root._relocateBgs);
         }
     }
 

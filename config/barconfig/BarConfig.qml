@@ -26,10 +26,6 @@ JsonObject {
         center: 70
         // begin: 15
     }
-    property SeparatedData reusability: SeparatedData {
-        all: false
-    }
-
     property SeparatedData longSideMargin: SeparatedData {
         all: 7
         center: 0

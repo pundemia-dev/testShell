@@ -371,14 +371,20 @@ Item {
                     id: pageLoader
                     anchors.fill: parent
                     anchors.margins: Appearance.padding.large
-                    sourceComponent: root._componentFor(root.currentPage)
 
                     opacity: 1.0
+
+                    // No live binding on sourceComponent: the page is set once
+                    // here and afterwards ONLY from switchAnim's PropertyAction,
+                    // so the swap always happens mid-fade (opacity 0). Binding it
+                    // to currentPage would swap instantly and defeat the fade-out.
+                    Component.onCompleted: sourceComponent = root._componentFor(root.currentPage)
 
                     Connections {
                         target: root
                         function onCurrentPageChanged() {
-                            switchAnim.restart();
+                            switchAnim.complete();
+                            switchAnim.start();
                         }
                     }
 
@@ -388,6 +394,7 @@ Item {
                         NumberAnimation {
                             target: pageLoader
                             property: "opacity"
+                            from: 1
                             to: 0
                             duration: 100
                             easing.type: Easing.InQuad
@@ -419,6 +426,7 @@ Item {
                             NumberAnimation {
                                 target: pageLoader
                                 property: "opacity"
+                                from: 0
                                 to: 1
                                 duration: 200
                                 easing.type: Easing.OutCubic

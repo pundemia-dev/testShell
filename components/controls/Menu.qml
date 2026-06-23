@@ -7,14 +7,25 @@ import qs.config
 import QtQuick
 import QtQuick.Layouts
 
+// Dropdown menu list. Two ways to feed it:
+//   • `items`  — a list<MenuItem> (declarative; used by SplitButton/TrayMenu).
+//   • `model`  — a plain JS array of entries (used by ValueSelector). Each entry
+//                may carry { text|label, icon, trailingIcon, trailingText,
+//                separator, value }.
+// Entries with `separator: true` render a non-interactive divider. `itemSelected`
+// emits the chosen entry (a MenuItem or a plain object). `active` (compared by
+// identity) gets the selected-row highlight.
 Elevation {
     id: root
 
     property list<MenuItem> items
-    property MenuItem active: items[0] ?? null
+    property var model: null
+    property var active: items[0] ?? null
     property bool expanded
 
-    signal itemSelected(item: MenuItem)
+    signal itemSelected(item: var)
+
+    readonly property var _model: model ?? items
 
     radius: Appearance.rounding.small / 2
     level: 2
@@ -36,60 +47,97 @@ Elevation {
             spacing: 0
 
             Repeater {
-                model: root.items
+                model: root._model
 
-                StyledRect {
-                    id: item
+                delegate: Item {
+                    id: del
 
-                    required property int index
-                    required property MenuItem modelData
-                    readonly property bool active: modelData === root.active
+                    required property var modelData
+                    readonly property bool isSep: modelData.separator === true
+                    readonly property bool active: !isSep && modelData === root.active
 
                     Layout.fillWidth: true
-                    implicitWidth: menuOptionRow.implicitWidth + Appearance.padding.normal * 2
-                    implicitHeight: menuOptionRow.implicitHeight + Appearance.padding.normal * 2
+                    implicitHeight: isSep ? sep.implicitHeight : item.implicitHeight
 
-                    color: Qt.alpha(Colours.palette.secondary_container, active ? 1 : 0)
+                    // Divider.
+                    Item {
+                        id: sep
+                        visible: del.isSep
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        implicitHeight: Appearance.spacing.small
 
-                    StateLayer {
-                        color: item.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface
-                        disabled: !root.expanded
-
-                        function onClicked(): void {
-                            root.itemSelected(item.modelData);
-                            root.active = item.modelData;
-                            root.expanded = false;
+                        StyledRect {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.leftMargin: Appearance.padding.normal
+                            anchors.rightMargin: Appearance.padding.normal
+                            implicitHeight: 1
+                            color: Colours.palette.outline_variant
+                            opacity: 0.5
                         }
                     }
 
-                    RowLayout {
-                        id: menuOptionRow
+                    // Selectable row.
+                    StyledRect {
+                        id: item
+                        visible: !del.isSep
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        implicitHeight: menuOptionRow.implicitHeight + Appearance.padding.normal * 2
 
-                        anchors.fill: parent
-                        anchors.margins: Appearance.padding.normal
-                        spacing: Appearance.spacing.small
+                        color: Qt.alpha(Colours.palette.secondary_container, del.active ? 1 : 0)
 
-                        StyledIcon {
-                            Layout.alignment: Qt.AlignVCenter
-                            text: item.modelData.icon
-                            color: item.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
+                        StateLayer {
+                            color: del.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface
+                            disabled: !root.expanded
+
+                            function onClicked(): void {
+                                root.itemSelected(del.modelData);
+                                root.active = del.modelData;
+                                root.expanded = false;
+                            }
                         }
 
-                        StyledText {
-                            Layout.alignment: Qt.AlignVCenter
-                            Layout.fillWidth: true
-                            text: item.modelData.text
-                            color: item.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface
-                        }
+                        RowLayout {
+                            id: menuOptionRow
 
-                        Loader {
-                            Layout.alignment: Qt.AlignVCenter
-                            active: item.modelData.trailingIcon.length > 0
-                            visible: active
+                            anchors.fill: parent
+                            anchors.margins: Appearance.padding.normal
+                            spacing: Appearance.spacing.small
 
-                            sourceComponent: StyledIcon {
-                                text: item.modelData.trailingIcon
-                                color: item.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface
+                            StyledIcon {
+                                visible: text !== ""
+                                Layout.alignment: Qt.AlignVCenter
+                                text: del.modelData.icon ?? ""
+                                color: del.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
+                            }
+
+                            StyledText {
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.fillWidth: true
+                                text: del.modelData.text ?? del.modelData.label ?? ""
+                                color: del.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface
+                            }
+
+                            StyledText {
+                                Layout.alignment: Qt.AlignVCenter
+                                visible: text !== ""
+                                text: del.modelData.trailingText ?? ""
+                                color: Colours.palette.on_surface_variant
+                                font.pointSize: Appearance.font.size.small
+                            }
+
+                            Loader {
+                                Layout.alignment: Qt.AlignVCenter
+                                active: (del.modelData.trailingIcon ?? "").length > 0
+                                visible: active
+
+                                sourceComponent: StyledIcon {
+                                    text: del.modelData.trailingIcon
+                                    color: del.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface
+                                }
                             }
                         }
                     }

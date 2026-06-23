@@ -1,60 +1,135 @@
+import ".."
 import qs.components
 import qs.services
 import qs.config
 import QtQuick
 import QtQuick.Templates
 
+// Caelestia-style slider: thin track, narrow handle stick, an end dot, and a
+// filled part that can be a flat line or an animated sine wave (`wavy`). Kept as
+// a plain Templates.Slider so the standard API (value/from/to/stepSize/
+// onValueChanged + built-in drag) still works for existing call sites.
 Slider {
     id: root
 
-    implicitHeight: 32
+    // Visuals
+    property bool wavy: false
+    property bool animateWave: pressed   // wave scrolls while dragging
+    property int waveFrequency: 6
+    property int radius: Appearance.rounding.full
+    property color fgColour: Colours.palette.primary
+    property color bgColour: Colours.palette.surface_container_highest
+
+    // Filled length up to the handle centre (drives both the line and the wave).
+    readonly property real filledWidth: handle ? handle.x + handle.implicitWidth / 2 : 0
+
+    implicitHeight: 16
     implicitWidth: 200
 
-    background: Item {
-        StyledRect {
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.topMargin: root.implicitHeight / 3
-            anchors.bottomMargin: root.implicitHeight / 3
+    handle: StyledRect {
+        id: handleRect
 
-            implicitWidth: root.handle.x - root.implicitHeight / 6
+        x: root.visualPosition * root.availableWidth
+        anchors.verticalCenter: parent?.verticalCenter ?? undefined
 
-            color: Colours.palette.primary
-            radius: Appearance.rounding.full
-            topRightRadius: root.implicitHeight / 15
-            bottomRightRadius: root.implicitHeight / 15
-        }
+        implicitWidth: 4
+        implicitHeight: root.pressed ? root.height : root.height * 0.8
 
-        StyledRect {
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.right: parent.right
-            anchors.topMargin: root.implicitHeight / 3
-            anchors.bottomMargin: root.implicitHeight / 3
+        radius: root.radius
+        color: root.fgColour
 
-            implicitWidth: parent.width - root.handle.x - root.handle.implicitWidth - root.implicitHeight / 6
-
-            color: Colours.palette.surface_container_highest
-            radius: Appearance.rounding.full
-            topLeftRadius: root.implicitHeight / 15
-            bottomLeftRadius: root.implicitHeight / 15
+        Behavior on implicitHeight {
+            Anim {
+                duration: Appearance.anim.durations.expressiveFastSpatial
+                easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
+            }
         }
     }
 
-    handle: StyledRect {
-        x: root.visualPosition * root.availableWidth - implicitWidth / 2
+    background: Item {
+        anchors.fill: parent
 
-        implicitWidth: root.implicitHeight / 4.5
-        implicitHeight: root.implicitHeight
+        // Remaining (un-filled) track from the filled part to the end.
+        StyledRect {
+            id: remaining
 
-        color: Colours.palette.primary
-        radius: Appearance.rounding.full
+            anchors.left: filled.right
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: Appearance.spacing.small
 
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.NoButton
-            cursorShape: Qt.PointingHandCursor
+            implicitHeight: root.height * 0.45
+            radius: root.radius
+            topLeftRadius: root.radius / 4
+            bottomLeftRadius: root.radius / 4
+            color: root.bgColour
+        }
+
+        // End dot.
+        StyledRect {
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: implicitWidth / 2
+
+            implicitWidth: root.height * 0.18
+            implicitHeight: implicitWidth
+            radius: Appearance.rounding.full
+            color: root.fgColour
+        }
+
+        // Filled part: flat line or animated wave.
+        Loader {
+            id: filled
+
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            sourceComponent: root.wavy ? waveComp : lineComp
+        }
+
+        Component {
+            id: lineComp
+
+            StyledRect {
+                implicitWidth: root.filledWidth
+                implicitHeight: root.height * 0.45
+                radius: root.radius
+                topRightRadius: root.radius / 4
+                bottomRightRadius: root.radius / 4
+                color: root.fgColour
+
+                Behavior on implicitWidth {
+                    Anim {}
+                }
+            }
+        }
+
+        Component {
+            id: waveComp
+
+            WavyLine {
+                implicitWidth: root.filledWidth
+                implicitHeight: lineWidth * amplitudeMultiplier * 2 + lineWidth
+
+                lineWidth: Math.round(root.height * 0.5)
+                amplitudeMultiplier: 0.5
+                frequency: root.waveFrequency
+                fullLength: root.availableWidth
+                color: root.fgColour
+
+                Behavior on implicitWidth {
+                    Anim {}
+                }
+
+                NumberAnimation on waveProgress {
+                    running: true
+                    paused: !root.animateWave
+                    from: 0
+                    to: 1
+                    duration: 1000
+                    loops: Animation.Infinite
+                    easing.type: Easing.Linear
+                }
+            }
         }
     }
 }

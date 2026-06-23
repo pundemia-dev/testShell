@@ -14,6 +14,37 @@ Flickable {
     clip: true
     boundsBehavior: Flickable.StopAtBounds
 
+    // Docked edge derived from the two underlying bools (orientation = horizontal
+    // vs vertical; position = far vs near edge). The four-button selector reads
+    // this and writes both bools back through setEdge — no new config fields.
+    readonly property string barEdge: {
+        const horizontal = Config.bar.orientation;
+        const far = Config.bar.position;
+        if (!horizontal)
+            return far ? "right" : "left";
+        return far ? "bottom" : "top";
+    }
+    function setEdge(edge: string): void {
+        switch (edge) {
+        case "left":
+            Config.bar.orientation = false;
+            Config.bar.position = false;
+            break;
+        case "right":
+            Config.bar.orientation = false;
+            Config.bar.position = true;
+            break;
+        case "top":
+            Config.bar.orientation = true;
+            Config.bar.position = false;
+            break;
+        case "bottom":
+            Config.bar.orientation = true;
+            Config.bar.position = true;
+            break;
+        }
+    }
+
     ColumnLayout {
         id: col
         width: parent.width
@@ -74,19 +105,40 @@ Flickable {
                 }
             }
             SettingRow {
-                label: qsTr("Horizontal")
-                description: qsTr("On = top/bottom bar, off = left/right bar.")
-                StyledSwitch {
-                    checked: Config.bar.orientation
-                    onToggled: Config.bar.orientation = checked
-                }
-            }
-            SettingRow {
-                label: qsTr("Far side")
-                description: qsTr("On = bottom/right edge, off = top/left edge.")
-                StyledSwitch {
-                    checked: Config.bar.position
-                    onToggled: Config.bar.position = checked
+                label: qsTr("Position")
+                description: qsTr("Which screen edge the bar docks to.")
+
+                RowLayout {
+                    spacing: Appearance.spacing.small
+
+                    Repeater {
+                        model: [
+                            {
+                                edge: "left",
+                                icon: "\uf2a9" // tabler box-align-left
+                            },
+                            {
+                                edge: "bottom",
+                                icon: "\uf2a8" // tabler box-align-bottom
+                            },
+                            {
+                                edge: "top",
+                                icon: "\uf2ab" // tabler box-align-top
+                            },
+                            {
+                                edge: "right",
+                                icon: "\uf2aa" // tabler box-align-right
+                            }
+                        ]
+
+                        delegate: ToggleButton {
+                            required property var modelData
+                            accent: "Primary"
+                            icon: modelData.icon
+                            toggled: root.barEdge === modelData.edge
+                            onClicked: root.setEdge(modelData.edge)
+                        }
+                    }
                 }
             }
             SettingRow {
@@ -102,45 +154,73 @@ Flickable {
 
         SettingSection {
             title: qsTr("Sizing")
-            icon: "\uead7" // tabler layout-navbar
+            icon: "\uf291" // tabler ruler-measure
+            description: qsTr("Each value has an All base plus per-segment overrides (Begin / Center / End).")
 
-            SettingRow {
-                label: qsTr("Thickness")
-                description: qsTr("Bar thickness (all segments).")
-                CustomSpinBox {
-                    value: Config.bar.thickness.all ?? 44
-                    min: 20
-                    max: 100
-                    onValueModified: v => Config.bar.thickness.all = v
-                }
+            SeparatedField {
+                title: qsTr("Thickness")
+                data: Config.bar.thickness
+                min: 0
+                max: 200
+                fallback: 44
+                // thickness.all is read raw in BarWrapper → no Auto for it.
+                presets: [
+                    {
+                        label: qsTr("Compact"),
+                        value: 36
+                    },
+                    {
+                        label: qsTr("Normal"),
+                        value: 44
+                    },
+                    {
+                        label: qsTr("Tall"),
+                        value: 52
+                    }
+                ]
             }
-            SettingRow {
-                label: qsTr("Center thickness")
-                CustomSpinBox {
-                    value: Config.bar.thickness.center ?? (Config.bar.thickness.all ?? 44)
-                    min: 20
-                    max: 120
-                    onValueModified: v => Config.bar.thickness.center = v
-                }
+            SeparatedField {
+                title: qsTr("Padding")
+                data: Config.bar.paddings
+                min: 0
+                max: 80
+                fallback: Appearance.padding.normal
+                allCanInherit: true
+                presetGroup: Appearance.padding
             }
-            SettingRow {
-                label: qsTr("Padding")
-                CustomSpinBox {
-                    value: Config.bar.paddings.all ?? 8
-                    min: 0
-                    max: 40
-                    onValueModified: v => Config.bar.paddings.all = v
-                }
+            SeparatedField {
+                title: qsTr("Rounding")
+                data: Config.bar.rounding
+                min: 0
+                max: 120
+                fallback: Appearance.rounding.normal
+                allCanInherit: true
+                presetGroup: Appearance.rounding
             }
-            SettingRow {
-                label: qsTr("Rounding")
-                showSeparator: false
-                CustomSpinBox {
-                    value: Config.bar.rounding.all ?? 12
-                    min: 0
-                    max: 80
-                    onValueModified: v => Config.bar.rounding.all = v
-                }
+        }
+
+        SettingSection {
+            title: qsTr("Margins")
+            icon: "\uee0b" // tabler box-margin
+            description: qsTr("Long side = along the bar's length; short side = toward its docked edge.")
+
+            SeparatedField {
+                title: qsTr("Long-side margin")
+                data: Config.bar.longSideMargin
+                min: 0
+                max: 400
+                fallback: Appearance.padding.small
+                allCanInherit: true
+                presetGroup: Appearance.padding
+            }
+            SeparatedField {
+                title: qsTr("Short-side margin")
+                data: Config.bar.shortSideMargin
+                min: 0
+                max: 400
+                fallback: Appearance.padding.small
+                allCanInherit: true
+                presetGroup: Appearance.padding
             }
         }
 
@@ -175,6 +255,19 @@ Flickable {
                     max: 60
                     onValueModified: v => Config.bar.group.rounding = v
                 }
+            }
+        }
+
+        // Per-widget settings, discovered from each widget's `<Name>.settings.qml`
+        // schema (built-in widgets we ship + any third-party widget that drops one).
+        SettingSection {
+            visible: widgetSettings.schemas.length > 0
+            title: qsTr("Widget settings")
+            icon: "\uefa5" // tabler components
+
+            WidgetSettings {
+                id: widgetSettings
+                Layout.fillWidth: true
             }
         }
 
