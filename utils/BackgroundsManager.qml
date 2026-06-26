@@ -275,14 +275,23 @@ QtObject {
                 if (entry.dying) continue; // collapsing → release its exclusion now
                 const w = entry.wrapper;
                 if (!w || !w.pinned || !w.reservesSpace) continue;
-                if (side === "top" && w.aTop) {
-                    sum = Math.max(sum, (w.wrapperHeight || 0) + (w.mTop || 0));
-                } else if (side === "bottom" && w.aBottom) {
-                    sum = Math.max(sum, (w.wrapperHeight || 0) + (w.mBottom || 0));
-                } else if (side === "left" && w.aLeft) {
-                    sum = Math.max(sum, (w.wrapperWidth || 0) + (w.mLeft || 0));
-                } else if (side === "right" && w.aRight) {
-                    sum = Math.max(sum, (w.wrapperWidth || 0) + (w.mRight || 0));
+                // A wrapper only reserves a STRIP on `side` if it has a real
+                // extent along that side's perpendicular axis. A horizontal bar
+                // segment sitting in a corner is still aRight/aLeft (it's the
+                // right/left piece of the TOP bar) but has wrapperWidth 0 — it
+                // reserves the top strip, not a side column. Counting its
+                // short-side margin here would masquerade as a side reservation,
+                // which wrongly trips the corner L-step (WindowSlot.isLStep) and
+                // emits a spurious side exclusion zone. Require the reserving
+                // dimension > 0 so only real columns/strips count.
+                if (side === "top" && w.aTop && (w.wrapperHeight || 0) > 0) {
+                    sum = Math.max(sum, w.wrapperHeight + (w.mTop || 0));
+                } else if (side === "bottom" && w.aBottom && (w.wrapperHeight || 0) > 0) {
+                    sum = Math.max(sum, w.wrapperHeight + (w.mBottom || 0));
+                } else if (side === "left" && w.aLeft && (w.wrapperWidth || 0) > 0) {
+                    sum = Math.max(sum, w.wrapperWidth + (w.mLeft || 0));
+                } else if (side === "right" && w.aRight && (w.wrapperWidth || 0) > 0) {
+                    sum = Math.max(sum, w.wrapperWidth + (w.mRight || 0));
                 }
             }
         }
