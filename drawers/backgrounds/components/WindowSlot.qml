@@ -741,11 +741,17 @@ Item {
 
     Connections {
         target: root
+        // bgRect sits at (0,0) inside this slot, so a pure move (margin change
+        // repositioning root, no size change) never fires geometryChange on the
+        // BlobRect — the SDF compositor would keep drawing it at its stale scene
+        // position (a ghost) until something else dirties the group. Nudge it.
         function onXChanged() {
             InputManager.refresh();
+            bgRect.repolish();
         }
         function onYChanged() {
             InputManager.refresh();
+            bgRect.repolish();
         }
         function onWidthChanged() {
             InputManager.refresh();

@@ -82,6 +82,11 @@ void BlobShape::geometryChange(const QRectF& newGeometry, const QRectF& oldGeome
     }
 }
 
+void BlobShape::repolish() {
+    if (m_group)
+        m_group->markShapeDirty(this);
+}
+
 void BlobShape::updateCenteredDeformMatrix() {
     const auto cx = static_cast<float>(width()) * 0.5f;
     const auto cy = static_cast<float>(height()) * 0.5f;

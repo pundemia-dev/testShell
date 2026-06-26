@@ -33,6 +33,12 @@ public:
 
     QMatrix4x4 rawDeformMatrix() const { return m_deformMatrix; }
 
+    // Re-dirty this shape in its group. QML calls this when an ANCESTOR moves the
+    // shape (e.g. a WindowSlot repositioned by a margin change) — geometryChange
+    // only fires on the shape's OWN geometry, so without this nudge the shader
+    // keeps its stale cached scene position and renders a ghost at the old spot.
+    Q_INVOKABLE void repolish();
+
 signals:
     void groupChanged();
     void radiusChanged();

@@ -17,7 +17,6 @@ Item {
     // Visibility state
     property bool barVisible: Config.bar.enabled
 
-
     // Регистрация visibility через менеджер (с поддержкой pendingRequests)
     Component.onCompleted: {
         VisibilitiesManager.addVisibility(root.screen, "bar", "bar", false, Config.bar.enabled, "Toggle Bar");
