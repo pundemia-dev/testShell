@@ -54,9 +54,9 @@ Flickable {
             }
         }
 
-        // ── Transparency & blur ──────────────────────────────────────────
+        // ── Transparency ─────────────────────────────────────────────────
         SettingSection {
-            title: qsTr("Transparency & blur")
+            title: qsTr("Transparency")
             icon: "" // tabler blur
 
             SettingRow {
@@ -99,6 +99,7 @@ Flickable {
                 label: qsTr("Layers opacity")
                 description: qsTr("Opacity of stacked container fills (higher layers).")
                 visible: Config.general.transparency.enabled
+                showSeparator: false
 
                 RowLayout {
                     spacing: Appearance.spacing.normal
@@ -121,17 +122,6 @@ Flickable {
                 }
             }
 
-            SettingRow {
-                label: qsTr("Compositor blur")
-                description: qsTr("Blur the wallpaper behind translucent panels (niri).")
-                hintText: qsTr("Requires niri with background-effect support. Add this once to your niri config:\n\ninclude \"~/.config/quickshell/pShell/config/niri/blur.kdl\"\n\nThe toggle rewrites that file; niri reloads it automatically.")
-                showSeparator: false
-
-                StyledSwitch {
-                    checked: Config.general.transparency.blur
-                    onToggled: Config.general.transparency.blur = checked
-                }
-            }
         }
 
         // ── Schema demo (Phase-1 verification) ───────────────────────────

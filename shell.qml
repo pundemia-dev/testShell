@@ -12,10 +12,8 @@ ShellRoot {
     CaptureScope {}
 
     // Force PresetsManager to instantiate so its "presets" IPC handler and
-    // preset-dir bootstrap run even before the settings UI is opened. Likewise
-    // NiriBlur, so the generated blur.kdl tracks Config from startup.
+    // preset-dir bootstrap run even before the settings UI is opened.
     Component.onCompleted: {
         PresetsManager.presetsDir;
-        NiriBlur.kdlPath;
     }
 }
