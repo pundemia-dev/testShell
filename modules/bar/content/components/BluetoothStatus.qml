@@ -15,7 +15,7 @@ FlexboxLayout {
     alignItems: FlexboxLayout.AlignCenter
     justifyContent: FlexboxLayout.JustifyCenter
 
-    property color colour: Colours.palette.secondary
+    property color colour: Colours.role(Config.getCustom("bluetoothStatus", "colour", "secondary"))
 
     gap: Appearance.spacing.smaller / 2
 

@@ -9,7 +9,7 @@ import "../popouts" as BarPopouts
 
 RadialSliderIcon {
     id: root
-    property color colour: Colours.palette.secondary
+    property color colour: Colours.role(Config.getCustom("powerStatus", "colour", "secondary"))
 
     implicitHeight: 30 // added
     implicitWidth: 40 // added

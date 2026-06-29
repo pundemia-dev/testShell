@@ -55,7 +55,7 @@ Item {
         text: Icons.osIcon
         font.pointSize: Appearance.font.size.smaller
         font.family: Appearance.font.family.mono
-        color: Colours.palette.tertiary
+        color: Colours.role(Config.getCustom("osIcon", "colour", "tertiary"))
         // text: Icons.osIcon //"\ueb0d"//"power_settings_new"
         // color: Colours.palette.tertiary
         // // font.bold: true

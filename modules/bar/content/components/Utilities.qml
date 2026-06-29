@@ -70,7 +70,7 @@ Item {
         // text: "power_settings_new"
         text: "\uebca"
         font.pointSize: Appearance.font.size.normal
-        color: Colours.palette.tertiary
+        color: Colours.role(Config.getCustom("utilities", "colour", "tertiary"))
         // text: Icons.osIcon //"\ueb0d"//"power_settings_new"
         // color: Colours.palette.tertiary
         // // font.bold: true

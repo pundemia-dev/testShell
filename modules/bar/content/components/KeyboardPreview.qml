@@ -11,13 +11,13 @@ FlexboxLayout {
     alignItems: FlexboxLayout.AlignCenter
     justifyContent: FlexboxLayout.JustifyCenter
     // visible: Config.bar.kbLayout.show
-    property color colour: Colours.palette.secondary
+    property color colour: Colours.role(Config.getCustom("keyboardPreview", "colour", "secondary"))
 
     gap: Appearance.spacing.small
 
     StyledIcon {
         id: icon
-        visible: Config.bar.kbPreview.showIcon
+        visible: Config.getCustom("keyboardPreview", "showIcon", false)
         text: "\uebd6"//"calendar_month"
         color: root.colour
 
@@ -26,7 +26,7 @@ FlexboxLayout {
 
     StyledText {
         id: text
-        visible: Config.bar.kbPreview.showLayout
+        visible: Config.getCustom("keyboardPreview", "showLayout", true)
         // anchors.horizontalCenter: parent.horizontalCenter
 
         // horizontalAlignment: StyledText.AlignHCenter

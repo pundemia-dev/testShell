@@ -54,6 +54,86 @@ Flickable {
             }
         }
 
+        // ── Transparency & blur ──────────────────────────────────────────
+        SettingSection {
+            title: qsTr("Transparency & blur")
+            icon: "" // tabler blur
+
+            SettingRow {
+                label: qsTr("Translucent panels")
+                description: qsTr("Make panel backgrounds see-through so the wallpaper shows behind them.")
+
+                StyledSwitch {
+                    checked: Config.general.transparency.enabled
+                    onToggled: Config.general.transparency.enabled = checked
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Base opacity")
+                description: qsTr("Opacity of base / background fills (layer 0).")
+                visible: Config.general.transparency.enabled
+
+                RowLayout {
+                    spacing: Appearance.spacing.normal
+
+                    StyledText {
+                        text: Math.round(baseSlider.value * 100) + "%"
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: baseSlider
+                        Layout.preferredWidth: 180
+                        from: 0
+                        to: 1
+                        stepSize: 0.01
+                        value: Config.general.transparency.base
+                        onMoved: Config.general.transparency.base = value
+                    }
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Layers opacity")
+                description: qsTr("Opacity of stacked container fills (higher layers).")
+                visible: Config.general.transparency.enabled
+
+                RowLayout {
+                    spacing: Appearance.spacing.normal
+
+                    StyledText {
+                        text: Math.round(layersSlider.value * 100) + "%"
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: layersSlider
+                        Layout.preferredWidth: 180
+                        from: 0
+                        to: 1
+                        stepSize: 0.01
+                        value: Config.general.transparency.layers
+                        onMoved: Config.general.transparency.layers = value
+                    }
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Compositor blur")
+                description: qsTr("Blur the wallpaper behind translucent panels (niri).")
+                hintText: qsTr("Requires niri with background-effect support. Add this once to your niri config:\n\ninclude \"~/.config/quickshell/pShell/config/niri/blur.kdl\"\n\nThe toggle rewrites that file; niri reloads it automatically.")
+                showSeparator: false
+
+                StyledSwitch {
+                    checked: Config.general.transparency.blur
+                    onToggled: Config.general.transparency.blur = checked
+                }
+            }
+        }
+
         // ── Schema demo (Phase-1 verification) ───────────────────────────
         SettingSection {
             title: qsTr("Schema demo")

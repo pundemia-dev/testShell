@@ -1,14 +1,19 @@
 import qs.components
 
-// DEMO of the third-party settings contract: a lightweight schema sibling to a
-// bar widget. SettingsDiscovery picks it up and renders a "Clock" page; values
-// persist in Config.custom["clock"]. A real widget would read them via
-// Config.getCustom("clock", "<field>", <default>). Safe to delete.
+// Per-widget settings for the Clock. Values persist in Config.custom["clock"]
+// and are read by Clock.qml via Config.getCustom("clock", <field>, <default>).
 SettingsSchema {
     title: "Clock"
-    icon: "\uea70" // tabler clock
+    icon: "" // tabler clock
     key: "clock"
     fields: [
+        ({
+                key: "colour",
+                type: "enum",
+                label: "Colour",
+                "default": "tertiary",
+                options: ["primary", "secondary", "tertiary", "error", "on_surface"]
+            }),
         ({
                 key: "format24h",
                 type: "bool",
@@ -23,12 +28,6 @@ SettingsSchema {
                 type: "bool",
                 label: "Show seconds",
                 "default": false
-            }),
-        ({
-                key: "showDate",
-                type: "bool",
-                label: "Show date",
-                "default": true
             })
     ]
 }

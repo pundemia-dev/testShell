@@ -50,13 +50,32 @@ Singleton {
         custom = c;
     }
 
+    // Guards the startup write race: until the initial on-disk read finishes,
+    // the JsonAdapter holds only the sub-configs' QML defaults. Writing those
+    // back (async load hasn't delivered yet) would clobber shell.json with a
+    // full default config — wiping the applied theme on every restart. Only
+    // persist after `loaded` (or after creating a missing file). See
+    // [[config-startup-write-race]].
+    property bool ready: false
+
     FileView {
         id: fileview
         // path: `${Paths.stringify(Paths.config)}/shell.json`
         path: `/home/pundemia/.config/pShell/shell.json`
         watchChanges: true
+        // Synchronous first read so the adapter is populated from disk before
+        // any binding can fire onAdapterUpdated.
+        blockLoading: true
         onFileChanged: reload()
-        onAdapterUpdated: writeAdapter()
+        onAdapterUpdated: if (root.ready) writeAdapter()
+        onLoaded: root.ready = true
+        onLoadFailed: err => {
+            if (err === FileViewError.FileNotFound) {
+                // First run: no file yet — create it from defaults, then allow writes.
+                root.ready = true;
+                writeAdapter();
+            }
+        }
 
         JsonAdapter {
             id: adapter

@@ -21,7 +21,7 @@ Item {
 
         anchors.centerIn: parent
         text: "\ueb0d"//"power_settings_new"
-        color: Colours.palette.error
+        color: Colours.role(Config.getCustom("power", "colour", "error"))
         // font.bold: true
         font.pointSize: Appearance.font.size.larger
 

@@ -8,6 +8,7 @@ import qs.components.controls
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Window
 import "pages"
 
 Item {
@@ -172,6 +173,14 @@ Item {
         Item {
             Layout.fillWidth: true
             implicitHeight: closeButton.implicitHeight
+
+            // Drag anywhere on the titlebar strip to move the window. Declared
+            // first so the close button (later child) stays on top and keeps
+            // its own clicks. Niri honours xdg-toplevel interactive move.
+            MouseArea {
+                anchors.fill: parent
+                onPressed: root.Window.window?.startSystemMove()
+            }
 
             StyledText {
                 anchors.centerIn: parent

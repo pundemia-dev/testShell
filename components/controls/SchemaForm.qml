@@ -100,7 +100,7 @@ ColumnLayout {
                     rightPadding: Appearance.padding.normal
                     background: StyledRect {
                         radius: Appearance.rounding.small
-                        color: Colours.palette.surface_container_high
+                        color: Colours.palette.surface_container_highest
                     }
                 }
             }

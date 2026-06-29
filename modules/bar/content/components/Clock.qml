@@ -10,7 +10,10 @@ FlexboxLayout {
     alignItems: FlexboxLayout.AlignCenter
     justifyContent: FlexboxLayout.JustifyCenter
 
-    property color colour: Colours.palette.tertiary
+    property color colour: Colours.role(Config.getCustom("clock", "colour", "tertiary"))
+
+    readonly property bool _24h: Config.getCustom("clock", "format24h", true)
+    readonly property bool _showSeconds: Config.getCustom("clock", "showSeconds", false)
 
     gap: Appearance.spacing.small
 
@@ -50,7 +53,13 @@ FlexboxLayout {
 
         // horizontalAlignment: StyledText.AlignHCenter
         // verticalAlignment: StyledText.AlignVCenter
-        text: Config.bar.orientation ? Time.format("hh:mm") : Time.format("hh\nmm")
+        text: {
+            const ap = root._24h ? "" : "AP";
+            if (Config.bar.orientation)
+                return Time.format("hh:mm" + (root._showSeconds ? ":ss" : "") + (ap ? " " + ap : ""));
+            // Vertical bar: hours over minutes (+ seconds / AM-PM stacked).
+            return Time.format("hh\nmm" + (root._showSeconds ? "\nss" : "") + (ap ? "\n" + ap : ""));
+        }
         font.pointSize: Appearance.font.size.smaller
         font.family: Appearance.font.family.mono
         color: root.colour

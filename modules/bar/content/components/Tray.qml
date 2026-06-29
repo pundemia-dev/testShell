@@ -13,7 +13,7 @@ Item {
     readonly property alias items: items
     readonly property alias expandIcon: expandIcon
 
-    readonly property int padding: Config.bar.tray.background ? Appearance.padding.normal : Appearance.padding.small
+    readonly property int padding: Config.getCustom("tray", "background", false) ? Appearance.padding.normal : Appearance.padding.small
     readonly property int itemSpacing: parent.parent.gap
     readonly property int itemSize: Appearance.font.size.small * 2
     readonly property bool isHorizontal: Config.bar.orientation
@@ -51,7 +51,7 @@ Item {
     Loader {
         id: expandIcon
 
-        active: Config.bar.tray.compact
+        active: Config.getCustom("tray", "compact", false)
 
         sourceComponent: Item {
             implicitWidth: expandIconInner.implicitWidth

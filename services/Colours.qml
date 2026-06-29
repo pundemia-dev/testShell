@@ -34,10 +34,46 @@ Singleton {
 
             return layer === 0 ? Qt.alpha(c, transparency.base) : alterColour(c, transparency.layers, layer ?? 1);
         }
+    function getLuminance(c: color): real {
+        if (c.r == 0 && c.g == 0 && c.b == 0)
+            return 0;
+        return Math.sqrt(0.299 * (c.r ** 2) + 0.587 * (c.g ** 2) + 0.114 * (c.b ** 2));
+    }
+
+    // Lighten/darken a colour for a stacked layer, then apply alpha `a`. Ported
+    // from caelestia; `wallLuminance` term dropped (pShell doesn't analyse the
+    // wallpaper) so the offset depends only on light/dark mode and `base`.
+    function alterColour(c: color, a: real, layer: int): color {
+        const luminance = getLuminance(c);
+        if (luminance === 0)
+            return Qt.rgba(c.r, c.g, c.b, a);
+
+        const offset = (!light || layer == 1 ? 1 : -layer / 2) * (light ? 0.2 : 0.3) * (1 - transparency.base);
+        const scale = (luminance + offset) / luminance;
+        const r = Math.max(0, Math.min(1, c.r * scale));
+        const g = Math.max(0, Math.min(1, c.g * scale));
+        const b = Math.max(0, Math.min(1, c.b * scale));
+
+        return Qt.rgba(r, g, b, a);
+    }
+
     function on(c: color): color {
         if (c.hslLightness < 0.5)
             return Qt.hsla(c.hslHue, c.hslSaturation, 0.9, 1);
         return Qt.hsla(c.hslHue, c.hslSaturation, 0.1, 1);
+    }
+
+    // Resolve a palette role by name (used by widget settings' `colour` enum).
+    // Unknown names fall back to tertiary.
+    function role(name: string): color {
+        switch (name) {
+        case "primary": return palette.primary;
+        case "secondary": return palette.secondary;
+        case "tertiary": return palette.tertiary;
+        case "error": return palette.error;
+        case "on_surface": return palette.on_surface;
+        default: return palette.tertiary;
+        }
     }
 
     function load(data: string, isPreview: bool): void {
@@ -72,9 +108,9 @@ Singleton {
     }
 
     component Transparency: QtObject {
-        readonly property bool enabled: false
-        readonly property real base: 0.78
-        readonly property real layers: 0.58
+        readonly property bool enabled: Config.general.transparency.enabled
+        readonly property real base: Config.general.transparency.base
+        readonly property real layers: Config.general.transparency.layers
     }
 
     component M3Palette: QtObject {

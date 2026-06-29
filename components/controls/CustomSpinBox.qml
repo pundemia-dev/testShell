@@ -80,7 +80,7 @@ RowLayout {
         background: StyledRect {
             implicitWidth: 100
             radius: Appearance.rounding.small
-            color: Colours.palette.surface_container_high
+            color: Colours.palette.surface_container_highest
         }
     }
 

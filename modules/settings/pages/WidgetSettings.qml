@@ -103,4 +103,18 @@ ColumnLayout {
             }
         }
     }
+
+    // Workspaces is a built-in widget with a rich, nested typed sub-config
+    // (Config.bar.workspaces) that doesn't fit the flat SchemaForm, so it gets a
+    // hand-written block here instead of a *.settings.qml schema.
+    CollapsibleSection {
+        Layout.fillWidth: true
+        title: qsTr("Workspaces")
+        showBackground: true
+        nested: true
+
+        WorkspacesSettings {
+            Layout.fillWidth: true
+        }
+    }
 }
