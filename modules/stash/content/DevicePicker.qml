@@ -17,7 +17,7 @@ StyledRect {
     signal picked(string ip)
     signal rescan
 
-    color: Colours.palette.surface
+    color: Colours.tPalette.surface
     radius: Appearance.rounding.normal
     opacity: 0.97
 

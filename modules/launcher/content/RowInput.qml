@@ -48,7 +48,7 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             radius: 15
-            color: Colours.palette.surface_container
+            color: Colours.tPalette.surface_container
 
             // Удобные проперти для управления цветами и состояниями
             property bool isModActive: root.moduleManager.currentState === root.moduleManager.stateActive

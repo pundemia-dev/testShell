@@ -205,7 +205,7 @@ Item {
     BlobGroup {
         id: panelGroup
 
-        color: Colours.palette.surface_container
+        color: Colours.tPalette.surface_container
         smoothing: 32
     }
 

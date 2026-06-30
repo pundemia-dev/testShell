@@ -51,7 +51,7 @@ Flickable {
             Layout.fillWidth: true
             implicitHeight: placeholderColumn.implicitHeight + Appearance.padding.large * 2
             radius: Appearance.rounding.normal
-            color: Colours.palette.surface_container
+            color: Colours.tPalette.surface_container
 
             ColumnLayout {
                 id: placeholderColumn

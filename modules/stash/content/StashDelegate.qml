@@ -111,7 +111,7 @@ Item {
             id: surface
             anchors.fill: parent
             radius: Appearance.rounding.normal
-            color: Colours.palette.surface_container
+            color: Colours.tPalette.surface_container
 
             // System theme icon underneath — always present, gets faded out
             // when the thumbnail becomes ready.

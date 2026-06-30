@@ -199,7 +199,7 @@ Item {
             implicitWidth: swatchRow.implicitWidth + Appearance.padding.normal * 2
             implicitHeight: swatchRow.implicitHeight + Appearance.padding.smaller * 2
             radius: Appearance.rounding.full
-            color: Colours.palette.surface_container
+            color: Colours.tPalette.surface_container
 
             Row {
                 id: swatchRow

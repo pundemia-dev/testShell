@@ -373,7 +373,7 @@ Item {
                 Layout.fillHeight: true
 
                 radius: Appearance.rounding.normal
-                color: Colours.palette.surface_container_low
+                color: Colours.tPalette.surface_container_low
                 clip: true
 
                 Loader {

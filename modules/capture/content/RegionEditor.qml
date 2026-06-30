@@ -698,7 +698,7 @@ Item {
         implicitWidth: dimsText.implicitWidth + Appearance.padding.normal * 2
         implicitHeight: dimsText.implicitHeight + Appearance.padding.smaller * 2
         radius: Appearance.rounding.small
-        color: Colours.palette.surface_container
+        color: Colours.tPalette.surface_container
 
         StyledText {
             id: dimsText
@@ -949,7 +949,7 @@ Item {
         implicitWidth: notifyText.implicitWidth + Appearance.padding.normal * 2
         implicitHeight: notifyText.implicitHeight + Appearance.padding.smaller * 2
         radius: Appearance.rounding.full
-        color: Colours.palette.surface_container
+        color: Colours.tPalette.surface_container
 
         StyledText {
             id: notifyText

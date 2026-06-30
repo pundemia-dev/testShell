@@ -110,7 +110,7 @@ StyledRect {
             StyledClippingRect {
                 anchors.fill: parent
                 radius: parent.radius
-                color: Colours.palette.surface_container
+                color: Colours.tPalette.surface_container
 
                 ColumnLayout {
                     id: menuColumn

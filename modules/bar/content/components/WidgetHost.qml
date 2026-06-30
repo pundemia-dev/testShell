@@ -246,7 +246,7 @@ Item {
         y: host._contentY
         width: host._contentW
         height: host._contentH
-        color: Colours.palette.surface_container
+        color: Colours.tPalette.surface_container
         radius: Config.bar.group.rounding
 
         // index of the group child currently hovered (-1 = none); used to

@@ -116,7 +116,7 @@ Item {
     BlobGroup {
         id: ocrGroup
 
-        color: Colours.palette.surface_container
+        color: Colours.tPalette.surface_container
         smoothing: 32
     }
 

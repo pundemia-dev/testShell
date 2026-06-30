@@ -20,7 +20,7 @@ StyledClippingRect {
     width: parent?.width ?? 0
 
     radius: Appearance.rounding.normal
-    color: hasBackground ? Colours.palette.surface : "transparent"
+    color: hasBackground ? Colours.tPalette.surface : "transparent"
 
     border.width: isCurrent && hasBackground ? 1.5 : 0
     border.color: Colours.alpha(Colours.palette.primary, 0.4)

@@ -22,7 +22,9 @@ StyledRect {
     implicitHeight: outerColumn.implicitHeight + Appearance.padding.larger * 2
 
     radius: Appearance.rounding.normal
-    color: Colours.palette.surface_container
+    // Nested card inside the settings window surface — layered like caelestia's
+    // SectionContainer (layer 2 when translucent; opaque role otherwise).
+    color: Colours.transparency.enabled ? Colours.layer(Colours.palette.surface_container, 2) : Colours.palette.surface_container
 
     ColumnLayout {
         id: outerColumn
