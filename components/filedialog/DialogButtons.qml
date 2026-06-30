@@ -11,7 +11,7 @@ StyledRect {
 
     implicitHeight: inner.implicitHeight + Appearance.padding.normal * 2
 
-    color: Colours.palette.surface_container
+    color: Colours.tPalette.surface_container
 
     RowLayout {
         id: inner
@@ -30,7 +30,7 @@ StyledRect {
             Layout.fillHeight: true
             Layout.rightMargin: Appearance.spacing.normal
 
-            color: Colours.palette.surface_container_high
+            color: Colours.tPalette.surface_container_high
             radius: Appearance.rounding.small
 
             StyledText {
@@ -42,7 +42,7 @@ StyledRect {
         }
 
         StyledRect {
-            color: Colours.palette.surface_container_high
+            color: Colours.tPalette.surface_container_high
             radius: Appearance.rounding.small
 
             implicitWidth: cancelText.implicitWidth + Appearance.padding.normal * 2
@@ -68,7 +68,7 @@ StyledRect {
         }
 
         StyledRect {
-            color: Colours.palette.surface_container_high
+            color: Colours.tPalette.surface_container_high
             radius: Appearance.rounding.small
 
             implicitWidth: cancelText.implicitWidth + Appearance.padding.normal * 2

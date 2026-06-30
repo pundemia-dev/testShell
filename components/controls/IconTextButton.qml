@@ -28,7 +28,7 @@ StyledRect {
 
     property bool internalChecked
     property color activeColour: type === IconTextButton.Filled ? Colours.palette.primary : Colours.palette.secondary
-    property color inactiveColour: type === IconTextButton.Filled ? Colours.palette.surface_container : Colours.palette.secondary_container
+    property color inactiveColour: type === IconTextButton.Filled ? Colours.tPalette.surface_container : Colours.palette.secondary_container
     property color activeOnColour: type === IconTextButton.Filled ? Colours.palette.on_primary : Colours.palette.on_secondary
     property color inactiveOnColour: type === IconTextButton.Filled ? Colours.palette.on_surface : Colours.palette.on_secondary_container
 

@@ -14,7 +14,7 @@ StyledRect {
     implicitWidth: Sizes.sidebarWidth
     implicitHeight: inner.implicitHeight + Appearance.padding.normal * 2
 
-    color: Colours.palette.surface_container
+    color: Colours.tPalette.surface_container
 
     ColumnLayout {
         id: inner

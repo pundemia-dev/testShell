@@ -19,7 +19,7 @@ Item {
 
     StyledRect {
         anchors.fill: parent
-        color: Colours.alpha(Colours.palette.surface, false)
+        color: Colours.tPalette.surface
 
         layer.enabled: true
         layer.effect: MultiEffect {

@@ -8,7 +8,7 @@ import qs.components.containers
 StyledRect {
     id: root
 
-    color: Colours.alpha(Colours.palette.surface_container, true)
+    color: Colours.tPalette.surface_container
     radius: 20
 
 }

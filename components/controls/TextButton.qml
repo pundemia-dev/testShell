@@ -28,7 +28,7 @@ StyledRect {
     property color inactiveColour: {
         if (!toggle && type === TextButton.Filled)
             return Colours.palette.primary;
-        return type === TextButton.Filled ? Colours.palette.surface_container : Colours.palette.secondary_container;
+        return type === TextButton.Filled ? Colours.tPalette.surface_container : Colours.palette.secondary_container;
     }
     property color activeOnColour: {
         if (type === TextButton.Text)

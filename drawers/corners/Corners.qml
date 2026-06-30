@@ -13,7 +13,7 @@ Item {
 
     StyledRect {
         anchors.fill: parent
-        color: Config.corners.color || Colours.alpha(Colours.palette.surface, false)
+        color: Config.corners.color || Colours.tPalette.surface
 
         layer.enabled: true
         layer.effect: MultiEffect {

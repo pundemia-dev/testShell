@@ -29,7 +29,7 @@ StyledRect {
     property color inactiveColour: {
         if (!toggle && type === IconButton.Filled)
             return Colours.palette.primary;
-        return type === IconButton.Filled ? Colours.palette.surface_container : Colours.palette.secondary_container;
+        return type === IconButton.Filled ? Colours.tPalette.surface_container : Colours.palette.secondary_container;
     }
     property color activeOnColour: type === IconButton.Filled ? Colours.palette.on_primary : type === IconButton.Tonal ? Colours.palette.on_secondary : Colours.palette.primary
     property color inactiveOnColour: {

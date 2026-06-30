@@ -20,7 +20,7 @@ Item {
 
     StyledRect {
         anchors.fill: parent
-        color: Colours.palette.surface_container
+        color: Colours.tPalette.surface_container
 
         layer.enabled: true
         layer.effect: MultiEffect {
@@ -138,7 +138,7 @@ Item {
             implicitHeight: nonAnimHeight
 
             radius: Appearance.rounding.normal
-            color: Qt.alpha(Colours.palette.surface_container_highest, GridView.isCurrentItem ? Colours.palette.surface_container_highest.a : 0)
+            color: Qt.alpha(Colours.tPalette.surface_container_highest, GridView.isCurrentItem ? Colours.tPalette.surface_container_highest.a : 0)
             z: GridView.isCurrentItem || implicitHeight !== nonAnimHeight ? 1 : 0
             clip: true
 

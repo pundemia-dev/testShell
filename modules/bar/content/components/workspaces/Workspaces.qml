@@ -48,7 +48,7 @@ StyledClippingRect {
         ? Math.ceil((unitSize + Appearance.padding.small * 2) / 2) * 2
         : Math.ceil((Math.max(layout.childrenRect.height, totalMainSize) + Appearance.padding.small * 2) / 2) * 2
 
-    color: Colours.palette.surface_container
+    color: Colours.tPalette.surface_container
     radius: Config.bar.workspaces.rounding >= 0 ? Config.bar.workspaces.rounding : Appearance.rounding.full
 
     Item {

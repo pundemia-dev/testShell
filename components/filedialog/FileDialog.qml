@@ -50,7 +50,7 @@ LazyLoader {
 
         implicitWidth: 1000
         implicitHeight: 600
-        color: Colours.palette.surface
+        color: Colours.tPalette.surface
         title: loader.title
 
         onVisibleChanged: {

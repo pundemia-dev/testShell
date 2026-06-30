@@ -14,7 +14,7 @@ StyledRect {
     implicitWidth: inner.implicitWidth + Appearance.padding.normal * 2
     implicitHeight: inner.implicitHeight + Appearance.padding.normal * 2
 
-    color: Colours.palette.surface_container
+    color: Colours.tPalette.surface_container
 
     RowLayout {
         id: inner
@@ -50,7 +50,7 @@ StyledRect {
             Layout.fillWidth: true
 
             radius: Appearance.rounding.small
-            color: Colours.palette.surface_container_high
+            color: Colours.tPalette.surface_container_high
 
             implicitHeight: pathComponents.implicitHeight + pathComponents.anchors.margins * 2
 

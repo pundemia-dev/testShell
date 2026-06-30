@@ -22,7 +22,7 @@ Scope {
 
         title: "pShell Settings"
         visible: false
-        color: Colours.palette.surface
+        color: Colours.tPalette.surface
 
         width: 900
         height: 600
