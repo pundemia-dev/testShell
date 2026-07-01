@@ -27,8 +27,15 @@ layout(std140, binding = 0) uniform buf {
     vec4 invertedInner;
     vec4 zoneRoundingsLow;   // zones 0..3 (topLeft, top, topRight, right)
     vec4 zoneRoundingsHigh;  // zones 4..7 (bottomRight, bottom, bottomLeft, left)
+    // Frosted-glass: x=screenW, y=screenH, z=enabled(>0.5), w=tint mix amount.
+    vec4 wpParams;
     vec4 rectData[80];
 };
+
+// Pre-blurred wallpaper (downscaled on CPU). Sampled at scene-pixel/screen UV
+// and mixed with `color` to fill the panel as frosted glass. Always bound (1x1
+// dummy when frost is off), so the sampler never dangles.
+layout(binding = 1) uniform sampler2D wpTex;
 
 // Look up the per-zone присасывание strength for a given rect's zone.
 // Returns 0.0 if zoneIndex < 0 (no zone — bg does NOT pull the frame).
@@ -338,5 +345,15 @@ void main() {
 
     float fw = fwidth(mergedSdf);
     float alpha = 1.0 - smoothstep(-fw, fw, mergedSdf);
-    fragColor = vec4(color.rgb * alpha, alpha) * qt_Opacity;
+
+    // Frosted glass: fill with the blurred wallpaper (sampled at this scene
+    // pixel mapped to screen UV) mixed with the tint colour. Painted with the
+    // SDF `alpha` in this same pass, so it follows the exact panel contour at
+    // native resolution — no separate-layer corner mismatch.
+    vec3 fill = color.rgb;
+    if (wpParams.z > 0.5) {
+        vec2 uv = pixel / vec2(wpParams.x, wpParams.y);
+        fill = mix(texture(wpTex, uv).rgb, color.rgb, wpParams.w);
+    }
+    fragColor = vec4(fill * alpha, alpha) * qt_Opacity;
 }

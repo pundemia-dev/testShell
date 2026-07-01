@@ -31,7 +31,7 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
     Q_UNUSED(oldMaterial);
     auto* mat = static_cast<BlobMaterial*>(newMaterial);
     QByteArray* buf = state.uniformData();
-    Q_ASSERT(buf->size() >= 1472);
+    Q_ASSERT(buf->size() >= 1488);
 
     if (state.isMatrixDirty()) {
         const QMatrix4x4 m = state.combinedMatrix();
@@ -91,11 +91,16 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
     memcpy(buf->data() + 160, mat->m_zoneRoundings, 16);      // zones 0..3
     memcpy(buf->data() + 176, mat->m_zoneRoundings + 4, 16);  // zones 4..7
 
-    // Rect data (offset 192, each rect = 5 vec4s = 80 bytes)
+    // Frosted-glass wallpaper params (offset 192, one vec4): screenW, screenH,
+    // wpEnabled, wpTint. Pushes rectData to offset 208 (buffer grew to 1488).
+    const float wpParams[4] = { mat->m_screenW, mat->m_screenH, mat->m_wpEnabled, mat->m_wpTint };
+    memcpy(buf->data() + 192, wpParams, 16);
+
+    // Rect data (offset 208, each rect = 5 vec4s = 80 bytes)
     const int count = qMin(mat->m_rectCount, 16);
     for (int i = 0; i < count; ++i) {
         const auto& r = mat->m_rects[i];
-        const int base = 192 + i * 80;
+        const int base = 208 + i * 80;
         // Pack excludeMask into props.x via bit-cast (read in shader with floatBitsToInt)
         float maskAsFloat;
         memcpy(&maskAsFloat, &r.excludeMask, sizeof(float));
@@ -114,4 +119,20 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
     }
 
     return true;
+}
+
+void BlobMaterialShader::updateSampledImage(RenderState& state, int binding, QSGTexture** texture,
+    QSGMaterial* newMaterial, QSGMaterial* /*oldMaterial*/) {
+    Q_UNUSED(binding);
+    auto* mat = static_cast<BlobMaterial*>(newMaterial);
+    // One sampler (wpTex). Provide the material's texture, falling back to the
+    // last valid one (shared group texture) so the binding never dangles.
+    if (mat->m_wpTexture)
+        m_fallbackTex = mat->m_wpTexture;
+    QSGTexture* tex = mat->m_wpTexture ? mat->m_wpTexture : m_fallbackTex;
+    // Upload pending pixel data to the GPU. A texture from createTextureFromImage
+    // is lazily uploaded; without this commit a custom material samples it black.
+    if (tex)
+        tex->commitTextureOperations(state.rhi(), state.resourceUpdateBatch());
+    *texture = tex;
 }

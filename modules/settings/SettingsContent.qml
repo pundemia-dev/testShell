@@ -94,6 +94,12 @@ Item {
             component: launcherPage
         },
         {
+            name: qsTr("Dashboard"),
+            icon: "\uea87", // tabler dashboard
+            scope: "dashboard",
+            component: dashboardPage
+        },
+        {
             name: qsTr("About"),
             icon: "\ueac5", // tabler info-circle
             scope: "full",
@@ -129,6 +135,10 @@ Item {
     Component {
         id: launcherPage
         LauncherPage {}
+    }
+    Component {
+        id: dashboardPage
+        DashboardSettingsPage {}
     }
     Component {
         id: aboutPage

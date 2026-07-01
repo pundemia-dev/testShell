@@ -15,6 +15,7 @@ import qs.modules.bar
 import qs.modules.launcher
 import qs.modules.notifications
 import qs.modules.stash
+import qs.modules.dashboard
 import qs.modules.capture
 
 import qs.config
@@ -109,6 +110,35 @@ Variants {
                 regions: InputManager.regions
             }
 
+            // Compositor-side background blur (niri ext-background-effect-v1).
+            // The union of all settled panels' blur sub-regions is committed
+            // with this surface, so niri blurs exactly the panel shapes with no
+            // lag (and auto-enables xray inside them). See utils/BlurManager.qml,
+            // WindowSlot.qml.
+            //
+            // BackgroundEffect.blurRegion must be RE-applied imperatively on
+            // every change: a declarative binding commits the region object once
+            // and never re-reads it when its child list mutates, so the blur
+            // freezes at the first shape (stale blur lingers under shrinking
+            // panels and in vacated gaps). The null→region "kick" forces niri to
+            // re-read the current union each time the slot set / settle state
+            // changes (mirrors DMS's WindowBlur.kick()).
+            Region {
+                id: blurRegion
+                // Empty base; children combine (union) into the blur shape.
+                regions: BlurManager.regions
+            }
+            function _kickBlur(): void {
+                win.BackgroundEffect.blurRegion = null;
+                win.BackgroundEffect.blurRegion = BlurManager.enabled ? blurRegion : null;
+            }
+            Component.onCompleted: win._kickBlur()
+            Connections {
+                target: BlurManager
+                function onRevisionChanged(): void { win._kickBlur(); }
+                function onEnabledChanged(): void { win._kickBlur(); }
+            }
+
             anchors.top: true
             anchors.bottom: true
             anchors.left: true
@@ -192,6 +222,12 @@ Variants {
                 }
                 StashWrapper {
                     id: stash
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
+                    anchors.fill: parent
+                }
+                DashboardWrapper {
+                    id: dashboard
                     manager: scope.backgroundsManager
                     screen: scope.modelData
                     anchors.fill: parent

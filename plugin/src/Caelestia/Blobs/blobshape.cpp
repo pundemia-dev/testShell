@@ -408,6 +408,15 @@ QSGNode* BlobShape::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
     for (int i = 0; i < count; ++i)
         material->m_rects[i] = m_cachedRects[i];
 
+    // Frosted-glass wallpaper: hand the (shared) blurred texture + UV params.
+    // The texture is always valid (dummy when off) so the sampler never dangles.
+    const QSizeF screen = m_group->screenSize();
+    material->m_screenW = static_cast<float>(screen.width() > 0 ? screen.width() : 1.0);
+    material->m_screenH = static_cast<float>(screen.height() > 0 ? screen.height() : 1.0);
+    material->m_wpTint = static_cast<float>(m_group->wallpaperTint());
+    material->m_wpEnabled = m_group->hasWallpaper() ? 1.0f : 0.0f;
+    material->m_wpTexture = m_group->wallpaperTexture(window());
+
     node->markDirty(QSGNode::DirtyMaterial);
 
     return node;

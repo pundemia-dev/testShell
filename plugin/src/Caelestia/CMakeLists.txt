@@ -32,3 +32,4 @@ function(qml_module arg_TARGET)
 endfunction()
 
 add_subdirectory(Blobs)
+add_subdirectory(ImageAnalyser)

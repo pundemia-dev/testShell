@@ -3,6 +3,7 @@
 #include <qcolor.h>
 #include <qsgmaterial.h>
 #include <qsgmaterialshader.h>
+#include <qsgtexture.h>
 
 struct BlobRectData {
     float cx = 0, cy = 0, hw = 0, hh = 0;
@@ -55,6 +56,18 @@ public:
     // 0 disables sink for bgs in that zone; >0 enables (1.0 = unscaled).
     // Order: topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left.
     float m_zoneRoundings[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    // ── Frosted-glass wallpaper sampling (Approach A) ──
+    // A pre-blurred wallpaper texture sampled at scene-pixel/screen UV and mixed
+    // with m_color (tint) when m_wpEnabled — so the panel fill is the blurred
+    // wallpaper instead of a flat colour. Always non-null at draw time (the
+    // group hands a 1x1 dummy when disabled) so binding=1 stays valid.
+    QSGTexture* m_wpTexture = nullptr;
+    float m_wpEnabled = 0.0f;       // 0 = flat colour (legacy), 1 = frost
+    float m_wpTint = 0.3f;          // mix(wallpaper, color, tint): 0 = pure wp
+    float m_screenW = 1.0f;         // for scene-pixel → wallpaper UV mapping
+    float m_screenH = 1.0f;
+
     BlobRectData m_rects[16] = {};
 };
 
@@ -62,4 +75,13 @@ class BlobMaterialShader : public QSGMaterialShader {
 public:
     BlobMaterialShader();
     bool updateUniformData(RenderState& state, QSGMaterial* newMaterial, QSGMaterial* oldMaterial) override;
+    void updateSampledImage(RenderState& state, int binding, QSGTexture** texture, QSGMaterial* newMaterial,
+        QSGMaterial* oldMaterial) override;
+
+private:
+    // Last non-null wallpaper texture seen. All materials in a group share ONE
+    // texture, but the batch renderer can ask this shader to bind a sampler for
+    // a material whose m_wpTexture is momentarily null — fall back to this so
+    // binding=1 never dangles ("No QSGTexture provided").
+    QSGTexture* m_fallbackTex = nullptr;
 };

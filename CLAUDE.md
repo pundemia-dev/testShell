@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-pShell is a desktop shell built on **Quickshell**, a Qt6-based Wayland shell framework. It targets the **Niri** compositor (Hyprland support is legacy and partially stripped on the active branch). The UI is written in QML; the only C++ component is the **Caelestia.Blobs** plugin, which provides SDF-based rounded panel rendering.
+pShell is a desktop shell built on **Quickshell**, a Qt6-based Wayland shell framework. It targets the **Niri** compositor (Hyprland support is legacy and partially stripped on the active branch). The UI is written in QML; the C++ lives in two plugin modules under `plugin/src/Caelestia/`: **Caelestia.Blobs** (SDF-based rounded panel rendering) and **Caelestia** (`ImageAnalyser` — wallpaper luminance / dominant colour, used by the transparency system).
 
-**Key technologies:** QML/Qt6, C++20 (Blobs plugin only), Quickshell, CMake.
+**Key technologies:** QML/Qt6, C++20 (plugin only), Quickshell, CMake.
 
 ## Building and Running
 
 ### Prerequisites
 
-- Qt6 (ShaderTools, Core, Qml, Gui, Quick)
+- Qt6 (ShaderTools, Core, Qml, Gui, Quick, Concurrent)
 - CMake 3.19+
 - C++20 compiler
 - Quickshell framework
@@ -22,7 +22,7 @@ pShell is a desktop shell built on **Quickshell**, a Qt6-based Wayland shell fra
 ```bash
 cmake -B build -S . -G Ninja
 cmake --build build
-sudo cmake --install build --prefix /usr   # installs Caelestia.Blobs to /usr/lib/qt6/qml
+sudo cmake --install build --prefix /usr   # installs Caelestia.Blobs + Caelestia to /usr/lib/qt6/qml
 ```
 
 ### Run
@@ -138,6 +138,7 @@ Each module is `modules/<name>/<Name>Wrapper.qml` + `modules/<name>/content/`. T
 | `modules/notifications` | D-Bus notification popups |
 | `modules/stash` | File tray (drag/drop + LocalSend share); hover-trigger; two-zone drag chooser |
 | `modules/settings` | Settings UI |
+| `modules/dashboard` | Hover dashboard (drops from an edge); **modular self-discovering pages** — see [Dashboard module](#dashboard-module) |
 
 ### Visibility & Focus
 
@@ -166,6 +167,7 @@ Each module is `modules/<name>/<Name>Wrapper.qml` + `modules/<name>/content/`. T
 - `Config.corners` → `cornersconfig/CornersConfig.qml`
 - `Config.stash` → `stashconfig/StashConfig.qml`
 - `Config.general` → `generalconfig/GeneralConfig.qml` (shell-wide prefs; `advanced` drives the settings basic/advanced disclosure)
+- `Config.dashboard` → `dashboardconfig/DashboardConfig.qml` (hover dashboard; per-page token sub-objects `dash`/`media`/`performance`/`weather` + `order[]`/`disabled[]` page lists)
 - `Config.custom` → open `var` map for third-party module settings, keyed by `SettingsSchema.key`. Read with `Config.getCustom(key, field, fallback)`, write with `Config.setCustom(key, field, value)` (it reassigns `custom` wholesale so JsonAdapter persists).
 
 Config **presets** (full-config themes + per-section snapshots) live under `~/.config/pShell/presets/<scope>/<name>.json`, managed by `utils/PresetsManager.qml` (IPC target `presets`; apply = write file → `reload()`).
@@ -183,6 +185,53 @@ Config **presets** (full-config themes + per-section snapshots) live under `~/.c
 - **basic/advanced** — `Config.general.advanced`; gate any field/section/page with `visible: !advanced || Config.general.advanced`.
 - Sidebar icons are **tabler** glyphs (`Appearance.font.family.tabler`, incl. `IconButton`/`StyledIcon`). Write them as `\uXXXX` escapes (literal PUA chars get stripped by the edit tooling) and verify codepoints against the installed font cmap — see [tabler-icon-codepoints memory].
 
+### Dashboard module
+
+`modules/dashboard` is a hover-triggered panel (drops from a configurable edge,
+default top-center) that hosts **modular, self-discovering pages** — visually a
+1:1 port of caelestia's dashboard, but on pShell's own tokens/colours/tabler
+glyphs.
+
+- **Wrapper** `DashboardWrapper.qml` — clone of `StashWrapper`: registers on the
+  rail derived from anchors, opens on hover via `InteractionManager.registerHover`
+  (the trigger is the existing `BorderZone` strip — see the hover-trigger pattern),
+  auto-hides on `_anyHovered` drop. Rails contract uses `mode: "push"`. Instanced
+  in `drawers/Drawers.qml`.
+- **Page contract (the modularity)** — each page is a **folder** under
+  `modules/dashboard/pages/<id>/` shipping a `<id>.page.qml` **manifest** that is a
+  `components/DashboardPage.qml` (`QtObject { id; title; icon /*tabler glyph*/;
+  order; Component content }`). The page declares its own title + icon.
+  `content/DashboardRegistry.qml` auto-discovers folders (nested `FolderListModel`,
+  mirrors `SettingsDiscovery`) and loads only the manifest (content built lazily by
+  the tab view). **Add a page-folder + manifest → a tab appears automatically**;
+  no hardcoded tab list.
+- **UI** `content/DashboardContent.qml` (tab bar + horizontally-swipeable page
+  area with slide+resize animation) + `content/DashboardTabs.qml` (indicator).
+  Sizing gotchas that bit us: every page's outer item **must** expose a real
+  `implicitHeight`/`implicitWidth` (a card missing `implicitHeight` collapses the
+  Flickable and overlaps content); tab `currentIndex` is a **one-way** input +
+  `tabClicked` signal (writing it internally breaks the external binding so the
+  indicator freezes on swipe); the current page loads **synchronously** while other
+  pages are deferred ~450 ms + `asynchronous: true` so first-open doesn't hang.
+- **Config** `Config.dashboard` → `config/dashboardconfig/DashboardConfig.qml`:
+  enabled/anchors/mode/margins/padding/rounding/shortcut/autoHideMs, `order[]` +
+  `disabled[]` (arrays of page **ids** — reassign the whole array so JsonAdapter
+  persists), weather location/units, and **design tokens as a sub-object per page**
+  (`dash`/`media`/`performance`/`weather`, values 1:1 from caelestia
+  `DashboardTokens`) + per-perf-widget `show*` toggles.
+- **Settings page** `modules/settings/pages/DashboardSettingsPage.qml` (registered
+  in `SettingsContent.qml`, scope `dashboard`): enable, anchor edge, padding/
+  rounding/autohide, a **drag-reorder + toggle list** of pages, Performance-widget
+  toggles, Weather. (Still WIP — see `tmp/dashboard-settings-reminders.md`.)
+- **Services** (see below): `SystemUsage` is superseded on the perf/resources pages
+  by the real `Caelestia.Services` sensors; `Players`/`Weather`/`NetworkUsage`/
+  `Audio`/`SysInfo`/`Icons.getWeatherIconWmo` back the widgets.
+- **Rich components** ported for parity: `components/controls/DashProgress.qml`
+  (sweep-angle gauges + wavy arc via `Caelestia.Components.WavyLine`, kept separate
+  from the simple `CircularProgress`) and `DashProgressBar.qml` (M3 linear bar with
+  stop dot). Round transport buttons are the **existing** `IconButton` (already
+  round + radius-morph); the play button just gets `Layout.fillWidth`.
+
 ### Services
 
 Singletons in `services/`:
@@ -190,11 +239,49 @@ Singletons in `services/`:
 - `Niri.qml` — workspaces, toplevels, `dispatch()`
 - `Notifs.qml` — D-Bus notification server
 - `Network.qml` / `Nmcli.qml`
-- `Colours.qml` — dynamic palette (matugen)
+- `Colours.qml` — dynamic palette (matugen) + the transparency system: `palette` (opaque M3 roles), `tPalette` (translucency-aware roles), `layer()` / `alterColour()` helpers, and `wallLuminance` (from the `Caelestia.ImageAnalyser` plugin). See **[Transparency & the `tPalette` rule](#transparency--the-tpalette-rule)**.
 - `Time.qml`
-- `WallpaperState.qml`
+- `WallpaperState.qml` — current per-monitor wallpaper (`forMonitor(name).path`); `Colours.wallpaperPath` picks a representative image from it for luminance analysis
+- **Dashboard-backing services:** `Players.qml` (MPRIS), `SystemUsage.qml`
+  (CPU/RAM from `/proc`, disk via `df` — a lightweight fallback; the perf/resources
+  pages use the real `Caelestia.Services` sensors instead), `Weather.qml`
+  (open-meteo via `XMLHttpRequest`; loc/units from `Config.dashboard`),
+  `NetworkUsage.qml` (`/proc/net/dev` → speeds/totals, history in
+  `Caelestia.Internal.CircularBuffer`; polls while `refCount>0`), `Audio.qml`
+  (minimal: `CavaProvider`+`BeatTracker` for the media visualiser), `SysInfo.qml`
+  (uptime/wm/os glyph). `utils/Icons.qml` gained `getWeatherIconWmo(code)` (WMO→
+  tabler).
 
-### Caelestia.Blobs plugin
+### Plugin modules
+
+Native QML modules are added from the top-level `CMakeLists.txt` via three
+`add_subdirectory`s:
+
+- **`plugin/src/Caelestia/`** — pShell's own two modules: `Caelestia.Blobs`
+  (SDF panels) and `Caelestia` (`ImageAnalyser`). Their `qml_module(...)` helper is
+  local to `plugin/src/Caelestia/CMakeLists.txt`.
+- **`plugin/caelestia/`** — **vendored** caelestia C++ modules the dashboard binds
+  to: `Caelestia.Config` (GlobalConfig/Tokens/Appearance — a parallel config system,
+  NOT pShell's `qs.config`), `Caelestia.Internal` (sparkline, visualiser bars,
+  CircularBuffer, indicator managers), `Caelestia.Services` (Cpu/Gpu/Memory/Storage/
+  DiskInfo sensors + audio/beat/cava + lyrics + `UsageFmt`/`ServiceRef`),
+  `Caelestia.Components` (WavyLine, ButtonRow, LazyListView). Self-contained subtree
+  with its own build helpers (`cmake/{pch,qml-module,sensorslib}.cmake`); the helper
+  installs backing libs to `Caelestia/lib/` with rpath so the submodules cross-link.
+  **System deps:** pipewire, aubio, libsensors, libcava.
+- **`plugin/m3shapes/`** — **vendored** `M3Shapes` (github.com/soramanew/m3shapes):
+  `MaterialShape` M3 organic shapes (Pill/Gem/ClamShell/Diamond/Sunny/VerySunny/
+  Cookie*Sided/SoftBurst…) + `distanceAtAngle`/`pointAtAngle`. Its own `CMakeLists`
+  installs to `M3Shapes/`; we added `INSTALL_RPATH "$ORIGIN"` to the plugin so it
+  finds its backing `libm3shapes.so`.
+
+All install to `/usr/lib/qt6/qml/...`. **Adding/changing a C++ type means a rebuild
++ `sudo cmake --install build --prefix /usr` + a real `qs -c pShell` reload —
+qmlcachegen/qmllint can't see uninstalled plugin types.**
+
+- **`Caelestia`** (`ImageAnalyser/`) — `import Caelestia` exposes `ImageAnalyser` (`source`/`sourceItem`/`rescaleSize` → `luminance`/`dominantColour`, computed off-thread via QtConcurrent). `Colours.qml` feeds it `wallpaperPath` and reads `luminance` as `wallLuminance` for the transparency tint. Links `Qt::Gui/Quick/Concurrent`.
+
+#### Caelestia.Blobs
 
 `plugin/src/Caelestia/Blobs/` — SDF panel renderer adapted from upstream caelestia. Builds a single Qt scene-graph material that merges multiple `BlobRect`s and one `BlobInvertedRect` into one shader pass with optional inverted-corner joins. Exposed types:
 
@@ -228,6 +315,8 @@ The uniform buffer is **1472 bytes** (up from 1440) after adding two `vec4` slot
 | Per-window присасывание toggle (`sticks`) + capsule (`stickSmooth`) | `plugin/src/Caelestia/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
 | SDF frame inset to border inner edge | `drawers/backgrounds/Backgrounds.qml` (`_frameInset*`) |
 | Settings UI (pages, contract, presets, hints) | `modules/settings/{SettingsContent,SettingsDiscovery,PresetButton}.qml`, `modules/settings/pages/*.qml`, `components/{SettingsSchema,SettingRow,SettingSection}.qml`, `components/controls/{SchemaForm,Hint,HintIcon}.qml`, `utils/PresetsManager.qml`, `config/generalconfig/GeneralConfig.qml` — see [docs/development/settings.md](docs/development/settings.md) |
+| Dashboard (modular pages, hover-open, swipe) | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/<id>.page.qml` + content, `components/DashboardPage.qml`, `config/dashboardconfig/DashboardConfig.qml`, `modules/settings/pages/DashboardSettingsPage.qml`; rich progress = `components/controls/{DashProgress,DashProgressBar}.qml`; vendored plugins `plugin/{caelestia,m3shapes}/` |
+| Dashboard-backing services | `services/{Players,SystemUsage,Weather,NetworkUsage,Audio,SysInfo}.qml`, `utils/Icons.qml` (`getWeatherIconWmo`) |
 
 ---
 
@@ -242,6 +331,47 @@ Always prefer `StyledRect`, `StyledText`, `StyledIcon`, `IconButton`, `TextButto
 ### Always use Appearance design tokens
 
 Never hardcode pixel/ms/radius/font-size literals in module code. Always pull from `Appearance.rounding.*`, `Appearance.padding.*`, `Appearance.spacing.*`, `Appearance.font.size.*`, `Appearance.anim.durations.*`, `Appearance.anim.curves.*`. Hardcoded values lurk only in `config/*Config.qml` defaults (where they're per-module configuration, not styling).
+
+### Transparency & the `tPalette` rule
+
+pShell has an opt-in translucency system ported from caelestia. Config is
+`Config.general.transparency` (`enabled`, `base` = surface alpha, `layers` =
+stacked-layer alpha); `services/Colours.qml` turns it into colours. **When you
+write a new module/component, pick the fill colour by this rule:**
+
+| What you're colouring | Use |
+|---|---|
+| Outermost surface of a panel / popup / card / window / button / bar widget, and `BlobGroup.color` of a standalone blob bg | **`Colours.tPalette.<role>`** |
+| A surface **nested on top of** another tPalette/blob surface (card-in-a-card), by depth | **`Colours.layer(Colours.palette.<role>, N)`** (N = 2, 3, 4…) |
+| Text, icons, outlines, borders, selected/active-state fills, explicit-alpha overlays | **`Colours.palette.<role>`** (opaque) or `Qt.alpha(Colours.palette.<role>, a)` |
+
+- **`tPalette`** is a parallel palette where each role is pre-wrapped: surface/
+  background roles (`surface`, `background`, `surface_dim`, `surface_bright`,
+  `surface_variant`, `inverse_surface`) get **layer 0** (`base` alpha, no tint);
+  every other role gets **layer 1** (`layers` alpha + a luminance/wallpaper-aware
+  tint). When transparency is **off**, `tPalette.X === palette.X` exactly, so it's
+  a zero-cost drop-in — there's no reason to use raw `palette.<surface role>` for
+  an outer surface; default to `tPalette`.
+- **`Colours.layer(c, n)`** — n=0 → `base` alpha; n≥1 → alpha + tint scaled by
+  depth `n`. Use it (not tPalette) for nested cards: tPalette only emits layer
+  0/1, so deeper nesting needs explicit `n` to stay visually distinct. A common
+  shape is `Colours.transparency.enabled ? Colours.layer(palette.surface_container, 2) : palette.surface_container`
+  (see `components/SettingSection.qml`).
+- **Never make text/icons/outlines/state-fills translucent** — they must read.
+  And don't hand-roll panel translucency with `opacity:` or `Qt.rgba(...,0.x)`;
+  route it through `tPalette`/`layer` so the global toggle + light/dark + wallpaper
+  adaptation all apply uniformly.
+- The SDF blob backgrounds in `WindowSlot.qml` are the **exception**: they
+  replicate layer 0 manually in the shader fade path (`_fadeColor × _fadeMaxAlpha`).
+  Don't bind `tPalette` there.
+- Avoid the legacy `Colours.alpha(c, bool)` helper — its second arg is a bool
+  (`layers` vs `base`) and it **ignores any numeric value** passed to it; reach for
+  `tPalette`/`layer` instead.
+- Supporting maths (rarely called directly): `Colours.alterColour(c, a, layer)`
+  (the tint), `Colours.wallLuminance` (0..1 wallpaper luminance from the
+  `Caelestia.ImageAnalyser` plugin), `Colours.wallpaperPath`. Frosted-glass blur
+  (`Config.general.transparency.shaderBlur` / `blurInset`) is a separate shader
+  path and doesn't change how you pick colours.
 
 ### Use the rails contract — don't add fields to it
 
@@ -322,8 +452,8 @@ Tile dimensions swap with orientation via `Config.stash.dropZoneX` / `dropZoneY`
 
 ### Commit style
 
-Imperative present tense, short subject line (≤72 chars), body explains *why*. Co-author with `Claude Opus 4.7 <noreply@anthropic.com>` only when the user explicitly asks for a commit. Never commit without being asked.
+Imperative present tense, short subject line (≤72 chars), body explains *why*. Co-author with `Claude Opus 4.8 <noreply@anthropic.com>` only when the user explicitly asks for a commit. Never commit without being asked. When committing, stage only the files for the task at hand — the working tree often carries unrelated in-progress changes (plugin edits, `tmp/`), so `git add` explicit paths, never `git add -A`.
 
 ### Verification before claiming done
 
-For QML changes, after edits run `qmllint -I /home/pundemia/.config/quickshell/pShell -I /usr/lib/qt6/qml <files>` to catch obvious syntax. For C++ plugin changes, run `cmake --build build` to completion. Don't claim "works" unless the user has reloaded `qs -c pShell` and confirmed.
+For QML changes, syntax-check each file with `/usr/lib/qt6/qmlcachegen --resource-path /qs/<path> <path> -o /tmp/check.cpp` (exit 0 = clean). The system `qmllint` exits 255 silently on the big shell files even at HEAD, so don't rely on it — the PATH one is also Qt5. For C++ plugin changes, run `cmake --build build` to completion, then (to actually load new/changed types) `sudo cmake --install build --prefix /usr`. Don't claim "works" unless the user has reloaded `qs -c pShell` and confirmed — qmlcachegen validates syntax only, not plugin-import resolution.

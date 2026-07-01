@@ -124,6 +124,75 @@ Flickable {
 
         }
 
+        // ── Background blur (shader frosted glass) ───────────────────────
+        SettingSection {
+            title: qsTr("Background blur")
+            icon: "" // tabler blur
+
+            SettingRow {
+                label: qsTr("Frosted glass")
+                description: qsTr("Fill panels with a blurred copy of the wallpaper, rendered inside the SDF shader (follows the exact panel shape). Mutually exclusive with compositor blur.")
+
+                StyledSwitch {
+                    checked: Config.general.transparency.shaderBlur
+                    onToggled: Config.general.transparency.shaderBlur = checked
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Blur amount")
+                description: qsTr("Strength of the wallpaper blur.")
+                visible: Config.general.transparency.shaderBlur
+
+                RowLayout {
+                    spacing: Appearance.spacing.normal
+
+                    StyledText {
+                        text: Math.round(blurAmountSlider.value * 100) + "%"
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: blurAmountSlider
+                        Layout.preferredWidth: 180
+                        from: 0
+                        to: 1
+                        stepSize: 0.01
+                        value: Config.general.transparency.blurAmount
+                        onMoved: Config.general.transparency.blurAmount = value
+                    }
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Tint")
+                description: qsTr("How much of the surface colour veils the frost. Higher = darker / more solid, lower = lighter / more wallpaper.")
+                visible: Config.general.transparency.shaderBlur
+                showSeparator: false
+
+                RowLayout {
+                    spacing: Appearance.spacing.normal
+
+                    StyledText {
+                        text: Math.round(blurTintSlider.value * 100) + "%"
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: blurTintSlider
+                        Layout.preferredWidth: 180
+                        from: 0
+                        to: 1
+                        stepSize: 0.01
+                        value: Config.general.transparency.blurTint
+                        onMoved: Config.general.transparency.blurTint = value
+                    }
+                }
+            }
+        }
+
         // ── Schema demo (Phase-1 verification) ───────────────────────────
         SettingSection {
             title: qsTr("Schema demo")

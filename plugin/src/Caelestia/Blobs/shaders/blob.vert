@@ -24,6 +24,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 invertedInner;
     vec4 zoneRoundingsLow;   // zones 0..3 (topLeft, top, topRight, right)
     vec4 zoneRoundingsHigh;  // zones 4..7 (bottomRight, bottom, bottomLeft, left)
+    vec4 wpParams;           // frost: x=screenW, y=screenH, z=enabled, w=tint
     vec4 rectData[80];
 };
 

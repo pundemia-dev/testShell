@@ -615,6 +615,117 @@ Item {
         intersection: Intersection.Subtract
     }
 
+    // ── Compositor blur region (ext-background-effect-v1) ────────────
+    //
+    // Published to niri (union'd in Drawers via BackgroundEffect.blurRegion).
+    // niri blurs EXACTLY the wl_region we hand it, committed atomically with
+    // the surface → no lag. The region is a rounded-rect approximation of the
+    // SDF contour (the protocol takes no per-pixel mask), so:
+    //   • body  — the panel's rounded rect, inset inward by blurInset so the
+    //             hard region edge hides under the panel's translucent rim;
+    //   • necks — the magnet bridges to the PREVIOUS sibling on this rail
+    //             (layer-2+), included only when both stick and the gap is
+    //             within the SDF merge reach (group.smoothing × stickSmooth).
+    //
+    // Settle gate: while the slot is appearing / resizing (geometry in flux)
+    // every region collapses to 0, so niri never blurs a morphing shape — only
+    // a frozen one, where the rectangle approximation actually matches.
+    readonly property int _blurInset: Config.general.transparency.blurInset ?? 8
+    readonly property int _blurInsetEff: Math.min(_blurInset, Math.floor(paintedWidth / 2), Math.floor(paintedHeight / 2))
+    readonly property real _blurMagnetDist: (group?.smoothing ?? 32) * (Config.backgrounds.stickSmooth ?? 1)
+
+    property bool _blurSettled: false
+    readonly property bool _blurOn: BlurManager.enabled && _blurSettled && !dying
+    // Necks temporarily disabled: the distance≤magnet heuristic over-publishes
+    // — it adds a blur rect in real (non-merging) gaps between stacked panels,
+    // so blur shows where there's no blob. Revisit with an accurate SDF-merge
+    // test before re-enabling. Body-only blur for now.
+    readonly property bool _blurNeckOn: false
+
+    Timer {
+        id: _blurSettleTimer
+        interval: Config.general.transparency.blurSettleMs ?? 200
+        onTriggered: {
+            root._blurSettled = true;
+            BlurManager.refresh();
+        }
+    }
+    function _blurUnsettle(): void {
+        if (!BlurManager.enabled)
+            return;
+        if (root._blurSettled) {
+            root._blurSettled = false;
+            BlurManager.refresh();
+        }
+        _blurSettleTimer.restart();
+    }
+    // x/y are bound to targetX/targetY; paintedWidth/Height ride the size
+    // spring. Any of them moving means the contour is still in flux.
+    onXChanged: _blurUnsettle()
+    onYChanged: _blurUnsettle()
+    onPaintedWidthChanged: _blurUnsettle()
+    onPaintedHeightChanged: _blurUnsettle()
+    Connections {
+        target: BlurManager
+        // Toggling blur on for an already-static panel fires no geometry
+        // signal — kick the settle timer so it publishes after blurSettleMs.
+        function onEnabledChanged(): void {
+            root._blurUnsettle();
+        }
+    }
+
+    // Clamp a neighbour-neck bridge rect to the magnet reach: beyond it the SDF
+    // doesn't merge the panels, so blurring the gap would show a blurred sliver
+    // with no blob painted over it.
+    function _blurNeck(r: rect): rect {
+        if (!_blurNeckOn || r.width <= 0 || r.height <= 0)
+            return Qt.rect(0, 0, 0, 0);
+        if (Math.min(r.width, r.height) > _blurMagnetDist)
+            return Qt.rect(0, 0, 0, 0);
+        return r;
+    }
+    readonly property rect _blurNeckTopRect: layerIdx > 1 ? _blurNeck(_bridgeTopRect) : Qt.rect(0, 0, 0, 0)
+    readonly property rect _blurNeckBottomRect: layerIdx > 1 ? _blurNeck(_bridgeBottomRect) : Qt.rect(0, 0, 0, 0)
+    readonly property rect _blurNeckLeftRect: layerIdx > 1 ? _blurNeck(_bridgeLeftRect) : Qt.rect(0, 0, 0, 0)
+    readonly property rect _blurNeckRightRect: layerIdx > 1 ? _blurNeck(_bridgeRightRect) : Qt.rect(0, 0, 0, 0)
+
+    Region {
+        id: blurBody
+        x: root.x + root._blurInsetEff
+        y: root.y + root._blurInsetEff
+        width: root._blurOn ? Math.max(0, root.paintedWidth - 2 * root._blurInsetEff) : 0
+        height: root._blurOn ? Math.max(0, root.paintedHeight - 2 * root._blurInsetEff) : 0
+        radius: Math.max(0, root.effectiveRounding - root._blurInsetEff)
+    }
+    Region {
+        id: blurNeckTop
+        x: root._blurNeckTopRect.x
+        y: root._blurNeckTopRect.y
+        width: root._blurNeckTopRect.width
+        height: root._blurNeckTopRect.height
+    }
+    Region {
+        id: blurNeckBottom
+        x: root._blurNeckBottomRect.x
+        y: root._blurNeckBottomRect.y
+        width: root._blurNeckBottomRect.width
+        height: root._blurNeckBottomRect.height
+    }
+    Region {
+        id: blurNeckLeft
+        x: root._blurNeckLeftRect.x
+        y: root._blurNeckLeftRect.y
+        width: root._blurNeckLeftRect.width
+        height: root._blurNeckLeftRect.height
+    }
+    Region {
+        id: blurNeckRight
+        x: root._blurNeckRightRect.x
+        y: root._blurNeckRightRect.y
+        width: root._blurNeckRightRect.width
+        height: root._blurNeckRightRect.height
+    }
+
     // ── Slot hover/drag tracking ─────────────────────────────────────
     //
     // ONE invisible "envelope" Item covering the bounding box of the slot's
@@ -823,6 +934,11 @@ Item {
     readonly property int overlapShrink: Math.max(0, Config.backgrounds.overlapShrink ?? 0)
     readonly property real fadeStrength: Math.max(0.05, Config.backgrounds.fadeStrength ?? 1.0)
     readonly property color _fadeColor: Colours.palette.surface
+    // Peak opacity of the content-backing aura. Honours transparency so the
+    // frosted blur behind the panels (niri BackgroundEffect or the QML frost
+    // layer) shows through the WHOLE panel, not just the fade ring — otherwise
+    // the opaque inner solid hides it in the centre. 1.0 when transparency off.
+    readonly property real _fadeMaxAlpha: Colours.transparency.enabled ? Colours.transparency.base : 1.0
     readonly property int _innerW: Math.max(0, paintedWidth - 2 * overlapShrink)
     readonly property int _innerH: Math.max(0, paintedHeight - 2 * overlapShrink)
     // Inner-solid origin in fadeAura-local coords. fadeAura is expanded
@@ -833,7 +949,7 @@ Item {
     // alpha(t) = t^(1/strength). t=0 → fully transparent (outer edge),
     // t=1 → fully opaque (inner edge).
     function _fadeAt(t) {
-        const a = Math.pow(t, 1.0 / root.fadeStrength);
+        const a = Math.pow(t, 1.0 / root.fadeStrength) * root._fadeMaxAlpha;
         return Qt.rgba(root._fadeColor.r, root._fadeColor.g, root._fadeColor.b, a);
     }
 
@@ -845,7 +961,11 @@ Item {
     Item {
         id: fadeAura
         parent: root.contentLayer
-        visible: root.fadeWidth > 0 || root.overlapShrink > 0
+        // Disabled while shader frost is on: the aura's surface backing would
+        // cover the frosted-wallpaper fill (content sits directly on the frost).
+        // Auto-restored when shaderBlur is off.
+        visible: !(Config.general.transparency.shaderBlur ?? false)
+                 && (root.fadeWidth > 0 || root.overlapShrink > 0)
         x: root.x - root.fadeWidth
         y: root.y - root.fadeWidth
         width: root.paintedWidth + 2 * root.fadeWidth
@@ -874,16 +994,18 @@ Item {
             recursive: false
         }
 
-        // Inner solid rect — fully opaque, size = paintedRect shrunk by
-        // overlapShrink on every side, centred over paintedRect. No
-        // radius: rounded clipping comes from the SDF-union mask.
+        // Inner solid rect — size = paintedRect shrunk by overlapShrink on
+        // every side, centred over paintedRect. No radius: rounded clipping
+        // comes from the SDF-union mask. Opacity follows _fadeMaxAlpha (via
+        // _fadeAt(1.0)) so it's translucent when transparency is on → frost
+        // shows through the centre, not just the fade ring.
         Rectangle {
             x: root._innerOff
             y: root._innerOff
             width: root._innerW
             height: root._innerH
             radius: 0
-            color: root._fadeColor
+            color: root._fadeAt(1.0)
         }
 
         // ── Halo ring: 4 strips + 4 corners around inner_solid_rect.
@@ -1553,6 +1675,12 @@ Item {
         InputManager.addRegion(bridgeBottom);
         InputManager.addRegion(bridgeLeft);
         InputManager.addRegion(bridgeRight);
+        // Compositor-blur sub-regions (gated to 0 until settled).
+        BlurManager.addRegion(blurBody);
+        BlurManager.addRegion(blurNeckTop);
+        BlurManager.addRegion(blurNeckBottom);
+        BlurManager.addRegion(blurNeckLeft);
+        BlurManager.addRegion(blurNeckRight);
         // Delegate (re)created already dying — the dying flag flip regenerated
         // the Repeater, so onDyingChanged won't fire. Kick off the collapse here.
         if (root.dying)
@@ -1569,6 +1697,11 @@ Item {
         InputManager.removeRegion(bridgeBottom);
         InputManager.removeRegion(bridgeLeft);
         InputManager.removeRegion(bridgeRight);
+        BlurManager.removeRegion(blurBody);
+        BlurManager.removeRegion(blurNeckTop);
+        BlurManager.removeRegion(blurNeckBottom);
+        BlurManager.removeRegion(blurNeckLeft);
+        BlurManager.removeRegion(blurNeckRight);
         if (manager && manager.clearSlotRect)
             manager.clearSlotRect(arrivalSeq);
         if (manager && manager.clearSlotHover)

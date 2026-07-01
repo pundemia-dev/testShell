@@ -262,6 +262,43 @@ Singleton {
         return "air";
     }
 
+    // open-meteo WMO weather codes → tabler glyphs (used by services/Weather).
+    readonly property var wmoIcons: ({
+            "0": "\ueb30",
+            "1": "\ueb30",
+            "2": "\uea76",
+            "3": "\uea76",
+            "45": "\uecd9",
+            "48": "\uecd9",
+            "51": "\uea72",
+            "53": "\uea72",
+            "55": "\uea72",
+            "56": "\uea72",
+            "57": "\uea72",
+            "61": "\uea72",
+            "63": "\uea72",
+            "65": "\uea72",
+            "66": "\uea72",
+            "67": "\uea72",
+            "71": "\uea73",
+            "73": "\uea73",
+            "75": "\uea73",
+            "77": "\uea73",
+            "80": "\uea72",
+            "81": "\uea72",
+            "82": "\uea72",
+            "85": "\uea73",
+            "86": "\uea73",
+            "95": "\uea74",
+            "96": "\uea74",
+            "99": "\uea74"
+        })
+
+    function getWeatherIconWmo(code: var): string {
+        const k = String(code);
+        return wmoIcons.hasOwnProperty(k) ? wmoIcons[k] : "\uea76";
+    }
+
     function getNotifIcon(summary: string, urgency: int): string {
         if (summary.includes("reboot"))
             return "restart_alt";

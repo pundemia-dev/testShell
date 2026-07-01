@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Effects
+import Quickshell.Io
 import Caelestia.Blobs
 import qs.config
 import qs.services
@@ -40,6 +41,40 @@ Item {
         color: Colours.palette.surface
         smoothing: 32
         stickSmooth: Config.backgrounds.stickSmooth
+        // Frosted-glass (Approach A): the plugin samples a pre-blurred copy of
+        // the wallpaper inside blob.frag and mixes it with `color`, painted with
+        // the SDF alpha — exact contour, native res, no separate-layer corner
+        // mismatch. The wallpaper path comes from awww; blur/tint from config.
+        wallpaperEnabled: Config.general.transparency.shaderBlur ?? false
+        wallpaperTint: Config.general.transparency.blurTint ?? 0.3
+        wallpaperBlur: Config.general.transparency.blurAmount ?? 0.6
+        screenSize: Qt.size(root.width, root.height)
+        wallpaperPath: root._wpPath
+    }
+
+    // Current wallpaper path (eDP-style single output) from awww, fed to the
+    // BlobGroup for the frost texture. Re-queried whenever frost turns on.
+    // awww (swww fork) emits no wallpaper-change signal, so poll `awww query`
+    // while frost is on. setWallpaperPath ignores an unchanged path, so the
+    // texture only rebuilds when the wallpaper actually changes.
+    property string _wpPath: ""
+    Timer {
+        running: Config.general.transparency.shaderBlur ?? false
+        interval: 2000
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: wpQuery.running = true
+    }
+    Process {
+        id: wpQuery
+        command: ["sh", "-c", "awww query | sed -n 's/.*image: //p' | head -1"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const p = text.trim();
+                if (p)
+                    root._wpPath = p;
+            }
+        }
     }
 
     // Screen-edge SDF frame. Its outer edge sits OUTSIDE the viewport
@@ -73,6 +108,15 @@ Item {
     Item {
         id: bgRenderHost
         anchors.fill: parent
+        // Panel-background opacity. With shader frost the blob fill already IS
+        // the (opaque) frosted wallpaper, so keep it at 1.0 — dimming it would
+        // double-expose the real wallpaper behind. Otherwise (niri-blur or plain
+        // transparency) dim to `base` so a compositor blur shows through; the
+        // blob shader ignores color.a but multiplies the material's qt_Opacity.
+        // Content is unaffected (sibling contentLayer z=100).
+        opacity: (Config.general.transparency.shaderBlur ?? false)
+                 ? 1.0
+                 : (Colours.transparency.enabled ? Colours.transparency.base : 1.0)
         // Already layered to expose the merged-SDF union texture for
         // WindowSlot's halo mask (ShaderEffectSource sourceItem). The
         // effect below also makes this FBO the shell's drop-shadow source —

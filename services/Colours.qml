@@ -2,6 +2,8 @@ pragma Singleton
 
 import qs.config
 import qs.utils
+import qs.services
+import Caelestia
 import Quickshell
 import Quickshell.Io
 import QtQuick
@@ -20,6 +22,32 @@ Singleton {
     readonly property M3Palette preview: M3Palette {}
     readonly property M3TPalette tPalette: M3TPalette {}
     readonly property Transparency transparency: Transparency {}
+
+    // Average luminance of the current wallpaper (0..1), driven by the
+    // ImageAnalyser plugin. Feeds alterColour's stacked-layer offset so the
+    // tint boost scales with how bright the wallpaper is (caelestia parity).
+    readonly property alias wallLuminance: analyser.luminance
+
+    // Pick a representative wallpaper image path from WallpaperState (global
+    // singleton, so prefer the fallback entry, else any monitor). Video
+    // entries are skipped — QImage can't decode them and the last good
+    // luminance is kept.
+    readonly property string wallpaperPath: {
+        const d = WallpaperState.stateData;
+        if (!d)
+            return "";
+        const pick = e => e && e.path && (e.media_type ?? "image") !== "video" ? e.path : "";
+        let p = pick(d.fallback);
+        if (p)
+            return p;
+        if (d.monitors)
+            for (const k in d.monitors) {
+                p = pick(d.monitors[k]);
+                if (p)
+                    return p;
+            }
+        return "";
+    }
 
     function alpha(c: color, layer: bool): color {
         if (!transparency.enabled)
@@ -42,14 +70,14 @@ Singleton {
     }
 
     // Lighten/darken a colour for a stacked layer, then apply alpha `a`. Ported
-    // from caelestia; `wallLuminance` term dropped (pShell doesn't analyse the
-    // wallpaper) so the offset depends only on light/dark mode and `base`.
+    // from caelestia: the offset scales with light/dark mode, `base`, and the
+    // wallpaper luminance (brighter wallpaper → stronger tint boost).
     function alterColour(c: color, a: real, layer: int): color {
         const luminance = getLuminance(c);
         if (luminance === 0)
             return Qt.rgba(c.r, c.g, c.b, a);
 
-        const offset = (!light || layer == 1 ? 1 : -layer / 2) * (light ? 0.2 : 0.3) * (1 - transparency.base);
+        const offset = (!light || layer == 1 ? 1 : -layer / 2) * (light ? 0.2 : 0.3) * (1 - transparency.base) * (1 + wallLuminance * (light ? (layer == 1 ? 3 : 1) : 2.5));
         const scale = (luminance + offset) / luminance;
         const r = Math.max(0, Math.min(1, c.r * scale));
         const g = Math.max(0, Math.min(1, c.g * scale));
@@ -99,6 +127,12 @@ Singleton {
 
     function setMode(mode: string): void {
         Quickshell.execDetached(["caelestia", "scheme", "set", "--notify", "-m", mode]);
+    }
+
+    ImageAnalyser {
+        id: analyser
+
+        source: root.wallpaperPath
     }
 
     FileView {

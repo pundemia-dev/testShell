@@ -13,6 +13,7 @@ import "notifsconfig"
 import "stashconfig"
 import "captureconfig"
 import "popoutsconfig"
+import "dashboardconfig"
 import "generalconfig"
 
 Singleton {
@@ -27,6 +28,7 @@ Singleton {
     property alias stash: adapter.stash
     property alias capture: adapter.capture
     property alias popouts: adapter.popouts
+    property alias dashboard: adapter.dashboard
     property alias general: adapter.general
     // Open map for third-party module settings, keyed by SettingsSchema.key.
     // Official modules use their typed sub-configs above; custom modules read
@@ -89,6 +91,7 @@ Singleton {
             property StashConfig stash: StashConfig {}
             property CaptureConfig capture: CaptureConfig {}
             property PopoutsConfig popouts: PopoutsConfig {}
+            property DashboardConfig dashboard: DashboardConfig {}
             property GeneralConfig general: GeneralConfig {}
             property var custom: ({})
         }
