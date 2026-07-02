@@ -137,8 +137,8 @@ RowLayout {
         implicitWidth: 200
         placeholderText: qsTr("comma-separated labels")
         padding: Appearance.padding.small
-        leftPadding: Appearance.padding.normal
-        rightPadding: Appearance.padding.normal
+        leftPadding: Appearance.padding.medium
+        rightPadding: Appearance.padding.medium
 
         onEditingFinished: root.picked(text.split(",").map(s => s.trim()).filter(s => s.length > 0))
 

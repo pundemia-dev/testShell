@@ -35,7 +35,7 @@ Item {
     }
 
     readonly property var place: {
-        const m = Appearance.spacing.normal;
+        const m = Appearance.spacing.medium;
         const c = clearance + m;
         const e = editor;
         const side = [
@@ -160,7 +160,7 @@ Item {
         id: col
 
         anchors.centerIn: parent
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
         width: root.boxW
 
         // ── Header: icon chip + title/status + actions ──────────────
@@ -173,7 +173,7 @@ Item {
 
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                implicitWidth: Appearance.font.size.large + Appearance.padding.larger * 2
+                implicitWidth: Appearance.font.size.large + Appearance.padding.large * 2
                 implicitHeight: implicitWidth
                 radius: Appearance.rounding.full
                 color: Colours.palette.primary_container
@@ -187,7 +187,7 @@ Item {
 
             Column {
                 anchors.left: iconChip.right
-                anchors.leftMargin: Appearance.spacing.normal
+                anchors.leftMargin: Appearance.spacing.medium
                 anchors.verticalCenter: parent.verticalCenter
 
                 StyledText {
@@ -238,8 +238,8 @@ Item {
 
                     readonly property bool active: root.editor.ocrLangsSel === modelData
 
-                    implicitWidth: chipText.implicitWidth + Appearance.padding.normal * 2
-                    implicitHeight: chipText.implicitHeight + Appearance.padding.smaller * 2
+                    implicitWidth: chipText.implicitWidth + Appearance.padding.medium * 2
+                    implicitHeight: chipText.implicitHeight + Appearance.padding.small * 2
                     radius: Appearance.rounding.full
                     color: active ? Colours.palette.primary : Colours.palette.surface_container_high
 
@@ -266,15 +266,15 @@ Item {
         //    rerun is in flight so the panel doesn't flicker) ─────────
         StyledRect {
             width: parent.width
-            radius: Appearance.rounding.normal
+            radius: Appearance.rounding.large
             color: Colours.palette.surface_container_low
-            implicitHeight: Math.min(root.editor.height * 0.4, flick.contentHeight + Appearance.padding.normal * 2)
+            implicitHeight: Math.min(root.editor.height * 0.4, flick.contentHeight + Appearance.padding.medium * 2)
 
             Flickable {
                 id: flick
 
                 anchors.fill: parent
-                anchors.margins: Appearance.padding.normal
+                anchors.margins: Appearance.padding.medium
                 clip: true
                 contentWidth: width
                 contentHeight: ocrEdit.height

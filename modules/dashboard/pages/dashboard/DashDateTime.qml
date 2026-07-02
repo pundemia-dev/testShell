@@ -26,21 +26,21 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             text: Time.hourStr
             color: Colours.palette.secondary
-            font.pointSize: 35
+            font.pointSize: 28
             font.weight: Font.DemiBold
         }
         StyledText {
             Layout.alignment: Qt.AlignHCenter
             text: "•••"
             color: Colours.palette.primary
-            font.pointSize: 35 * 0.9
+            font.pointSize: 28 * 0.9
         }
         StyledText {
             Layout.topMargin: -(font.pointSize * 0.4)
             Layout.alignment: Qt.AlignHCenter
             text: Time.minuteStr
             color: Colours.palette.secondary
-            font.pointSize: 35
+            font.pointSize: 28
             font.weight: Font.DemiBold
         }
         StyledText {
@@ -48,7 +48,7 @@ Item {
             visible: Time.amPmStr !== ""
             text: Time.amPmStr
             color: Colours.palette.primary
-            font.pointSize: 22
+            font.pointSize: 18
             font.weight: Font.DemiBold
         }
     }

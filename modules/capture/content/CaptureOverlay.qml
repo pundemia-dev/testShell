@@ -277,8 +277,8 @@ PanelWindow {
             visible: root.ready && m !== null && m.hovered && !m.interacting && (root.mode !== "region" || !(regionLoader.item?.hasSelection ?? false))
             glyph: root.modeGlyph(root.mode)
             description: root.modeLabel(root.mode)
-            x: Math.min((m ? m.cursorX : 0) + Appearance.spacing.large, root.width - width - Appearance.padding.normal)
-            y: Math.min((m ? m.cursorY : 0) + Appearance.spacing.large, root.height - height - Appearance.padding.normal)
+            x: Math.min((m ? m.cursorX : 0) + Appearance.spacing.large, root.width - width - Appearance.padding.medium)
+            y: Math.min((m ? m.cursorY : 0) + Appearance.spacing.large, root.height - height - Appearance.padding.medium)
 
             Behavior on x {
                 enabled: guide.springLive

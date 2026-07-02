@@ -7,7 +7,7 @@ import QtQuick.Templates
 RadioButton {
     id: root
 
-    font.pointSize: Appearance.font.size.smaller
+    font: Appearance.font.body.small
 
     implicitWidth: implicitIndicatorWidth + implicitContentWidth + contentItem.anchors.leftMargin
     implicitHeight: Math.max(implicitIndicatorHeight, implicitContentHeight)
@@ -24,7 +24,7 @@ RadioButton {
         anchors.verticalCenter: parent.verticalCenter
 
         StateLayer {
-            anchors.margins: -Appearance.padding.smaller
+            anchors.margins: -Appearance.padding.small
             color: root.checked ? Colours.palette.on_surface : Colours.palette.primary
             z: -1
 
@@ -49,9 +49,9 @@ RadioButton {
 
     contentItem: StyledText {
         text: root.text
-        font.pointSize: root.font.pointSize
+        font: root.font
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: outerCircle.right
-        anchors.leftMargin: Appearance.spacing.smaller
+        anchors.leftMargin: Appearance.spacing.medium
     }
 }

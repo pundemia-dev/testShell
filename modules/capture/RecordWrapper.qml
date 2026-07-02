@@ -31,7 +31,7 @@ Item {
         // Margins & offsets
         property int mLeft: 0
         property int mRight: 0
-        property int mTop: Appearance.spacing.normal
+        property int mTop: Appearance.spacing.medium
         property int mBottom: 0
         property int vCenterOffset: 0
         property int hCenterOffset: 0

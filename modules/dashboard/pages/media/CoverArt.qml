@@ -73,7 +73,7 @@ Item {
     CachingImage {
         id: image
         anchors.fill: parent
-        path: Players.getArtUrl(Players.active)
+        path: Players.artUrl
         visible: false
     }
 

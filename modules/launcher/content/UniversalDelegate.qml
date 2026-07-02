@@ -19,7 +19,7 @@ StyledClippingRect {
     implicitHeight: hasBackground ? Config.launcher.itemHeight * 2 : Config.launcher.itemHeight
     width: parent?.width ?? 0
 
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.large
     color: hasBackground ? Colours.tPalette.surface : "transparent"
 
     border.width: isCurrent && hasBackground ? 1.5 : 0
@@ -121,8 +121,8 @@ StyledClippingRect {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.leftMargin: Appearance.padding.larger
-        anchors.rightMargin: Appearance.padding.larger
+        anchors.leftMargin: Appearance.padding.large
+        anchors.rightMargin: Appearance.padding.large
         height: root.hasBackground ? root.height / 2 : root.height
 
         // --- ЛЕВАЯ ИКОНКА ---
@@ -169,9 +169,9 @@ StyledClippingRect {
             id: textBlock
 
             anchors.left: leftIconLoader.right
-            anchors.leftMargin: leftIconLoader.active ? Appearance.spacing.normal : 0
+            anchors.leftMargin: leftIconLoader.active ? Appearance.spacing.medium : 0
             anchors.right: rightContentBlock.left
-            anchors.rightMargin: Appearance.spacing.normal
+            anchors.rightMargin: Appearance.spacing.medium
             anchors.verticalCenter: parent.verticalCenter
             implicitHeight: headerText.implicitHeight + subText.implicitHeight
 

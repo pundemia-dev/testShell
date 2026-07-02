@@ -294,7 +294,7 @@ Item {
     }
 
     function hitObject(x: real, y: real): int {
-        const pad = Appearance.padding.smaller;
+        const pad = Appearance.padding.small;
         for (let i = objects.count - 1; i >= 0; i--) {
             const b = objBounds(i);
             if (x >= b.x - pad && x <= b.x + b.width + pad && y >= b.y - pad && y <= b.y + b.height + pad)
@@ -695,8 +695,8 @@ Item {
         visible: root.selVisible
         x: Math.min(root.selX + root.selW - width, root.width - width)
         y: root.selY + root.selH + Appearance.spacing.small
-        implicitWidth: dimsText.implicitWidth + Appearance.padding.normal * 2
-        implicitHeight: dimsText.implicitHeight + Appearance.padding.smaller * 2
+        implicitWidth: dimsText.implicitWidth + Appearance.padding.medium * 2
+        implicitHeight: dimsText.implicitHeight + Appearance.padding.small * 2
         radius: Appearance.rounding.small
         color: Colours.tPalette.surface_container
 
@@ -720,7 +720,7 @@ Item {
             visible: root.hasSelection && root.activeTool === "" && (root.dragMode === "" || root.dragMode === "resize")
             x: hp.x - width / 2
             y: hp.y - height / 2
-            width: Appearance.padding.larger
+            width: Appearance.padding.large
             height: width
             radius: width / 2
             color: Colours.palette.primary
@@ -946,8 +946,8 @@ Item {
         visible: notifyTimer.running
         x: root.cursorX + Appearance.spacing.large
         y: root.cursorY - height - Appearance.spacing.large
-        implicitWidth: notifyText.implicitWidth + Appearance.padding.normal * 2
-        implicitHeight: notifyText.implicitHeight + Appearance.padding.smaller * 2
+        implicitWidth: notifyText.implicitWidth + Appearance.padding.medium * 2
+        implicitHeight: notifyText.implicitHeight + Appearance.padding.small * 2
         radius: Appearance.rounding.full
         color: Colours.tPalette.surface_container
 

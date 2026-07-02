@@ -17,7 +17,7 @@ Flickable {
     ColumnLayout {
         id: contentColumn
         width: parent.width
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         // Page title
         StyledText {
@@ -43,14 +43,14 @@ Flickable {
             Layout.fillWidth: true
             implicitHeight: 1
             color: Colours.palette.outline_variant
-            Layout.bottomMargin: Appearance.spacing.normal
+            Layout.bottomMargin: Appearance.spacing.medium
         }
 
         // Placeholder content
         StyledRect {
             Layout.fillWidth: true
             implicitHeight: placeholderColumn.implicitHeight + Appearance.padding.large * 2
-            radius: Appearance.rounding.normal
+            radius: Appearance.rounding.large
             color: Colours.tPalette.surface_container
 
             ColumnLayout {

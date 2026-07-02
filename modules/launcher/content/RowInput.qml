@@ -160,7 +160,7 @@ Item {
                 id: clearIcon
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: parent.right
-                anchors.rightMargin: Appearance.padding.normal ?? 12
+                anchors.rightMargin: Appearance.padding.medium ?? 12
                 width: inputField.text ? implicitWidth : implicitWidth / 2
                 opacity: {
                     if (!inputField.text) return 0
@@ -195,8 +195,8 @@ Item {
                 anchors.right: clearIcon.left
                 anchors.verticalCenter: parent.verticalCenter
 
-                topPadding: Appearance.padding.larger
-                bottomPadding: Appearance.padding.larger
+                topPadding: Appearance.padding.large
+                bottomPadding: Appearance.padding.large
                 placeholderText: qsTr("Type \"%1\" for commands").arg(root.moduleManager.magicSymbol)
 
                 onTextEdited: root.moduleManager.processInput(text)
@@ -350,7 +350,7 @@ Item {
 //                 id: searchIcon
 //                 anchors.verticalCenter: parent.verticalCenter
 //                 anchors.left: parent.left
-//                 anchors.leftMargin: Appearance.padding.normal ?? 12
+//                 anchors.leftMargin: Appearance.padding.medium ?? 12
 //                 text: "\ueb1c"
 //                 font.pointSize: Appearance.font.size.large ?? 16
 //                 color: Colours.palette.on_surface_variant
@@ -360,7 +360,7 @@ Item {
 //                 id: clearIcon
 //                 anchors.verticalCenter: parent.verticalCenter
 //                 anchors.right: parent.right
-//                 anchors.rightMargin: Appearance.padding.normal ?? 12
+//                 anchors.rightMargin: Appearance.padding.medium ?? 12
 //                 width: inputField.text ? implicitWidth : implicitWidth / 2
 //                 opacity: {
 //                     if (!inputField.text) return 0
@@ -443,8 +443,8 @@ Item {
 //                 anchors.verticalCenter: parent.verticalCenter
 //                 anchors.leftMargin: Appearance.spacing.small
 //                 anchors.rightMargin: Appearance.spacing.small
-//                 topPadding: Appearance.padding.larger
-//                 bottomPadding: Appearance.padding.larger
+//                 topPadding: Appearance.padding.large
+//                 bottomPadding: Appearance.padding.large
 //                 placeholderText: qsTr("Type \"%1\" for commands").arg(root.moduleManager.magicSymbol)
 
 //                 onTextEdited: root.moduleManager.processInput(text)

@@ -16,7 +16,7 @@ ColumnLayout {
     property var schema: null
     readonly property string keyName: schema?.key ?? ""
 
-    spacing: Appearance.spacing.smaller
+    spacing: Appearance.spacing.small
 
     Component.onCompleted: _seedDefaults()
 
@@ -96,8 +96,8 @@ ColumnLayout {
                     text: rowD.curVal ?? ""
                     onEditingFinished: rowD.write(text)
                     padding: Appearance.padding.small
-                    leftPadding: Appearance.padding.normal
-                    rightPadding: Appearance.padding.normal
+                    leftPadding: Appearance.padding.medium
+                    rightPadding: Appearance.padding.medium
                     background: StyledRect {
                         radius: Appearance.rounding.small
                         color: Colours.palette.surface_container_highest
@@ -116,7 +116,7 @@ ColumnLayout {
                             required property var modelData
                             readonly property bool sel: rowD.curVal === modelData
 
-                            implicitWidth: chipText.implicitWidth + Appearance.padding.normal * 2
+                            implicitWidth: chipText.implicitWidth + Appearance.padding.medium * 2
                             implicitHeight: chipText.implicitHeight + Appearance.padding.small * 2
                             radius: Appearance.rounding.full
                             color: sel ? Colours.palette.primary : Colours.layer(Colours.palette.surface_container, 2)

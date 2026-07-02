@@ -50,11 +50,11 @@ StyledRect {
     RowLayout {
         id: rowLayout
         anchors.fill: parent
-        anchors.leftMargin: Appearance.padding.normal
-        anchors.rightMargin: Appearance.padding.normal
+        anchors.leftMargin: Appearance.padding.medium
+        anchors.rightMargin: Appearance.padding.medium
         anchors.topMargin: Appearance.padding.small
         anchors.bottomMargin: Appearance.padding.small
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledIcon {
             text: root.typeIcon

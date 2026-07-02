@@ -25,11 +25,12 @@ Item {
             && !(Config.dashboard.performance.showGpu && Gpu.type !== Gpu.None)
             && !Config.dashboard.performance.showMemory
             && !Config.dashboard.performance.showStorage
+            && !Config.dashboard.performance.showNetwork
             && !root.hasBattery
         asynchronous: true
 
         sourceComponent: ColumnLayout {
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.medium
 
             StyledText {
                 Layout.alignment: Qt.AlignHCenter
@@ -58,15 +59,15 @@ Item {
         id: content
         anchors.left: parent.left
         anchors.right: parent.right
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
         visible: !placeholder.active
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.medium
 
             RowLayout {
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.medium
                 visible: cpuCard.active || gpuCard.active
 
                 Loader {
@@ -105,7 +106,7 @@ Item {
             }
 
             RowLayout {
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.medium
                 visible: storageCard.active || networkCard.active || memoryCard.active
 
                 Loader {

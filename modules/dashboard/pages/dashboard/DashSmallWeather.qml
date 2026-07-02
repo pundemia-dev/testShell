@@ -32,8 +32,8 @@ Item {
         id: info
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: icon.right
-        anchors.leftMargin: Appearance.spacing.large
-        spacing: Appearance.spacing.small
+        anchors.leftMargin: Appearance.spacing.largeIncreased
+        spacing: Appearance.spacing.extraSmall
 
         StyledText {
             anchors.horizontalCenter: parent.horizontalCenter

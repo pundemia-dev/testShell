@@ -4,6 +4,7 @@ import qs.config
 import qs.services
 import qs.components
 import qs.components.controls
+import Caelestia.Services
 import Quickshell.Services.Mpris
 import QtQuick
 import QtQuick.Layouts
@@ -32,6 +33,8 @@ Item {
     anchors.bottom: parent.bottom
     implicitWidth: Config.dashboard.dash.mediaWidth
 
+    ServiceRef { service: Audio.beatTracker }
+
     DashProgress {
         id: prog
         anchors.centerIn: cover
@@ -43,6 +46,7 @@ Item {
         value: (root.player?.length ?? 0) > 0 ? root.pos / root.player.length : 0
         wavy: true
         waveFrequency: 8
+        waveDuration: 2000
         wavePaused: !root.playing
 
         Behavior on clampedVal { Anim {} }
@@ -53,7 +57,7 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.margins: Appearance.padding.normal + root.arcCoverGap + prog.thickness
+        anchors.margins: Appearance.padding.medium + root.arcCoverGap + prog.thickness
         implicitHeight: width
     }
 
@@ -61,7 +65,7 @@ Item {
         id: title
         anchors.top: cover.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin: Appearance.spacing.normal
+        anchors.topMargin: Appearance.spacing.medium
         horizontalAlignment: Text.AlignHCenter
         animate: true
         text: (root.player?.trackTitle ?? qsTr("No media")) || qsTr("Unknown title")
@@ -102,7 +106,7 @@ Item {
         anchors.top: artist.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.topMargin: Appearance.spacing.normal
+        anchors.topMargin: Appearance.spacing.medium
         anchors.margins: Appearance.padding.large
         spacing: Appearance.spacing.small
 

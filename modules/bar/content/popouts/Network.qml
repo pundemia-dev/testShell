@@ -22,7 +22,7 @@ ColumnLayout {
     spacing: Appearance.spacing.small
 
     StyledText {
-        Layout.rightMargin: Appearance.padding.smaller
+        Layout.rightMargin: Appearance.padding.small
         text: qsTr("Wireless")
         font.pointSize: Appearance.font.size.normal
         font.weight: Font.Medium
@@ -36,7 +36,7 @@ ColumnLayout {
 
     StyledText {
         Layout.topMargin: Appearance.spacing.small
-        Layout.rightMargin: Appearance.padding.smaller
+        Layout.rightMargin: Appearance.padding.small
         text: qsTr("%1 networks available").arg(Nmcli.networks.length)
         color: Colours.palette.on_surface_variant
     }
@@ -57,7 +57,7 @@ ColumnLayout {
             readonly property bool loading: root.connectingToSsid === modelData.ssid
 
             Layout.fillWidth: true
-            Layout.rightMargin: Appearance.padding.smaller
+            Layout.rightMargin: Appearance.padding.small
             spacing: Appearance.spacing.small
 
             opacity: 0
@@ -87,7 +87,7 @@ ColumnLayout {
 
             StyledText {
                 Layout.fillWidth: true
-                Layout.leftMargin: Appearance.spacing.smaller
+                Layout.leftMargin: Appearance.spacing.small
                 text: net.modelData.ssid
                 elide: Text.ElideRight
                 font.weight: net.modelData.active ? Font.Medium : Font.Normal
@@ -166,8 +166,8 @@ ColumnLayout {
         signal toggled(bool checked)
 
         Layout.fillWidth: true
-        Layout.rightMargin: Appearance.padding.smaller
-        spacing: Appearance.spacing.normal
+        Layout.rightMargin: Appearance.padding.small
+        spacing: Appearance.spacing.medium
 
         StyledText {
             Layout.fillWidth: true

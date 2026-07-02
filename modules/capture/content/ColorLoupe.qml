@@ -145,9 +145,9 @@ Item {
         visible: root.hovered && !panel.hovering
         width: Config.capture.loupeSize
         height: width
-        x: Math.min(root.cursorX + Appearance.spacing.large, root.width - width - Appearance.padding.normal)
+        x: Math.min(root.cursorX + Appearance.spacing.large, root.width - width - Appearance.padding.medium)
         // Sit above the cursor so it doesn't collide with the mode bubble.
-        y: Math.max(Appearance.padding.normal, root.cursorY - height - Appearance.spacing.large)
+        y: Math.max(Appearance.padding.medium, root.cursorY - height - Appearance.spacing.large)
 
         readonly property int zoom: Config.capture.loupeZoom
 
@@ -196,8 +196,8 @@ Item {
             anchors.topMargin: Appearance.spacing.small
             anchors.horizontalCenter: parent.horizontalCenter
             visible: root.liveColor !== null
-            implicitWidth: swatchRow.implicitWidth + Appearance.padding.normal * 2
-            implicitHeight: swatchRow.implicitHeight + Appearance.padding.smaller * 2
+            implicitWidth: swatchRow.implicitWidth + Appearance.padding.medium * 2
+            implicitHeight: swatchRow.implicitHeight + Appearance.padding.small * 2
             radius: Appearance.rounding.full
             color: Colours.tPalette.surface_container
 

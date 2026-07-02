@@ -9,13 +9,13 @@ StyledRect {
     id: root
 
     default property alias content: contentColumn.data
-    property real contentSpacing: Appearance.spacing.larger
+    property real contentSpacing: Appearance.spacing.large
     property bool alignTop: false
 
     Layout.fillWidth: true
     implicitHeight: contentColumn.implicitHeight + Appearance.padding.large * 2
 
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.large
     color: Colours.transparency.enabled
            ? Colours.layer(Colours.palette.surface_container, 2)
            : Colours.palette.surface_container_high

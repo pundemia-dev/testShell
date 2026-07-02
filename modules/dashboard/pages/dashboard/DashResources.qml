@@ -28,7 +28,7 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.margins: Appearance.padding.large
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         Resource {
             glyph: "\uef8e" // tabler cpu

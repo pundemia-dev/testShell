@@ -50,7 +50,7 @@ Item {
     // natural layout (icon + alias + badges row).
     readonly property int _deviceRowH:    60
     readonly property int _pickerHeaderH: 44   // header row (state label + rescan)
-    readonly property int _pickerPadH:    Appearance.padding.normal * 2
+    readonly property int _pickerPadH:    Appearance.padding.medium * 2
     // Visible device count = devices found, clamped to 1..visibleDevicesMax
     // so the panel always has at least one row's worth of vertical space
     // for the "Scanning…" / "Sending…" placeholders.
@@ -58,7 +58,7 @@ Item {
         Math.min(deviceModel.count, Config.stash.visibleDevicesMax))
     readonly property int _pickerH: _pickerHeaderH + _pickerPadH +
         _pickerVisibleRows * _deviceRowH +
-        Math.max(0, _pickerVisibleRows - 1) * Appearance.spacing.smaller
+        Math.max(0, _pickerVisibleRows - 1) * Appearance.spacing.small
 
     // View state: dropping a file into the trigger strip or directly onto
     // this content area pivots from "file tray" to "pick a drop zone".
@@ -272,7 +272,7 @@ Item {
 
             ColumnLayout {
                 anchors.left: parent.left
-                anchors.leftMargin: Appearance.padding.normal
+                anchors.leftMargin: Appearance.padding.medium
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: Appearance.spacing.small
 
@@ -320,7 +320,7 @@ Item {
 
             ColumnLayout {
                 anchors.left: parent.left
-                anchors.leftMargin: Appearance.padding.normal
+                anchors.leftMargin: Appearance.padding.medium
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: Appearance.spacing.small
 

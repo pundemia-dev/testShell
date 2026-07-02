@@ -38,8 +38,8 @@ StyledRect {
 
         fgColour: root.accent
         spacing: Appearance.spacing.small
-        strokeWidth: Appearance.padding.smaller
-        implicitSize: Math.max(icon.implicitWidth, icon.implicitHeight) + Appearance.padding.normal * 2
+        strokeWidth: Appearance.padding.small
+        implicitSize: Math.max(icon.implicitWidth, icon.implicitHeight) + Appearance.padding.medium * 2
         value: root.usage
 
         Behavior on clampedVal { Anim {} }
@@ -101,7 +101,7 @@ StyledRect {
         }
 
         // Temperature bar — M3 linear with stop dot (caelestia parity).
-        DashProgressBar {
+        StyledProgressBar {
             Layout.fillWidth: true
             value: root.temperature / 100
             fgColour: root.accent
@@ -112,7 +112,7 @@ StyledRect {
         id: usageShape
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: Appearance.padding.normal
+        anchors.margins: Appearance.padding.medium
 
         implicitSize: Config.dashboard.performance.usageShapeSize
         color: Colours.palette.secondary_container

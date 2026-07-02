@@ -15,8 +15,8 @@ GridLayout {
         ? Colours.layer(Colours.palette.surface_container, 2)
         : Colours.palette.surface_container
 
-    rowSpacing: Appearance.spacing.normal
-    columnSpacing: Appearance.spacing.normal
+    rowSpacing: Appearance.spacing.medium
+    columnSpacing: Appearance.spacing.medium
 
     // User
     Card {
@@ -24,7 +24,7 @@ GridLayout {
         Layout.columnSpan: 3
         Layout.preferredWidth: Config.dashboard.dash.userWidth
         Layout.fillHeight: true
-        radius: Appearance.rounding.large
+        radius: Appearance.rounding.extraLarge
 
         DashUser {}
     }
@@ -35,7 +35,7 @@ GridLayout {
         Layout.columnSpan: 2
         Layout.preferredWidth: Config.dashboard.dash.weatherWidth
         Layout.preferredHeight: weather.implicitHeight
-        radius: Appearance.rounding.large
+        radius: Appearance.rounding.extraLarge * 1.5
 
         DashSmallWeather { id: weather }
     }
@@ -57,7 +57,7 @@ GridLayout {
         Layout.columnSpan: 3
         Layout.fillWidth: true
         Layout.preferredHeight: calendar.implicitHeight + Appearance.padding.large * 2
-        radius: Appearance.rounding.large
+        radius: Appearance.rounding.extraLarge
 
         DashCalendar {
             id: calendar
@@ -84,7 +84,7 @@ GridLayout {
         Layout.rowSpan: 2
         Layout.preferredWidth: media.implicitWidth
         Layout.fillHeight: true
-        radius: Appearance.rounding.large
+        radius: Appearance.rounding.extraLarge * 2
 
         DashMedia { id: media; anchors.fill: parent; anchors.margins: Appearance.padding.large }
     }

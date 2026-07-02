@@ -17,7 +17,7 @@ FlexboxLayout {
 
     property color colour: Colours.role(Config.getCustom("bluetoothStatus", "colour", "secondary"))
 
-    gap: Appearance.spacing.smaller / 2
+    gap: Appearance.spacing.small / 2
 
     PopoutHandle {
         edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")

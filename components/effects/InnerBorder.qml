@@ -37,7 +37,7 @@ StyledRect {
             id: maskInner
 
             anchors.fill: parent
-            anchors.margins: Appearance.padding.normal
+            anchors.margins: Appearance.padding.medium
             radius: Appearance.rounding.small
         }
     }

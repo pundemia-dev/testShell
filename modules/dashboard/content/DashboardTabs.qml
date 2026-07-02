@@ -23,6 +23,15 @@ Item {
 
     implicitHeight: bar.implicitHeight + Appearance.spacing.small + 3 + separator.implicitHeight
 
+    WheelHandler {
+        onWheel: event => {
+            if (event.angleDelta.y < 0)
+                root.tabClicked(Math.min(root.currentIndex + 1, root.count - 1));
+            else if (event.angleDelta.y > 0)
+                root.tabClicked(Math.max(root.currentIndex - 1, 0));
+        }
+    }
+
     RowLayout {
         id: bar
         anchors.left: parent.left
@@ -45,7 +54,7 @@ Item {
                 implicitHeight: tabCol.implicitHeight + Appearance.padding.small * 2
 
                 StateLayer {
-                    radius: Appearance.rounding.normal
+                    radius: Appearance.rounding.large
                     color: tab.current ? Colours.palette.primary : Colours.palette.on_surface
                     function onClicked(): void {
                         root.tabClicked(tab.index);
@@ -100,6 +109,10 @@ Item {
         x: tabWidth * root.currentIndex + (tabWidth - width) / 2
 
         Behavior on x {
+            Anim {}
+        }
+
+        Behavior on implicitWidth {
             Anim {}
         }
     }

@@ -39,6 +39,10 @@ Item {
     implicitWidth: Config.dashboard.media.tabWidth
     implicitHeight: Config.dashboard.media.tabHeight
 
+    BackgroundShapes {
+        anchors.fill: parent
+    }
+
     // ── No media placeholder ──────────────────────────────────────
     ColumnLayout {
         anchors.centerIn: parent
@@ -143,10 +147,10 @@ Item {
                     wavy: true
                     animateWave: root.playing
                     waveFrequency: 5
-                    onMoved: {
+                    onInteraction: v => {
                         const p = root.player;
                         if (p?.canSeek && p?.positionSupported)
-                            p.position = value * p.length;
+                            p.position = v * p.length;
                     }
                 }
 
@@ -159,7 +163,7 @@ Item {
 
             // Transport.
             RowLayout {
-                Layout.topMargin: Appearance.spacing.normal
+                Layout.topMargin: Appearance.spacing.medium
                 Layout.fillWidth: true
                 spacing: Appearance.spacing.small
 

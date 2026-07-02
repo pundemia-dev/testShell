@@ -31,7 +31,7 @@ ColumnLayout {
     spacing: Appearance.spacing.small
 
     StyledText {
-        Layout.rightMargin: Appearance.padding.smaller
+        Layout.rightMargin: Appearance.padding.small
         text: qsTr("Bluetooth")
         font.pointSize: Appearance.font.size.normal
         font.weight: Font.Medium
@@ -59,7 +59,7 @@ ColumnLayout {
 
     StyledText {
         Layout.topMargin: Appearance.spacing.small
-        Layout.rightMargin: Appearance.padding.smaller
+        Layout.rightMargin: Appearance.padding.small
         text: {
             const devices = Bluetooth.devices.values;
             let s = qsTr("%1 device(s) available").arg(devices.length);
@@ -83,7 +83,7 @@ ColumnLayout {
             readonly property bool loading: modelData.state === BluetoothDeviceState.Connecting || modelData.state === BluetoothDeviceState.Disconnecting
 
             Layout.fillWidth: true
-            Layout.rightMargin: Appearance.padding.smaller
+            Layout.rightMargin: Appearance.padding.small
             spacing: Appearance.spacing.small
 
             opacity: 0
@@ -106,7 +106,7 @@ ColumnLayout {
 
             StyledText {
                 Layout.fillWidth: true
-                Layout.leftMargin: Appearance.spacing.smaller
+                Layout.leftMargin: Appearance.spacing.small
                 text: dev.modelData.name
                 elide: Text.ElideRight
                 color: dev.modelData.connected ? Colours.palette.primary : Colours.palette.on_surface
@@ -181,8 +181,8 @@ ColumnLayout {
         signal toggled(bool checked)
 
         Layout.fillWidth: true
-        Layout.rightMargin: Appearance.padding.smaller
-        spacing: Appearance.spacing.normal
+        Layout.rightMargin: Appearance.padding.small
+        spacing: Appearance.spacing.medium
 
         StyledText {
             Layout.fillWidth: true

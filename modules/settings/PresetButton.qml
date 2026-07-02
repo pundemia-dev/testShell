@@ -24,7 +24,7 @@ StyledRect {
     property int padH: Appearance.padding.large
     property int iconBox: 26
     property int iconSize: Appearance.font.size.large
-    property int buttonHeight: iconBox + Appearance.padding.normal * 2
+    property int buttonHeight: iconBox + Appearance.padding.medium * 2
 
     implicitWidth: root.expanded ? (padH + iconBox + Appearance.spacing.small + labelText.implicitWidth + padH) : (padH * 2 + iconBox)
     implicitHeight: buttonHeight
@@ -121,8 +121,8 @@ StyledRect {
 
                     StyledText {
                         Layout.fillWidth: true
-                        Layout.margins: Appearance.padding.normal
-                        Layout.bottomMargin: Appearance.padding.smaller
+                        Layout.margins: Appearance.padding.medium
+                        Layout.bottomMargin: Appearance.padding.small
                         text: qsTr("Apply %1 preset").arg(root.scope)
                         font.pointSize: Appearance.font.size.small
                         color: Colours.palette.on_surface_variant
@@ -130,7 +130,7 @@ StyledRect {
 
                     StyledText {
                         Layout.fillWidth: true
-                        Layout.margins: Appearance.padding.normal
+                        Layout.margins: Appearance.padding.medium
                         visible: presetList.count === 0
                         text: qsTr("No saved presets yet.")
                         font.pointSize: Appearance.font.size.small
@@ -160,7 +160,7 @@ StyledRect {
                             property bool confirmingDelete: false
 
                             width: ListView.view.width
-                            implicitHeight: rowText.implicitHeight + Appearance.padding.normal * 2
+                            implicitHeight: rowText.implicitHeight + Appearance.padding.medium * 2
                             color: presetRow.confirmingDelete ? Qt.alpha(Colours.palette.error, 0.18) : "transparent"
 
                             Timer {
@@ -186,7 +186,7 @@ StyledRect {
                                 anchors.left: parent.left
                                 anchors.right: delButton.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                anchors.leftMargin: Appearance.padding.normal
+                                anchors.leftMargin: Appearance.padding.medium
                                 text: presetRow.fileBaseName
                                 elide: Text.ElideRight
                             }
@@ -195,7 +195,7 @@ StyledRect {
                                 id: delButton
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                anchors.rightMargin: Appearance.padding.smaller
+                                anchors.rightMargin: Appearance.padding.small
                                 type: IconButton.Text
                                 icon: presetRow.confirmingDelete ? "\uea5e" : "\ueb41" // tabler check : trash
                                 onClicked: {
@@ -227,8 +227,8 @@ StyledRect {
                             Layout.fillWidth: true
                             placeholderText: qsTr("Save current as…")
                             padding: Appearance.padding.small
-                            leftPadding: Appearance.padding.normal
-                            rightPadding: Appearance.padding.normal
+                            leftPadding: Appearance.padding.medium
+                            rightPadding: Appearance.padding.medium
                             onAccepted: root._save()
                             background: StyledRect {
                                 radius: Appearance.rounding.small

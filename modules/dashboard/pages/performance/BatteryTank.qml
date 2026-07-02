@@ -18,7 +18,13 @@ StyledClippingRect {
     color: Colours.palette.secondary_container
     radius: Appearance.rounding.large
 
-    implicitWidth: Config.dashboard.performance.battWidth
+    implicitWidth: Config.dashboard.performance.showCpu
+        || (Config.dashboard.performance.showGpu && Gpu.type !== Gpu.None)
+        || Config.dashboard.performance.showStorage
+        || Config.dashboard.performance.showMemory
+        || Config.dashboard.performance.showNetwork
+        ? Config.dashboard.performance.battWidth
+        : Config.dashboard.performance.battWidthSingle
     implicitHeight: Config.dashboard.performance.battHeight
 
     Behavior on animPerc { Anim {} }
@@ -26,7 +32,7 @@ StyledClippingRect {
     Contents {
         id: layout
         anchors.fill: parent
-        anchors.margins: Appearance.padding.normal
+        anchors.margins: Appearance.padding.medium
         accentColour: Colours.palette.primary
         textColour: Colours.palette.on_surface
         subTextColour: Colours.palette.on_surface_variant

@@ -168,11 +168,11 @@ Item {
     StyledRect {
         id: wmContainer
         anchors.left: bubble2.left
-        anchors.leftMargin: -Appearance.padding.normal
+        anchors.leftMargin: -Appearance.padding.medium
         y: Appearance.padding.small
         radius: Appearance.rounding.large
         color: Colours.palette.secondary_container
-        implicitWidth: wmLabel.implicitWidth + Appearance.padding.normal * 2
+        implicitWidth: wmLabel.implicitWidth + Appearance.padding.medium * 2
         implicitHeight: wmLabel.implicitHeight + Appearance.padding.small * 2
 
         Row {

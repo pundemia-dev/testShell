@@ -23,7 +23,7 @@ ColumnLayout {
     }
 
     StyledText {
-        Layout.topMargin: Appearance.spacing.normal
+        Layout.topMargin: Appearance.spacing.medium
         text: qsTr("Subnet Mask")
     }
 
@@ -34,7 +34,7 @@ ColumnLayout {
     }
 
     StyledText {
-        Layout.topMargin: Appearance.spacing.normal
+        Layout.topMargin: Appearance.spacing.medium
         text: qsTr("Gateway")
     }
 
@@ -45,7 +45,7 @@ ColumnLayout {
     }
 
     StyledText {
-        Layout.topMargin: Appearance.spacing.normal
+        Layout.topMargin: Appearance.spacing.medium
         text: qsTr("DNS Servers")
     }
 

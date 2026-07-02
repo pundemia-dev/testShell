@@ -9,7 +9,7 @@ import QtQuick.Layouts
 // Compact current-weather chip backed by the Weather service.
 RowLayout {
     id: root
-    spacing: Appearance.spacing.normal
+    spacing: Appearance.spacing.medium
 
     StyledText {
         text: Weather.icon

@@ -18,7 +18,7 @@ Flickable {
     ColumnLayout {
         id: contentColumn
         width: parent.width
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledText {
             text: qsTr("General")
@@ -75,7 +75,7 @@ Flickable {
                 visible: Config.general.transparency.enabled
 
                 RowLayout {
-                    spacing: Appearance.spacing.normal
+                    spacing: Appearance.spacing.medium
 
                     StyledText {
                         text: Math.round(baseSlider.value * 100) + "%"
@@ -90,7 +90,7 @@ Flickable {
                         to: 1
                         stepSize: 0.01
                         value: Config.general.transparency.base
-                        onMoved: Config.general.transparency.base = value
+                        onInteraction: v => Config.general.transparency.base = v
                     }
                 }
             }
@@ -102,7 +102,7 @@ Flickable {
                 showSeparator: false
 
                 RowLayout {
-                    spacing: Appearance.spacing.normal
+                    spacing: Appearance.spacing.medium
 
                     StyledText {
                         text: Math.round(layersSlider.value * 100) + "%"
@@ -117,7 +117,7 @@ Flickable {
                         to: 1
                         stepSize: 0.01
                         value: Config.general.transparency.layers
-                        onMoved: Config.general.transparency.layers = value
+                        onInteraction: v => Config.general.transparency.layers = v
                     }
                 }
             }
@@ -145,7 +145,7 @@ Flickable {
                 visible: Config.general.transparency.shaderBlur
 
                 RowLayout {
-                    spacing: Appearance.spacing.normal
+                    spacing: Appearance.spacing.medium
 
                     StyledText {
                         text: Math.round(blurAmountSlider.value * 100) + "%"
@@ -160,7 +160,7 @@ Flickable {
                         to: 1
                         stepSize: 0.01
                         value: Config.general.transparency.blurAmount
-                        onMoved: Config.general.transparency.blurAmount = value
+                        onInteraction: v => Config.general.transparency.blurAmount = v
                     }
                 }
             }
@@ -172,7 +172,7 @@ Flickable {
                 showSeparator: false
 
                 RowLayout {
-                    spacing: Appearance.spacing.normal
+                    spacing: Appearance.spacing.medium
 
                     StyledText {
                         text: Math.round(blurTintSlider.value * 100) + "%"
@@ -187,7 +187,7 @@ Flickable {
                         to: 1
                         stepSize: 0.01
                         value: Config.general.transparency.blurTint
-                        onMoved: Config.general.transparency.blurTint = value
+                        onInteraction: v => Config.general.transparency.blurTint = v
                     }
                 }
             }

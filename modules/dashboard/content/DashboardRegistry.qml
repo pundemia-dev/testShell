@@ -14,6 +14,8 @@ import QtQuick
 Item {
     id: root
 
+    property int currentTab: 0
+
     // Every discovered manifest (unordered), keyed internally by id.
     property var all: []
 

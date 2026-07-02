@@ -138,7 +138,7 @@ Item {
         dy /= len;
         // Offset the centre so the rect BOUNDARY lands on the radius.
         const edge = Math.min(dx !== 0 ? (panelW / 2) / Math.abs(dx) : 1e9, dy !== 0 ? (panelH / 2) / Math.abs(dy) : 1e9);
-        const pad = Appearance.padding.normal;
+        const pad = Appearance.padding.medium;
         return {
             x: Math.max(pad, Math.min(picker.width - panelW - pad, cx + dx * (radius + edge) - panelW / 2)),
             y: Math.max(pad, Math.min(picker.height - panelH - pad, cy + dy * (radius + edge) - panelH / 2))
@@ -256,7 +256,7 @@ Item {
 
         anchors.centerIn: parent
         width: root.boxW
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         // ── Two previews (live / picked) + actions ──────────────────
         Item {
@@ -274,7 +274,7 @@ Item {
 
                     StyledRect {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        implicitWidth: Appearance.font.size.large + Appearance.padding.larger * 2
+                        implicitWidth: Appearance.font.size.large + Appearance.padding.large * 2
                         implicitHeight: implicitWidth
                         radius: Appearance.rounding.full
                         color: root.picker.liveColor ? Qt.rgba(root.picker.liveColor.r / 255, root.picker.liveColor.g / 255, root.picker.liveColor.b / 255, 1) : "transparent"
@@ -295,7 +295,7 @@ Item {
 
                     StyledRect {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        implicitWidth: Appearance.font.size.large + Appearance.padding.larger * 2
+                        implicitWidth: Appearance.font.size.large + Appearance.padding.large * 2
                         implicitHeight: implicitWidth
                         radius: Appearance.rounding.full
                         color: root.cur
@@ -338,7 +338,7 @@ Item {
             color: Colours.palette.surface_container_high
             border.width: valField.activeFocus ? 2 : 0
             border.color: Colours.palette.primary
-            implicitHeight: valField.implicitHeight + Appearance.padding.normal * 2
+            implicitHeight: valField.implicitHeight + Appearance.padding.medium * 2
 
             TextInput {
                 id: valField
@@ -346,7 +346,7 @@ Item {
                 property bool escCancel: false
 
                 anchors.fill: parent
-                anchors.margins: Appearance.padding.normal
+                anchors.margins: Appearance.padding.medium
                 verticalAlignment: TextInput.AlignVCenter
                 font.family: Appearance.font.family.mono
                 font.pointSize: Appearance.font.size.larger
@@ -389,8 +389,8 @@ Item {
 
                     readonly property bool active: root.fmt === modelData
 
-                    implicitWidth: chipText.implicitWidth + Appearance.padding.normal * 2
-                    implicitHeight: chipText.implicitHeight + Appearance.padding.smaller * 2
+                    implicitWidth: chipText.implicitWidth + Appearance.padding.medium * 2
+                    implicitHeight: chipText.implicitHeight + Appearance.padding.small * 2
                     radius: Appearance.rounding.full
                     color: active ? Colours.palette.primary : Colours.palette.surface_container_high
 
@@ -416,7 +416,7 @@ Item {
         // ── Quick editor: hue / saturation / lightness ──────────────
         Column {
             width: parent.width
-            spacing: Appearance.spacing.smaller
+            spacing: Appearance.spacing.small
 
             ColorSlider {
                 width: parent.width

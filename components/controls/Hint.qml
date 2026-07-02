@@ -45,8 +45,8 @@ Popup {
     }
 
     // ── Geometry ──────────────────────────────────────────────────────────
-    readonly property real bodyW: bodyContent.implicitWidth + Appearance.padding.normal * 2
-    readonly property real bodyH: bodyContent.implicitHeight + Appearance.padding.normal * 2
+    readonly property real bodyW: bodyContent.implicitWidth + Appearance.padding.medium * 2
+    readonly property real bodyH: bodyContent.implicitHeight + Appearance.padding.medium * 2
     readonly property real iconW: target ? target.width : 0
     readonly property real iconH: target ? target.height : 0
     readonly property real gap: Appearance.spacing.small
@@ -86,7 +86,7 @@ Popup {
     modal: false
     closePolicy: Popup.NoAutoClose
     padding: 0
-    margins: Appearance.padding.normal
+    margins: Appearance.padding.medium
     background: Item {}
 
     // Centre horizontally over the icon; lift the body above it by the gap.

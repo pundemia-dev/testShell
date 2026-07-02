@@ -47,7 +47,7 @@ StackView {
         property bool isSubMenu
         property bool shown
 
-        spacing: Appearance.spacing.smaller
+        spacing: Appearance.spacing.small
 
         opacity: shown ? 1 : 0
         scale: shown ? 1 : 0.9
@@ -154,7 +154,7 @@ StackView {
                 anchors.left: parent.left
                 anchors.leftMargin: Appearance.padding.small
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: Appearance.spacing.smaller
+                spacing: Appearance.spacing.small
 
                 StyledIcon {
                     anchors.verticalCenter: parent.verticalCenter

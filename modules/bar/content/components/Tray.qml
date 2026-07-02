@@ -13,7 +13,7 @@ Item {
     readonly property alias items: items
     readonly property alias expandIcon: expandIcon
 
-    readonly property int padding: Config.getCustom("tray", "background", false) ? Appearance.padding.normal : Appearance.padding.small
+    readonly property int padding: Config.getCustom("tray", "background", false) ? Appearance.padding.medium : Appearance.padding.small
     readonly property int itemSpacing: parent.parent.gap
     readonly property int itemSize: Appearance.font.size.small * 2
     readonly property bool isHorizontal: Config.bar.orientation

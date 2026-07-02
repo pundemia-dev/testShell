@@ -147,8 +147,8 @@ ColumnLayout {
     component TextEntry: StyledTextField {
         implicitWidth: 140
         padding: Appearance.padding.small
-        leftPadding: Appearance.padding.normal
-        rightPadding: Appearance.padding.normal
+        leftPadding: Appearance.padding.medium
+        rightPadding: Appearance.padding.medium
         background: StyledRect {
             radius: Appearance.rounding.small
             color: Colours.palette.surface_container_highest

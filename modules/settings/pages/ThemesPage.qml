@@ -30,7 +30,7 @@ Flickable {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledText {
             text: qsTr("Themes")
@@ -63,8 +63,8 @@ Flickable {
                     placeholderText: qsTr("New theme name…")
                     onAccepted: root._save()
                     padding: Appearance.padding.small
-                    leftPadding: Appearance.padding.normal
-                    rightPadding: Appearance.padding.normal
+                    leftPadding: Appearance.padding.medium
+                    rightPadding: Appearance.padding.medium
                     background: StyledRect {
                         radius: Appearance.rounding.small
                         color: Colours.palette.surface_container_high
@@ -116,8 +116,8 @@ Flickable {
                     }
 
                     Layout.fillWidth: true
-                    implicitHeight: cardRow.implicitHeight + Appearance.padding.normal * 2
-                    radius: Appearance.rounding.normal
+                    implicitHeight: cardRow.implicitHeight + Appearance.padding.medium * 2
+                    radius: Appearance.rounding.large
                     color: card.confirmingDelete ? Qt.alpha(Colours.palette.error, 0.18) : Colours.layer(Colours.palette.surface_container, 2)
 
                     Timer {
@@ -140,7 +140,7 @@ Flickable {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        anchors.leftMargin: Appearance.padding.normal
+                        anchors.leftMargin: Appearance.padding.medium
                         anchors.rightMargin: Appearance.padding.small
                         spacing: Appearance.spacing.small
 
@@ -159,8 +159,8 @@ Flickable {
                             text: card.fileBaseName
                             onAccepted: card.commit()
                             padding: Appearance.padding.small
-                            leftPadding: Appearance.padding.normal
-                            rightPadding: Appearance.padding.normal
+                            leftPadding: Appearance.padding.medium
+                            rightPadding: Appearance.padding.medium
                             background: StyledRect {
                                 radius: Appearance.rounding.small
                                 color: Colours.palette.surface_container_high

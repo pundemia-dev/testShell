@@ -74,8 +74,8 @@ RowLayout {
         }
 
         padding: Appearance.padding.small
-        leftPadding: Appearance.padding.normal
-        rightPadding: Appearance.padding.normal
+        leftPadding: Appearance.padding.medium
+        rightPadding: Appearance.padding.medium
 
         background: StyledRect {
             implicitWidth: 100

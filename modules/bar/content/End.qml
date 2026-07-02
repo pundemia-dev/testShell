@@ -15,7 +15,7 @@ FlexboxLayout {
     justifyContent: FlexboxLayout.JustifyStart
     direction: Config.bar.orientation ? FlexboxLayout.Row : FlexboxLayout.Column
     alignItems: FlexboxLayout.AlignCenter
-    gap: Appearance.spacing.normal
+    gap: Appearance.spacing.medium
 
     Repeater {
         id: widgetRepeater

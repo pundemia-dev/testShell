@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-pShell is a desktop shell built on **Quickshell**, a Qt6-based Wayland shell framework. It targets the **Niri** compositor (Hyprland support is legacy and partially stripped on the active branch). The UI is written in QML; the C++ lives in two plugin modules under `plugin/src/Caelestia/`: **Caelestia.Blobs** (SDF-based rounded panel rendering) and **Caelestia** (`ImageAnalyser` — wallpaper luminance / dominant colour, used by the transparency system).
+pShell is a desktop shell built on **Quickshell**, a Qt6-based Wayland shell framework. It targets the **Niri** compositor (Hyprland support is legacy and partially stripped on the active branch). The UI is written in QML; the C++ lives in two plugin modules under `plugin/src/Caelestia/`: **Caelestia.Blobs** (SDF-based rounded panel rendering) and **Caelestia** (`ImageAnalyser` — wallpaper luminance / dominant colour; plus `CUtils` — QML utility helpers).
 
 **Key technologies:** QML/Qt6, C++20 (plugin only), Quickshell, CMake.
 
@@ -37,286 +37,14 @@ qs -c pShell
 
 Quickshell writes runtime logs to `/run/user/<uid>/quickshell/by-id/<id>/log.qslog`. Errors usually appear in stderr too.
 
-## Architecture
+## Architecture & key files
 
-### Entry Point and Rendering Layer
+Full architecture (rendering tree, Rails system, Wrapper contract, module system,
+config schema, services, plugin modules):
+→ [`docs/development/architecture.md`](docs/development/architecture.md)
 
-`shell.qml` → `drawers/Drawers.qml` (a `WlrLayershell` window, ExclusionMode.Ignore). Per-screen tree:
-
-```
-Screen
-└── Drawers (WlrLayershell)
-    ├── Exclusions          ← per-side ExclusionZone windows (border floor)
-    ├── Corners             ← visual rounded-corner chrome
-    ├── Border              ← visible border chrome, FIRST (lowest z)
-    ├── Backgrounds         ← SDF Rails system (see below)
-    ├── BarWrapper, LauncherWrapper, NotificationsWrapper, StashWrapper
-    ├── Borders             ← 8 BorderZones (interaction strips only)
-    └── NiriFocusGrab       ← Niri-specific focus capture
-```
-
-The visible `Border` chrome is the FIRST child (lowest z) so it renders
-BELOW all panel content (contentLayer z=100): pinned/overlay panels sit
-at edge=0 (into the border strip) and their content must paint above the
-chrome, never covered. `Borders` (only the 8 BorderZone INPUT strips now)
-is instantiated LAST so its strips sit above all wrapper content in
-z-order — strips drive
-[InteractionManager](docs/development/interaction-manager.md) and
-must catch hover/click/slide/drop before the bgs do.
-
-### Backgrounds: Rails system (post-Phase A–D)
-
-`drawers/backgrounds/Backgrounds.qml` owns:
-
-- **One `BlobGroup`** (Caelestia.Blobs) — SDF compositor for all painted backgrounds. Backgrounds render at z=0.
-- **One `BlobInvertedRect`** at screen edges, carrying 8-element `zoneRoundings` for per-zone SDF присасывание (see [docs/development/border-zones.md](docs/development/border-zones.md)). Lives inside `bgRenderHost` and replaces the legacy `RailBorder.qml`.
-- **9 `Rail` instances**, one per anchor position (topLeft, top, topRight, left, center, right, bottomLeft, bottom, bottomRight). Each `Rail` is a Repeater over its slice of `manager.rails[i]`.
-- **One `contentLayer` (`z: 100`)** — every window's `wrapper.content` (and overlay-mode bgs) is reparented here with `z = arrivalSeq + 0.5`, so new content always paints above old content cross-rail. Per-slot **envelope Items** (invisible HoverHandler + DropArea) also live here at `z=-1`, sized from each slot's stable target geometry.
-
-The whole renderer is in:
-
-- `utils/BackgroundsManager.qml` — `rails[][]` state, `requestBackground(wrapper) → arrivalSeq`, `removeBackground(wrapper)`, `reservedTop/Bottom/Left/Right` (aggregated exclusion), zone helpers (`zoneForRail` / `railForZone` / `zoneSides` / `zoneEdgeNearestEntries` / `zoneTopmostEntry`), and per-slot maps (`slotRects` / `slotHover` / `slotDragOver`).
-- `drawers/backgrounds/components/Rail.qml` — sorts `pinned → push → overlay`, drives Repeater.
-- `drawers/backgrounds/components/WindowSlot.qml` — single window: BlobRect + content Loader, position math, **L-step** for layer 2 on corner rails when a side reservation exists. Also: 4 bridge `Region`s (one per side), `holdoverRegion` (resize-union with 600 ms stable timer), and the per-slot envelope Item.
-
-### Wrapper contract
-
-Every UI module registers with `BackgroundsManager` via a `QtObject` describing geometry + behaviour. Required shape:
-
-```qml
-QtObject {
-    // Size (0 = auto from content)
-    property int wrapperWidth: 0; property int wrapperHeight: 0
-    property int pLeft, pTop, pRight, pBottom
-
-    // Anchor (chooses rail)
-    property bool aLeft, aRight, aTop, aBottom
-    property bool aHorizontalCenter, aVerticalCenter
-
-    // Margins (perpendicular to growth axis; growth axis driven by neighbour)
-    property int mLeft, mRight, mTop, mBottom
-    property int vCenterOffset, hCenterOffset
-
-    // Stacking semantics
-    property string mode: "push"        // "push" displaces siblings; "overlay" covers
-    property bool pinned: false         // visually fixed at layer 1
-    property bool reservesSpace: false  // → wlr-layer-shell exclusion zone
-    property bool sticks: true          // false → clean floating contour (no SDF merge with neighbours/frame, no magnet)
-    readonly property int layer: 0      // assigned by Rail
-    property int windowRounding: -1
-
-    property Component content: null
-}
-```
-
-Call sites:
-```qml
-const arrivalSeq = manager.requestBackground(wrapper)
-// keep arrivalSeq if the module wants to subscribe to
-// manager.slotRects[seq] / slotHover[seq] / slotDragOver[seq]
-manager.removeBackground(wrapper)
-```
-
-**Don't pass legacy positional args** (`isolate`, `excludeBarArea`) — they're gone.
-
-**Margin direction for layer-2+ slots**: when a slot is layer-2+ on
-its rail (i.e. has a `prevSlot`), the gap to prev is taken from
-**THIS slot's own facing margin** (`mLeft` when prev is to the
-left, `mTop` when prev is above, etc.) — NOT `prev.mRight` /
-`prev.mBottom`. Each margin reads uniformly as "gap on this side
-from whatever is adjacent" (prev bg, reserved space, or screen
-edge).
-
-### Module System
-
-Each module is `modules/<name>/<Name>Wrapper.qml` + `modules/<name>/content/`. The wrapper owns the contract object(s) and lifecycle; content is a `Component` that renders the actual UI.
-
-| Module | Purpose |
-|--------|---------|
-| `modules/bar` | Status bar (3 pinned segments: begin/center/end) |
-| `modules/launcher` | Application launcher with pluggable search |
-| `modules/notifications` | D-Bus notification popups |
-| `modules/stash` | File tray (drag/drop + LocalSend share); hover-trigger; two-zone drag chooser |
-| `modules/settings` | Settings UI |
-| `modules/dashboard` | Hover dashboard (drops from an edge); **modular self-discovering pages** — see [Dashboard module](#dashboard-module) |
-
-### Visibility & Focus
-
-- `utils/VisibilitiesManager.qml` — per-monitor show/hide hub. `addVisibility(screen, name, shortcut, isolated, autostart, description)` registers the module; `setVisibility(screen, name, bool)` toggles.
-- `utils/InteractionManager.qml` — global Singleton coordinating per-rail interaction stacks driven by `BorderZone` strips. Three modes: **hover** (per-rail stack, advances on fresh enter or click; resets when rail empties), **slide** (press inside + drag out; single handler per rail), **drop** (file/text DragEnter; single handler per rail). Modules call `registerHover/registerSlide/registerDrop(rail, …)` from `Component.onCompleted` and `unregisterHover/...` from `Component.onDestruction`. Also publishes `stripHovered[rail]` / `stripDragOver[rail]` for modules' auto-hide logic. See [docs/development/interaction-manager.md](docs/development/interaction-manager.md).
-- Shortcuts on Niri use `Quickshell.Io.IpcHandler` (see `components/misc/CustomShortcut.qml`). There's no `hyprland_global_shortcuts_v1` on Niri — bind in `~/.config/niri/config.kdl`:
-  ```kdl
-  binds {
-      Mod+Space hotkey-overlay-title="Toggle launcher" {
-          spawn "qs" "-c" "pShell" "ipc" "call" "launcher" "activate";
-      }
-  }
-  ```
-- `utils/FocusManager.qml` — coordinates keyboard focus via `NiriFocusGrab`. Modules call `FocusManager.requestFocus(name)` / `releaseFocus(name)`.
-- `utils/InputManager.qml` — layershell input mask region collection. Each `WindowSlot` adds its `inputRegion` + `holdoverRegion` + 4 bridges. See [docs/development/input-mask.md](docs/development/input-mask.md).
-
-### Configuration
-
-`config/Config.qml` reads `~/.config/pShell/shell.json` (hardcoded path; intended `Paths.config`). Sub-configs live in `config/<name>config/`:
-
-- `Config.bar` → `barconfig/BarConfig.qml`
-- `Config.launcher` → `launcherconfig/LauncherConfig.qml`
-- `Config.notifs` → `notifsconfig/NotifsConfig.qml`
-- `Config.backgrounds` → `backgroundsconfig/BackgroundsConfig.qml`
-- `Config.border` → `borderconfig/BorderConfig.qml` (visible chrome + 8 zonal `zoneRoundings`)
-- `Config.corners` → `cornersconfig/CornersConfig.qml`
-- `Config.stash` → `stashconfig/StashConfig.qml`
-- `Config.general` → `generalconfig/GeneralConfig.qml` (shell-wide prefs; `advanced` drives the settings basic/advanced disclosure)
-- `Config.dashboard` → `dashboardconfig/DashboardConfig.qml` (hover dashboard; per-page token sub-objects `dash`/`media`/`performance`/`weather` + `order[]`/`disabled[]` page lists)
-- `Config.custom` → open `var` map for third-party module settings, keyed by `SettingsSchema.key`. Read with `Config.getCustom(key, field, fallback)`, write with `Config.setCustom(key, field, value)` (it reassigns `custom` wholesale so JsonAdapter persists).
-
-Config **presets** (full-config themes + per-section snapshots) live under `~/.config/pShell/presets/<scope>/<name>.json`, managed by `utils/PresetsManager.qml` (IPC target `presets`; apply = write file → `reload()`).
-
-`config/Appearance.qml` is the design-token singleton: `rounding.{small,normal,large,full,scale}`, `padding.*`, `spacing.*`, `font.family.{sans,mono,tabler}`, `font.size.*`, `anim.curves.*`, `anim.durations.*`. **Always reference these — never hardcode pixel/ms values.**
-
-### Settings module
-
-`modules/settings` is a normal `Window` (toggled via the `settings` IPC). Full design + phase log: [docs/development/settings.md](docs/development/settings.md). Pieces:
-
-- **Editing** — pages two-way-bind to `Config.*` (JsonAdapter auto-writes `shell.json`). Official pages are hand-written in `modules/settings/pages/` (`BarPage`, `BackgroundsPage`, …) over `SettingSection` + `SettingRow`; registered in `SettingsContent.qml`'s `pages` array (`name`/`icon`/`scope`/`component`).
-- **Third-party contract** — a module ships a lightweight sibling `<Name>.settings.qml` (a pure `components/SettingsSchema.qml`: `title`/`icon`/`key`/`fields[]`). `SettingsDiscovery.qml` scans `modules/{bar,launcher}/content/components/` for `*.settings.qml` (loads **only the schema**, never the module), and `components/controls/SchemaForm.qml` renders it generically into a `SchemaPage`, persisting values in `Config.custom[key]`. Drop a widget + its `.settings.qml` → its page appears automatically; defaults are seeded into `Config.custom` at discovery.
-- **Presets / themes** — `utils/PresetsManager.qml` (scopes = `full` + each config section). `pages/ThemesPage.qml` manages full-config theme cards (apply/rename/delete/save); the sidebar `PresetButton.qml` is scope-aware (follows the current tab). Destructive delete is two-tap confirmed.
-- **Hints** — `components/controls/Hint.qml` (a `Popup`, so it renders above everything and is never clipped by the content pane) + `HintIcon.qml`. Wire via `hintText`/`hintMedia` on a `SettingRow`, or `hint: { text, media }` on a schema field (media auto-detects GIF/WebP).
-- **basic/advanced** — `Config.general.advanced`; gate any field/section/page with `visible: !advanced || Config.general.advanced`.
-- Sidebar icons are **tabler** glyphs (`Appearance.font.family.tabler`, incl. `IconButton`/`StyledIcon`). Write them as `\uXXXX` escapes (literal PUA chars get stripped by the edit tooling) and verify codepoints against the installed font cmap — see [tabler-icon-codepoints memory].
-
-### Dashboard module
-
-`modules/dashboard` is a hover-triggered panel (drops from a configurable edge,
-default top-center) that hosts **modular, self-discovering pages** — visually a
-1:1 port of caelestia's dashboard, but on pShell's own tokens/colours/tabler
-glyphs.
-
-- **Wrapper** `DashboardWrapper.qml` — clone of `StashWrapper`: registers on the
-  rail derived from anchors, opens on hover via `InteractionManager.registerHover`
-  (the trigger is the existing `BorderZone` strip — see the hover-trigger pattern),
-  auto-hides on `_anyHovered` drop. Rails contract uses `mode: "push"`. Instanced
-  in `drawers/Drawers.qml`.
-- **Page contract (the modularity)** — each page is a **folder** under
-  `modules/dashboard/pages/<id>/` shipping a `<id>.page.qml` **manifest** that is a
-  `components/DashboardPage.qml` (`QtObject { id; title; icon /*tabler glyph*/;
-  order; Component content }`). The page declares its own title + icon.
-  `content/DashboardRegistry.qml` auto-discovers folders (nested `FolderListModel`,
-  mirrors `SettingsDiscovery`) and loads only the manifest (content built lazily by
-  the tab view). **Add a page-folder + manifest → a tab appears automatically**;
-  no hardcoded tab list.
-- **UI** `content/DashboardContent.qml` (tab bar + horizontally-swipeable page
-  area with slide+resize animation) + `content/DashboardTabs.qml` (indicator).
-  Sizing gotchas that bit us: every page's outer item **must** expose a real
-  `implicitHeight`/`implicitWidth` (a card missing `implicitHeight` collapses the
-  Flickable and overlaps content); tab `currentIndex` is a **one-way** input +
-  `tabClicked` signal (writing it internally breaks the external binding so the
-  indicator freezes on swipe); the current page loads **synchronously** while other
-  pages are deferred ~450 ms + `asynchronous: true` so first-open doesn't hang.
-- **Config** `Config.dashboard` → `config/dashboardconfig/DashboardConfig.qml`:
-  enabled/anchors/mode/margins/padding/rounding/shortcut/autoHideMs, `order[]` +
-  `disabled[]` (arrays of page **ids** — reassign the whole array so JsonAdapter
-  persists), weather location/units, and **design tokens as a sub-object per page**
-  (`dash`/`media`/`performance`/`weather`, values 1:1 from caelestia
-  `DashboardTokens`) + per-perf-widget `show*` toggles.
-- **Settings page** `modules/settings/pages/DashboardSettingsPage.qml` (registered
-  in `SettingsContent.qml`, scope `dashboard`): enable, anchor edge, padding/
-  rounding/autohide, a **drag-reorder + toggle list** of pages, Performance-widget
-  toggles, Weather. (Still WIP — see `tmp/dashboard-settings-reminders.md`.)
-- **Services** (see below): `SystemUsage` is superseded on the perf/resources pages
-  by the real `Caelestia.Services` sensors; `Players`/`Weather`/`NetworkUsage`/
-  `Audio`/`SysInfo`/`Icons.getWeatherIconWmo` back the widgets.
-- **Rich components** ported for parity: `components/controls/DashProgress.qml`
-  (sweep-angle gauges + wavy arc via `Caelestia.Components.WavyLine`, kept separate
-  from the simple `CircularProgress`) and `DashProgressBar.qml` (M3 linear bar with
-  stop dot). Round transport buttons are the **existing** `IconButton` (already
-  round + radius-morph); the play button just gets `Layout.fillWidth`.
-
-### Services
-
-Singletons in `services/`:
-
-- `Niri.qml` — workspaces, toplevels, `dispatch()`
-- `Notifs.qml` — D-Bus notification server
-- `Network.qml` / `Nmcli.qml`
-- `Colours.qml` — dynamic palette (matugen) + the transparency system: `palette` (opaque M3 roles), `tPalette` (translucency-aware roles), `layer()` / `alterColour()` helpers, and `wallLuminance` (from the `Caelestia.ImageAnalyser` plugin). See **[Transparency & the `tPalette` rule](#transparency--the-tpalette-rule)**.
-- `Time.qml`
-- `WallpaperState.qml` — current per-monitor wallpaper (`forMonitor(name).path`); `Colours.wallpaperPath` picks a representative image from it for luminance analysis
-- **Dashboard-backing services:** `Players.qml` (MPRIS), `SystemUsage.qml`
-  (CPU/RAM from `/proc`, disk via `df` — a lightweight fallback; the perf/resources
-  pages use the real `Caelestia.Services` sensors instead), `Weather.qml`
-  (open-meteo via `XMLHttpRequest`; loc/units from `Config.dashboard`),
-  `NetworkUsage.qml` (`/proc/net/dev` → speeds/totals, history in
-  `Caelestia.Internal.CircularBuffer`; polls while `refCount>0`), `Audio.qml`
-  (minimal: `CavaProvider`+`BeatTracker` for the media visualiser), `SysInfo.qml`
-  (uptime/wm/os glyph). `utils/Icons.qml` gained `getWeatherIconWmo(code)` (WMO→
-  tabler).
-
-### Plugin modules
-
-Native QML modules are added from the top-level `CMakeLists.txt` via three
-`add_subdirectory`s:
-
-- **`plugin/src/Caelestia/`** — pShell's own two modules: `Caelestia.Blobs`
-  (SDF panels) and `Caelestia` (`ImageAnalyser`). Their `qml_module(...)` helper is
-  local to `plugin/src/Caelestia/CMakeLists.txt`.
-- **`plugin/caelestia/`** — **vendored** caelestia C++ modules the dashboard binds
-  to: `Caelestia.Config` (GlobalConfig/Tokens/Appearance — a parallel config system,
-  NOT pShell's `qs.config`), `Caelestia.Internal` (sparkline, visualiser bars,
-  CircularBuffer, indicator managers), `Caelestia.Services` (Cpu/Gpu/Memory/Storage/
-  DiskInfo sensors + audio/beat/cava + lyrics + `UsageFmt`/`ServiceRef`),
-  `Caelestia.Components` (WavyLine, ButtonRow, LazyListView). Self-contained subtree
-  with its own build helpers (`cmake/{pch,qml-module,sensorslib}.cmake`); the helper
-  installs backing libs to `Caelestia/lib/` with rpath so the submodules cross-link.
-  **System deps:** pipewire, aubio, libsensors, libcava.
-- **`plugin/m3shapes/`** — **vendored** `M3Shapes` (github.com/soramanew/m3shapes):
-  `MaterialShape` M3 organic shapes (Pill/Gem/ClamShell/Diamond/Sunny/VerySunny/
-  Cookie*Sided/SoftBurst…) + `distanceAtAngle`/`pointAtAngle`. Its own `CMakeLists`
-  installs to `M3Shapes/`; we added `INSTALL_RPATH "$ORIGIN"` to the plugin so it
-  finds its backing `libm3shapes.so`.
-
-All install to `/usr/lib/qt6/qml/...`. **Adding/changing a C++ type means a rebuild
-+ `sudo cmake --install build --prefix /usr` + a real `qs -c pShell` reload —
-qmlcachegen/qmllint can't see uninstalled plugin types.**
-
-- **`Caelestia`** (`ImageAnalyser/`) — `import Caelestia` exposes `ImageAnalyser` (`source`/`sourceItem`/`rescaleSize` → `luminance`/`dominantColour`, computed off-thread via QtConcurrent). `Colours.qml` feeds it `wallpaperPath` and reads `luminance` as `wallLuminance` for the transparency tint. Links `Qt::Gui/Quick/Concurrent`.
-
-#### Caelestia.Blobs
-
-`plugin/src/Caelestia/Blobs/` — SDF panel renderer adapted from upstream caelestia. Builds a single Qt scene-graph material that merges multiple `BlobRect`s and one `BlobInvertedRect` into one shader pass with optional inverted-corner joins. Exposed types:
-
-- `BlobGroup` — shared SDF compositor. Properties: `smoothing`, **`stickSmooth: real`** (neck-fatness multiplier on the smin radius between two sticking rects; 1 = legacy, >1 = capsule).
-- `BlobRect` — rounded rectangle in the group. Properties: `radius`, `deformScale`, per-corner radii (`topLeft/topRight/bottomLeft/bottomRightRadius`), `exclude` (list), **`zoneIndex: int`** (0..7 = zone for per-zone присасывание; -1 = no zone → strength 0), **`sticks: bool`** (default true; false → no SDF merge with neighbours/frame, no boost/sink → clean floating contour).
-- `BlobInvertedRect` — frame with rounded inner cutout. Properties: `borderLeft/Right/Top/Bottom`, **`zoneRoundings: list<real>`** (8 elements; per-zone присасывание strength, see [docs/development/border-zones.md](docs/development/border-zones.md)).
-- `BlobShape` (base) — exposes `virtual int zoneIndex() const` and `virtual bool sticks() const` (defaults -1 / true, overridden in `BlobRect`).
-
-**Cap: 16 rects per `BlobGroup`.** All shell panels share one group in `Backgrounds.qml`. The single `BlobInvertedRect` carries the per-zone roundings; the shader reads each rect's packed `zoneIndex` (float-encoded in `rectData[i*5+3].z`) and looks up the matching strength to gate three effects: per-rect SDF boost scale, sink loop, and final smin-with-frame. The `.w` slot of the same vec4 carries the per-rect **`sticks`** flag: it's ANDed into the zone strength (kills boost/sink/frame-merge when 0) and gates the inter-rect pairwise smin (skip if either rect doesn't stick; widen to `smoothFactor * stickSmooth` when both do → capsule neck). See [docs/development/border-zones.md](docs/development/border-zones.md).
-
-The uniform buffer is **1472 bytes** (up from 1440) after adding two `vec4` slots (`zoneRoundingsLow/High`); the per-rect `sticks` flag reuses the spare `.w` slot and `stickSmooth` reuses the former `pad0` scalar, so neither changed the buffer size. Both `blob.vert` and `blob.frag` declare the same layout.
-
-## Key Files by Task
-
-| Task | File(s) |
-|------|---------|
-| Color scheme / design tokens | `config/Appearance.qml`, `services/Colours.qml` |
-| Bar layout sections | `modules/bar/content/Begin.qml`, `Center.qml`, `End.qml` |
-| Bar thickness/position | `config/barconfig/BarConfig.qml`, `modules/bar/BarWrapper.qml` |
-| Backgrounds rendering | `drawers/backgrounds/Backgrounds.qml`, `drawers/backgrounds/components/*.qml`, `utils/BackgroundsManager.qml` |
-| Border (chrome + 8 zonal interaction strips) | `drawers/border/Border.qml`, `drawers/border/Borders.qml`, `drawers/border/BorderZone.qml`, `config/borderconfig/BorderConfig.qml` |
-| Per-rail interaction stack (hover/slide/drop) | `utils/InteractionManager.qml` |
-| Wrapper contract examples | `modules/{bar,launcher,notifications,stash}/*Wrapper.qml` |
-| Slot input mask (bridges + holdover + envelope) | `drawers/backgrounds/components/WindowSlot.qml`, `utils/InputManager.qml`, `drawers/Drawers.qml` (mask Region) |
-| Edge reservation (exclusion zones) | `drawers/Drawers.qml` (`reservedEdge` aggregation), `drawers/exclusions/Exclusions.qml` |
-| Niri integration | `services/Niri.qml`, `utils/NiriFocusGrab.qml` |
-| LocalSend send | `modules/stash/content/StashContent.qml`, `modules/stash/content/{DevicePicker,DeviceUnit}.qml`, `scripts/localsend_{discover,send}.py` |
-| LocalSend receive | `services/LocalSend.qml` (singleton: owns receive server, accept/reject state), `modules/stash/content/IncomingRequest.qml` (accept/reject card), `scripts/localsend_receive.py` (HTTPS server), `scripts/localsend_pickdir.sh` (folder dialog) |
-| Dashed-border component | `components/DashedRect.qml` (Canvas-based, configurable dash / gap / radius) |
-| Per-zone shader logic (sink + boost + frame smin gating) | `plugin/src/Caelestia/Blobs/shaders/blob.frag`, `plugin/src/Caelestia/Blobs/blobmaterial.{hpp,cpp}` |
-| Per-window присасывание toggle (`sticks`) + capsule (`stickSmooth`) | `plugin/src/Caelestia/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
-| SDF frame inset to border inner edge | `drawers/backgrounds/Backgrounds.qml` (`_frameInset*`) |
-| Settings UI (pages, contract, presets, hints) | `modules/settings/{SettingsContent,SettingsDiscovery,PresetButton}.qml`, `modules/settings/pages/*.qml`, `components/{SettingsSchema,SettingRow,SettingSection}.qml`, `components/controls/{SchemaForm,Hint,HintIcon}.qml`, `utils/PresetsManager.qml`, `config/generalconfig/GeneralConfig.qml` — see [docs/development/settings.md](docs/development/settings.md) |
-| Dashboard (modular pages, hover-open, swipe) | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/<id>.page.qml` + content, `components/DashboardPage.qml`, `config/dashboardconfig/DashboardConfig.qml`, `modules/settings/pages/DashboardSettingsPage.qml`; rich progress = `components/controls/{DashProgress,DashProgressBar}.qml`; vendored plugins `plugin/{caelestia,m3shapes}/` |
-| Dashboard-backing services | `services/{Players,SystemUsage,Weather,NetworkUsage,Audio,SysInfo}.qml`, `utils/Icons.qml` (`getWeatherIconWmo`) |
+Task → file lookup:
+→ [`docs/development/key-files.md`](docs/development/key-files.md)
 
 ---
 
@@ -326,11 +54,79 @@ These conventions exist because past iterations made mistakes here. Follow them 
 
 ### Reuse existing components — don't inline raw Rectangle/Text
 
-Always prefer `StyledRect`, `StyledText`, `StyledIcon`, `IconButton`, `TextButton`, `IconTextButton`, `Anim`, `CAnim`, `StateLayer`, `SettingRow`, `CollapsibleSection`, etc. over raw `QtQuick` primitives. The styled wrappers carry palette bindings, font defaults, and animation Behaviors for free. If a styled variant doesn't exist for what you need, ask before introducing a new one.
+Always prefer `StyledRect`, `StyledText`, `StyledIcon`, `IconButton`/`TextButton`/`IconTextButton`/`ToggleButton` (all on `ButtonBase`), `Anim`, `CAnim`, `StateLayer`, `SettingRow`, `CollapsibleSection`, `StyledProgressBar`, `LoadingIndicator`, `FadeImage`, `VerticalFadeFlickable`, `Colouriser`, `ColouredIcon`, etc. over raw `QtQuick` primitives. The styled wrappers carry palette bindings, font defaults, and animation Behaviors for free. If a styled variant doesn't exist for what you need, ask before introducing a new one.
+
+### Porting components from caelestia
+
+pShell's `components/` base is **ported from caelestia** (checkout under `tmp/caelestia/` when present). The full port log — Phases 0–5: M3 tokens+typescale → `Anim`/`CAnim`/`StyledText` → `ButtonBase`+button family → `StateLayer` (Shape ripple) → containers/fields → new comps (`FadeImage`/`LoadingIndicator`/`StyledProgressBar`/`Mask`/`VerticalFadeFlickable`) → `CUtils` + controlled `StyledSlider` + token migration/alias removal + dead-code prune — lives in the **[caelestia-component-refactor memory]**. When pulling another component over, apply these mechanical translations — then honour the pShell-specific contracts below (they diverge from caelestia on purpose; don't "fix" them back):
+
+| caelestia | pShell |
+|---|---|
+| `import Caelestia.Config` + `Tokens.*` | `import qs.config` + `Appearance.*` |
+| `Tokens.anim.<curve>` | `Appearance.anim.curves.<curve>` (curves sit one level deeper) |
+| `easing: Tokens.anim.X` | `easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.anim.curves.X` (pShell curves are `list<real>`, not prebuilt easings) |
+| `Colours.palette.m3camelCase` | `Colours.palette.snake_case` (strip `m3`, camelCase→snake_case; note `m3neutral`/`m3success*` have no pShell equivalent) |
+| `Tokens.font.*` builder (`.size().weight().build()`) | assign the typescale `font` value directly (`font: Appearance.font.body.small`); pShell has no FontBuilder |
+| `MaterialIcon` | `StyledIcon` (Tabler) — and remap Material-Symbol glyph *names* → Tabler codepoints at the call site (see [[tabler-icon-codepoints]] memory) |
+| `CUtils.*` | available as-is (`import Caelestia`) |
+
+**pShell contracts that differ from caelestia:**
+- **`StateLayer`** exposes an overridable **`function onClicked()`** (not caelestia's `onClicked:` signal). Its ripple is a `Shape`/`RadialGradient`, but the public API (`color`/`radius`/`rect` + corner-radius aliases/`showHoverBackground`/`function onClicked`) is pShell's — keep it so the 30+ existing consumers don't break.
+- The button family extends **`ButtonBase`** (M3 colour logic + radius-morph on press). pShell keeps the property name **`toggle`** (not `isToggle`); buttons are rounded-rect by default (`defaultRadius` = `rounding.large`), pass `isRound: true` for a pill/circle.
+- **`StyledSlider`** is **controlled**: it emits `interaction(v)` (v already mapped through `from`/`to` + `stepSize`) and does *not* self-update `value` on drag. Bind `value:` to your source and write it back from `onInteraction: v => …` — there is no `onMoved`/`onValueChanged` drag update.
+- **`StyledIcon`** carries Tabler variable-font axes (`fill`/`grade` via `font.variableAxes`) — set `font.pointSize`/`font.family` on it, never assign a whole `font:` (that wipes the axes).
 
 ### Always use Appearance design tokens
 
-Never hardcode pixel/ms/radius/font-size literals in module code. Always pull from `Appearance.rounding.*`, `Appearance.padding.*`, `Appearance.spacing.*`, `Appearance.font.size.*`, `Appearance.anim.durations.*`, `Appearance.anim.curves.*`. Hardcoded values lurk only in `config/*Config.qml` defaults (where they're per-module configuration, not styling).
+Never hardcode pixel/ms/radius/font-size literals in module code. Always pull from `Appearance.rounding.*`, `Appearance.padding.*`, `Appearance.spacing.*`, the font typescale (`Appearance.font.{body,title,label,…}.*`), `Appearance.anim.durations.*`, `Appearance.anim.curves.*`. Hardcoded values lurk only in `config/*Config.qml` defaults (where they're per-module configuration, not styling).
+
+### Token scale & which step to use where
+
+`rounding`/`spacing`/`padding` share one M3 step scale (`extraSmall 4 · small 8 · medium 12 · large 16 · largeIncreased 20 · extraLarge 28 · extraLargeIncreased 32 · extraExtraLarge 48`). **Pick a step by its role, not by eyeballing a pixel count** — these are the conventions caelestia follows (mined from its components), and matching them keeps pShell visually consistent with the ported base.
+
+**`rounding` — corner radius**
+
+| Step | Use for |
+|---|---|
+| `full` | pills & circles — switches, scrollbar handles, chips, avatars, dots, round `IconButton` |
+| `extraLarge` (28) | large top-level surfaces — panels, sheets, dashboard / hover containers, big cards |
+| `large` (16) | default interactive radius — buttons (`ButtonBase.defaultRadius`), input fields, standard cards |
+| `medium` (12) | small tiles / nested containers, button **checked** state, tooltips, menu rows |
+| `small` (8) | **pressed** state (radius-morph), tight internal rounding |
+| `extraSmall` (4) | hairline joins — segment caps (often `extraSmall / 2`), slider track corners |
+
+**`spacing` — gap *between* sibling items in a Row/Column/Grid**
+
+| Step | Use for |
+|---|---|
+| `extraSmall` (4) | very tight — slider handle↔track, progress segments, calendar cells |
+| `small` (8) | a closely-bound pair — icon↔text inside a control, label↔value |
+| `medium` (12) | **default** gap between items in a layout |
+| `large` (16) | gap between distinct groups / sub-sections |
+| `largeIncreased`+ | big separations (rare) |
+
+**`padding` — inset between a container edge and its content**
+
+| Step | Use for |
+|---|---|
+| `extraSmall` (4) | ultra-compact (text-type icon button uses `extraSmall / 2`) |
+| `small` (8) | compact control padding — icon buttons, vertical padding of text buttons / rows |
+| `medium` (12) | **default** inner / content padding; text-button horizontal padding; section-header padding; tooltip |
+| `large` (16) | card / panel content padding; toggle-button horizontal padding |
+| `largeIncreased` / `extraLarge`+ | spacious padding on large surfaces (rare) |
+
+**Fonts — assign the typescale by semantic role, not by size.** Each role is a full `font` (family + size + weight) bound wholesale (`font: Appearance.font.body.small`); ranks are `large`/`medium`/`small` (icon also `extraLarge`).
+
+| Role | Use for |
+|---|---|
+| `headline.*` (32/28/24) | hero text — clocks, big numbers, top-of-page headers (rare) |
+| `title.*` (22/16/14, Medium) | section & card titles, dialog headers |
+| `body.*` (16/14/12, Normal) | running / content text — **`body.small` is the `StyledText` default**; the bulk of text |
+| `label.*` (14/12/11, Medium) | affordance / secondary text — buttons, chips, tabs, captions, trailing / hint text, tooltips |
+| `mono.*` | monospace / aligned numbers |
+| `icon.*` (via `StyledIcon`) | `icon.medium` default glyph · `icon.large` prominent · `icon.extraLarge` hero · `icon.small` inline |
+
+Prefer the typescale for anything text-role-shaped; the flat `font.size.{small…extraLarge}` is kept only for one-off point sizes (e.g. scaling a glyph). Migrating remaining `font.size.*` / `font.pointSize:` call sites to the typescale is fair game.
 
 ### Transparency & the `tPalette` rule
 

@@ -19,7 +19,7 @@ Item {
         if (count === 0)
             return 0;
 
-        let height = (count - 1) * Appearance.spacing.smaller;
+        let height = (count - 1) * Appearance.spacing.small;
         for (let i = 0; i < count; i++)
             height += list.itemAtIndex(i)?.nonAnimHeight ?? 0;
 
@@ -29,7 +29,7 @@ Item {
     StyledClippingRect {
         anchors.fill: parent
 
-        radius: Appearance.rounding.normal
+        radius: Appearance.rounding.large
 
         StyledListView {
             id: list
@@ -58,7 +58,7 @@ Item {
                 }
 
                 implicitWidth: notif.implicitWidth
-                implicitHeight: notif.implicitHeight + (idx === 0 ? 0 : Appearance.spacing.smaller)
+                implicitHeight: notif.implicitHeight + (idx === 0 ? 0 : Appearance.spacing.small)
 
                 ListView.onRemove: removeAnim.start()
 
@@ -101,7 +101,7 @@ Item {
 
                 StyledClippingRect {
                     anchors.top: parent.top
-                    anchors.topMargin: wrapper.idx === 0 ? 0 : Appearance.spacing.smaller
+                    anchors.topMargin: wrapper.idx === 0 ? 0 : Appearance.spacing.small
 
                     radius: notif.radius
                     implicitWidth: notif.implicitWidth
@@ -138,9 +138,9 @@ Item {
 
                     let height = 0;
                     for (let i = 0; i < count; i++) {
-                        height += (list.itemAtIndex(i)?.nonAnimHeight ?? 0) + Appearance.spacing.smaller;
+                        height += (list.itemAtIndex(i)?.nonAnimHeight ?? 0) + Appearance.spacing.small;
 
-                        if (height - Appearance.spacing.smaller >= scrollY)
+                        if (height - Appearance.spacing.small >= scrollY)
                             return i;
                     }
 
@@ -159,9 +159,9 @@ Item {
 
                     let height = 0;
                     for (let i = count - 1; i >= 0; i--) {
-                        height += (list.itemAtIndex(i)?.nonAnimHeight ?? 0) + Appearance.spacing.smaller;
+                        height += (list.itemAtIndex(i)?.nonAnimHeight ?? 0) + Appearance.spacing.small;
 
-                        if (height - Appearance.spacing.smaller >= scrollY)
+                        if (height - Appearance.spacing.small >= scrollY)
                             return count - i - 1;
                     }
 

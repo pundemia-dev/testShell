@@ -136,7 +136,7 @@ done`;
                     readonly property bool preselected: Capture.resolveRecordAudio() === modelData.v
 
                     anchors.verticalCenter: parent.verticalCenter
-                    implicitWidth: chipLabel.implicitWidth + Appearance.padding.normal * 2
+                    implicitWidth: chipLabel.implicitWidth + Appearance.padding.medium * 2
                     implicitHeight: chipLabel.implicitHeight + Appearance.padding.small * 2
                     radius: Appearance.rounding.full
                     color: preselected ? Colours.palette.primary : Colours.palette.surface_container_high
@@ -174,7 +174,7 @@ done`;
         id: recC
 
         Row {
-            spacing: Appearance.spacing.smaller
+            spacing: Appearance.spacing.small
 
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter

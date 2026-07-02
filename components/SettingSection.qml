@@ -11,7 +11,7 @@ StyledRect {
     property string title: ""
     property string description: ""
     property string icon: ""
-    property real contentSpacing: Appearance.spacing.smaller
+    property real contentSpacing: Appearance.spacing.small
 
     // When true, the whole section is hidden unless the UI is in advanced mode.
     property bool advanced: false
@@ -19,9 +19,9 @@ StyledRect {
     visible: !advanced || Config.general.advanced
 
     Layout.fillWidth: true
-    implicitHeight: outerColumn.implicitHeight + Appearance.padding.larger * 2
+    implicitHeight: outerColumn.implicitHeight + Appearance.padding.large * 2
 
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.large
     // Nested card inside the settings window surface — layered like caelestia's
     // SectionContainer (layer 2 when translucent; opaque role otherwise).
     color: Colours.transparency.enabled ? Colours.layer(Colours.palette.surface_container, 2) : Colours.palette.surface_container
@@ -32,8 +32,8 @@ StyledRect {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        anchors.margins: Appearance.padding.larger
-        spacing: Appearance.spacing.smaller
+        anchors.margins: Appearance.padding.large
+        spacing: Appearance.spacing.small
 
         // Section title (optional leading icon)
         RowLayout {

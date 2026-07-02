@@ -18,7 +18,7 @@ import QtQuick.Layouts
 // preset groups (e.g. Appearance tokens) read apart from Auto/Custom:
 //   { label: "Auto",   value: undefined }      // writes undefined (unset)
 //   { separator: true }                        // visual divider
-//   { label: "Normal", value: Appearance.padding.normal }
+//   { label: "Normal", value: Appearance.padding.medium }
 //   { label: "Custom", custom: true }          // reveals the slider
 RowLayout {
     id: root

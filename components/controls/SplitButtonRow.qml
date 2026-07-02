@@ -24,7 +24,7 @@ StyledRect {
 
     Layout.fillWidth: true
     implicitHeight: row.implicitHeight + Appearance.padding.large * 2
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.large
     color: Colours.layer(Colours.palette.surface_container, 2)
 
     clip: false
@@ -35,7 +35,7 @@ StyledRect {
         id: row
         anchors.fill: parent
         anchors.margins: Appearance.padding.large
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledText {
             Layout.fillWidth: true

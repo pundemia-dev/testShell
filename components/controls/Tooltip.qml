@@ -83,7 +83,7 @@ Popup {
             let newY = targetPos.y - tooltipHeight - Appearance.spacing.small;
 
             // Keep within bounds
-            const padding = Appearance.padding.normal;
+            const padding = Appearance.padding.medium;
             if (newX < padding) {
                 newX = padding;
             } else if (newX + tooltipWidth > (parent.width - padding)) {
@@ -101,8 +101,7 @@ Popup {
             property: "opacity"
             from: 0
             to: 1
-            duration: Appearance.anim.durations.expressiveFastSpatial
-            easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
+            type: Anim.FastSpatial
         }
     }
 
@@ -111,8 +110,7 @@ Popup {
             property: "opacity"
             from: 1
             to: 0
-            duration: Appearance.anim.durations.expressiveFastSpatial
-            easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
+            type: Anim.FastSpatial
         }
     }
 
@@ -137,11 +135,11 @@ Popup {
     contentItem: StyledRect {
         id: tooltipRect
 
-        implicitWidth: tooltipText.implicitWidth + Appearance.padding.normal * 2
-        implicitHeight: tooltipText.implicitHeight + Appearance.padding.smaller * 2
+        implicitWidth: tooltipText.implicitWidth + Appearance.padding.medium * 2
+        implicitHeight: tooltipText.implicitHeight + Appearance.padding.large
 
         color: Colours.palette.surface_container_highest
-        radius: Appearance.rounding.small
+        radius: Appearance.rounding.medium
         antialiasing: true
 
         // Add elevation for depth
@@ -159,7 +157,7 @@ Popup {
 
             text: root.text
             color: Colours.palette.on_surface
-            font.pointSize: Appearance.font.size.small
+            font: Appearance.font.label.small
         }
     }
 

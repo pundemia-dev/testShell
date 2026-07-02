@@ -1,88 +1,113 @@
-import ".."
-import qs.components
-import qs.services
-import qs.config
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Templates
+import Caelestia
+import Caelestia.Components
+import qs.components
+import qs.config
+import qs.services
 
-// Caelestia-style slider: thin track, narrow handle stick, an end dot, and a
-// filled part that can be a flat line or an animated sine wave (`wavy`). Kept as
-// a plain Templates.Slider so the standard API (value/from/to/stepSize/
-// onValueChanged + built-in drag) still works for existing call sites.
+// Ported from caelestia: controlled M3 slider — a custom drag MouseArea emits
+// `interaction(v)` (with v mapped through from/to + stepSize) rather than
+// self-updating value, so the consumer owns the value. Thin adaptive handle,
+// remaining track + end dot that fade with width, and an optional wavy fill.
 Slider {
     id: root
 
-    // Visuals
-    property bool wavy: false
-    property bool animateWave: pressed   // wave scrolls while dragging
-    property int waveFrequency: 6
-    property int radius: Appearance.rounding.full
-    property color fgColour: Colours.palette.primary
-    property color bgColour: Colours.palette.surface_container_highest
+    property bool wavy
+    property bool animateWave
+    property real waveFrequency: 6
+    property int waveDuration: 1000
+    property int radius: Appearance.rounding.medium
+    property bool interactionOnMove: true
+    readonly property bool dragging: mouse.pressed
 
-    // Filled length up to the handle centre (drives both the line and the wave).
-    readonly property real filledWidth: handle ? handle.x + handle.implicitWidth / 2 : 0
+    property color fgColour: enabled ? Colours.palette.primary : Qt.alpha(Colours.palette.on_surface, 0.38)
+    property color bgColour: enabled ? Colours.palette.secondary_container : Qt.alpha(Colours.palette.on_surface, 0.1)
 
-    implicitHeight: 16
-    implicitWidth: 200
+    property real pos: visualPosition
+    property real filledWidth
 
-    handle: StyledRect {
-        id: handleRect
+    // Emitted on user drag; `v` is the value in [from, to] (snapped to stepSize).
+    signal interaction(v: real)
 
-        x: root.visualPosition * root.availableWidth
-        anchors.verticalCenter: parent?.verticalCenter ?? undefined
-
-        implicitWidth: 4
-        implicitHeight: root.pressed ? root.height : root.height * 0.8
-
-        radius: root.radius
-        color: root.fgColour
-
-        Behavior on implicitHeight {
-            Anim {
-                duration: Appearance.anim.durations.expressiveFastSpatial
-                easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
-            }
-        }
+    function mapFraction(frac: real): real {
+        let v = from + CUtils.clamp(frac, 0, 1) * (to - from);
+        if (stepSize > 0)
+            v = Math.round(v / stepSize) * stepSize;
+        return v;
     }
 
-    background: Item {
+    Component.onCompleted: filledWidth = Qt.binding(() => (width - handle.implicitWidth - handle.anchors.leftMargin) * pos)
+
+    implicitWidth: 200
+    implicitHeight: 12
+
+    contentItem: Item {
         anchors.fill: parent
 
-        // Remaining (un-filled) track from the filled part to the end.
         StyledRect {
             id: remaining
 
-            anchors.left: filled.right
+            anchors.left: handle.right
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: Appearance.spacing.small
+            anchors.leftMargin: Appearance.spacing.extraSmall
 
-            implicitHeight: root.height * 0.45
+            implicitHeight: parent.height * (parent.height <= 12 ? opacity : Math.min(opacity * 2, 1))
+            opacity: Math.min(width, 12) / 12
+
             radius: root.radius
-            topLeftRadius: root.radius / 4
-            bottomLeftRadius: root.radius / 4
+            topLeftRadius: Appearance.rounding.extraSmall / 2
+            bottomLeftRadius: Appearance.rounding.extraSmall / 2
             color: root.bgColour
         }
 
-        // End dot.
         StyledRect {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: implicitWidth / 2
+            anchors.rightMargin: 4 * remaining.opacity
 
-            implicitWidth: root.height * 0.18
-            implicitHeight: implicitWidth
+            implicitWidth: implicitHeight
+            implicitHeight: 4 * remaining.opacity
+            opacity: remaining.opacity
+
             radius: Appearance.rounding.full
             color: root.fgColour
         }
 
-        // Filled part: flat line or animated wave.
+        StyledRect {
+            id: handle
+
+            anchors.left: filled.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: Appearance.spacing.extraSmall
+
+            implicitWidth: 4
+            implicitHeight: {
+                const t = CUtils.clamp((parent.height - 12) / 16, 0, 1);
+                const lerp = (a, b) => a + (b - a) * t;
+                return parent.height * (mouse.pressed ? lerp(3.5, 1.5) : lerp(3, 1.2));
+            }
+
+            radius: Appearance.rounding.full
+            color: root.fgColour
+
+            Behavior on implicitHeight {
+                Anim {
+                    type: Anim.FastSpatial
+                }
+            }
+        }
+
         Loader {
             id: filled
 
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
+            asynchronous: true
+
             sourceComponent: root.wavy ? waveComp : lineComp
         }
 
@@ -91,15 +116,12 @@ Slider {
 
             StyledRect {
                 implicitWidth: root.filledWidth
-                implicitHeight: root.height * 0.45
-                radius: root.radius
-                topRightRadius: root.radius / 4
-                bottomRightRadius: root.radius / 4
-                color: root.fgColour
+                implicitHeight: root.height
 
-                Behavior on implicitWidth {
-                    Anim {}
-                }
+                radius: root.radius
+                topRightRadius: Appearance.rounding.extraSmall / 2
+                bottomRightRadius: Appearance.rounding.extraSmall / 2
+                color: root.fgColour
             }
         }
 
@@ -107,29 +129,75 @@ Slider {
             id: waveComp
 
             WavyLine {
+                lineWidth: root.height * 0.7
+                frequency: root.waveFrequency
+                startX: x
+                fullLength: root.width - handle.implicitWidth - handle.anchors.leftMargin
+                color: root.fgColour
+
                 implicitWidth: root.filledWidth
                 implicitHeight: lineWidth * amplitudeMultiplier * 2 + lineWidth
 
-                lineWidth: Math.round(root.height * 0.5)
-                amplitudeMultiplier: 0.5
-                frequency: root.waveFrequency
-                fullLength: root.availableWidth
-                color: root.fgColour
-
-                Behavior on implicitWidth {
-                    Anim {}
-                }
-
-                NumberAnimation on waveProgress {
+                Anim on waveProgress {
                     running: true
                     paused: !root.animateWave
                     from: 0
                     to: 1
-                    duration: 1000
-                    loops: Animation.Infinite
+                    duration: root.waveDuration
                     easing.type: Easing.Linear
+                    loops: Animation.Infinite
+                }
+
+                Behavior on color {
+                    CAnim {}
                 }
             }
         }
+    }
+
+    Binding {
+        id: posBinding
+
+        target: root
+        property: "pos"
+        value: CUtils.clamp(mouse.pressStartPos + mouse.dragMovement, 0, 1)
+        when: mouse.pressed
+    }
+
+    MouseArea {
+        id: mouse
+
+        property real pressStartX
+        property real pressStartPos
+        property real dragMovement
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+
+        preventStealing: true
+        implicitHeight: handle.implicitHeight
+
+        onPressed: e => {
+            widthBehavior.enabled = false;
+            pressStartX = e.x;
+            pressStartPos = root.visualPosition;
+        }
+        onPositionChanged: e => {
+            dragMovement = (e.x - pressStartX) / width;
+            if (root.interactionOnMove)
+                root.interaction(root.mapFraction(posBinding.value));
+        }
+        onReleased: e => {
+            root.interaction(root.mapFraction(posBinding.value));
+            widthBehavior.enabled = true;
+            dragMovement = 0;
+        }
+    }
+
+    Behavior on filledWidth {
+        id: widthBehavior
+
+        Anim {}
     }
 }

@@ -20,7 +20,7 @@ StyledRect {
 
     Layout.fillWidth: true
     implicitHeight: row.implicitHeight + paddings * 2
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.large
     color: Colours.layer(Colours.palette.surface_container, 2)
 
     HoverHandler { id: hoverHandler }
@@ -36,14 +36,14 @@ StyledRect {
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         anchors.margins: root.paddings
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         Loader {
             active: root.icon !== ""
             visible: active
             sourceComponent: StyledRect {
                 implicitWidth: implicitHeight
-                implicitHeight: iconItem.implicitHeight + Appearance.padding.smaller * 2
+                implicitHeight: iconItem.implicitHeight + Appearance.padding.small * 2
                 radius: Appearance.rounding.full
                 color: Colours.palette.surface_variant
 

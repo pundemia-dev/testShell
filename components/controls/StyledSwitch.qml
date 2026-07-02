@@ -18,17 +18,17 @@ Switch {
         color: root.checked ? Colours.palette.primary : Colours.layer(Colours.palette.surface_container_highest, root.cLayer)
 
         implicitWidth: implicitHeight * 1.7
-        implicitHeight: Appearance.font.size.normal + Appearance.padding.smaller * 2
+        implicitHeight: Appearance.font.body.medium.pointSize + Appearance.padding.small * 2
 
         StyledRect {
-            readonly property real nonAnimWidth: root.pressed ? implicitHeight * 1.3 : implicitHeight
+            readonly property real nonAnimWidth: root.pressed ? implicitHeight * 1.2 : implicitHeight
 
             radius: Appearance.rounding.full
             color: root.checked ? Colours.palette.on_primary : Colours.layer(Colours.palette.outline, root.cLayer + 1)
 
-            x: root.checked ? parent.implicitWidth - nonAnimWidth - Appearance.padding.small / 2 : Appearance.padding.small / 2
+            x: root.checked ? parent.implicitWidth - nonAnimWidth - Appearance.padding.extraSmall / 2 : Appearance.padding.extraSmall / 2
             implicitWidth: nonAnimWidth
-            implicitHeight: parent.implicitHeight - Appearance.padding.small
+            implicitHeight: parent.implicitHeight - Appearance.padding.extraSmall
             anchors.verticalCenter: parent.verticalCenter
 
             StyledRect {
@@ -39,7 +39,9 @@ Switch {
                 opacity: root.pressed ? 0.1 : root.hovered ? 0.08 : 0
 
                 Behavior on opacity {
-                    Anim {}
+                    Anim {
+                        type: Anim.DefaultEffects
+                    }
                 }
             }
 
@@ -83,12 +85,12 @@ Switch {
 
                 anchors.centerIn: parent
                 width: height
-                height: parent.implicitHeight - Appearance.padding.small * 2
+                height: parent.implicitHeight - Appearance.padding.medium
                 preferredRendererType: Shape.CurveRenderer
                 asynchronous: true
 
                 ShapePath {
-                    strokeWidth: Appearance.font.size.larger * 0.15
+                    strokeWidth: Appearance.font.body.large.pointSize * 0.15
                     strokeColor: root.checked ? Colours.palette.primary : Colours.palette.surface_container_highest
                     fillColor: "transparent"
                     capStyle: Appearance.rounding.scale === 0 ? ShapePath.SquareCap : ShapePath.RoundCap
@@ -129,11 +131,15 @@ Switch {
             }
 
             Behavior on x {
-                Anim {}
+                Anim {
+                    type: Anim.FastSpatial
+                }
             }
 
             Behavior on implicitWidth {
-                Anim {}
+                Anim {
+                    type: Anim.FastSpatial
+                }
             }
         }
     }
@@ -145,8 +151,8 @@ Switch {
     }
 
     component PropAnim: PropertyAnimation {
-        duration: Appearance.anim.durations.normal
+        duration: Appearance.anim.durations.expressiveFastSpatial
         easing.type: Easing.BezierSpline
-        easing.bezierCurve: Appearance.anim.curves.standard
+        easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
     }
 }

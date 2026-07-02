@@ -28,12 +28,12 @@ ColumnLayout {
     property bool previewMode: false
 
     Layout.fillWidth: true
-    spacing: Appearance.spacing.normal
+    spacing: Appearance.spacing.medium
 
     // Header: hint + Preview toggle.
     RowLayout {
         Layout.fillWidth: true
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledText {
             text: qsTr("Drag a widget onto the bar to add it:")
@@ -73,7 +73,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: _packH
 
-        readonly property real gap: Appearance.spacing.normal
+        readonly property real gap: Appearance.spacing.medium
         readonly property real colW: 150
         readonly property int cols: Math.max(1, Math.floor((width + gap) / (colW + gap)))
 
@@ -155,7 +155,7 @@ ColumnLayout {
                 StyledRect {
                     id: frame
                     anchors.fill: parent
-                    radius: Appearance.rounding.normal
+                    radius: Appearance.rounding.large
                     color: ma.containsMouse ? Colours.palette.surface_container_highest : Colours.palette.surface_container_high
                 }
 

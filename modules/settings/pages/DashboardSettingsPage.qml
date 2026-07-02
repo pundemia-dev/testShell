@@ -76,7 +76,7 @@ Flickable {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledText {
             text: qsTr("Dashboard")
@@ -161,7 +161,7 @@ Flickable {
                             required property var modelData
                             readonly property bool active: root.currentEdge === modelData.key
 
-                            implicitWidth: edgeLabel.implicitWidth + Appearance.padding.normal * 2
+                            implicitWidth: edgeLabel.implicitWidth + Appearance.padding.medium * 2
                             implicitHeight: edgeLabel.implicitHeight + Appearance.padding.small * 2
                             radius: Appearance.rounding.small
                             color: active ? Colours.palette.secondary_container : Colours.palette.surface_container_high
@@ -238,7 +238,7 @@ Flickable {
                         width: reorder.width
                         height: reorder.rowH - Appearance.spacing.small
                         z: held ? 2 : 1
-                        radius: Appearance.rounding.normal
+                        radius: Appearance.rounding.large
                         color: held ? Colours.palette.surface_container_high
                                     : rowHover.containsMouse ? Colours.palette.surface_container
                                     : "transparent"
@@ -277,8 +277,8 @@ Flickable {
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: Appearance.padding.small
-                            anchors.rightMargin: Appearance.padding.normal
-                            spacing: Appearance.spacing.normal
+                            anchors.rightMargin: Appearance.padding.medium
+                            spacing: Appearance.spacing.medium
 
                             // Grip handle — the only draggable region.
                             StyledText {
@@ -403,8 +403,8 @@ Flickable {
                     text: Config.dashboard.weatherLocation
                     onEditingFinished: Config.dashboard.weatherLocation = text
                     padding: Appearance.padding.small
-                    leftPadding: Appearance.padding.normal
-                    rightPadding: Appearance.padding.normal
+                    leftPadding: Appearance.padding.medium
+                    rightPadding: Appearance.padding.medium
                     background: StyledRect {
                         radius: Appearance.rounding.small
                         color: Colours.palette.surface_container_high

@@ -62,12 +62,12 @@ StyledRect {
     }
 
     color: Colours.tPalette.surface
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.large
     opacity: 0.97
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Appearance.padding.normal
+        anchors.margins: Appearance.padding.medium
         spacing: Appearance.spacing.small
 
         // ── Header: sender ────────────────────────────────────────────
@@ -134,7 +134,7 @@ StyledRect {
             visible: !root.isTextMsg
             model: root.req ? root.req.files : []
             clip: true
-            spacing: Appearance.spacing.smaller / 2
+            spacing: Appearance.spacing.small / 2
 
             delegate: RowLayout {
                 id: fileRow
@@ -168,7 +168,7 @@ StyledRect {
         ColumnLayout {
             Layout.fillWidth: true
             visible: LocalSend.receiving
-            spacing: Appearance.spacing.smaller
+            spacing: Appearance.spacing.small
 
             Item {
                 Layout.fillWidth: true

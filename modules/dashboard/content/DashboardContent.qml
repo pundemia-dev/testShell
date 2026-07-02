@@ -18,7 +18,7 @@ Item {
     // Reliable hover signal for the wrapper's auto-hide.
     property bool panelHovered: hover.hovered
 
-    property int currentTab: 0
+    property int currentTab: registry.currentTab
 
     // Persistent registry injected by the wrapper. It's warmed at shell startup
     // so its async FolderListModel page discovery has long finished before the
@@ -34,7 +34,7 @@ Item {
         return repeater.itemAt(currentTab);
     }
 
-    onCountChanged: if (currentTab >= count) currentTab = Math.max(0, count - 1)
+    onCountChanged: if (registry.currentTab >= count) registry.currentTab = Math.max(0, count - 1)
 
     // On open only the current page is built (fast, single-frame); the other
     // (heavy) pages are deferred until just after the open settles so their
@@ -47,6 +47,15 @@ Item {
         onTriggered: root._othersReady = true
     }
 
+    // Animate contentX only on explicit tab switches / drag snap-backs, not on
+    // layout shifts caused by async page builds (which would scroll the view to
+    // the current page with a visible pan after _othersReady fires).
+    property bool _animContentX: false
+    onCurrentTabChanged: {
+        _animContentX = true;
+        Qt.callLater(() => { _animContentX = false; });
+    }
+
     implicitWidth: Math.max(320, view.implicitWidth + viewWrapper.anchors.margins * 2)
     implicitHeight: col.implicitHeight
 
@@ -57,7 +66,7 @@ Item {
     ColumnLayout {
         id: col
         anchors.fill: parent
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         DashboardTabs {
             id: tabs
@@ -65,7 +74,7 @@ Item {
             visible: root.count > 0
             tabs: root.pages
             currentIndex: root.currentTab
-            onTabClicked: index => root.currentTab = index
+            onTabClicked: index => registry.currentTab = index
         }
 
         // Empty state — no pages discovered or all disabled.
@@ -83,7 +92,7 @@ Item {
             Layout.fillHeight: true
             visible: root.count > 0
             color: "transparent"
-            radius: Appearance.rounding.normal
+            radius: Appearance.rounding.large
             anchors.margins: 0
 
             implicitWidth: view.implicitWidth
@@ -111,9 +120,9 @@ Item {
                         return;
                     const dx = contentX - root.currentItem.x;
                     if (dx > root.currentItem.implicitWidth / 2)
-                        root.currentTab = Math.min(root.currentTab + 1, root.count - 1);
+                        registry.currentTab = Math.min(registry.currentTab + 1, root.count - 1);
                     else if (dx < -root.currentItem.implicitWidth / 2)
-                        root.currentTab = Math.max(root.currentTab - 1, 0);
+                        registry.currentTab = Math.max(registry.currentTab - 1, 0);
                 }
 
                 onDragEnded: {
@@ -121,14 +130,18 @@ Item {
                         return;
                     const dx = contentX - root.currentItem.x;
                     if (dx > root.currentItem.implicitWidth / 10)
-                        root.currentTab = Math.min(root.currentTab + 1, root.count - 1);
+                        registry.currentTab = Math.min(registry.currentTab + 1, root.count - 1);
                     else if (dx < -root.currentItem.implicitWidth / 10)
-                        root.currentTab = Math.max(root.currentTab - 1, 0);
-                    else
+                        registry.currentTab = Math.max(registry.currentTab - 1, 0);
+                    else {
+                        root._animContentX = true;
                         contentX = Qt.binding(() => root.currentItem?.x ?? 0);
+                        Qt.callLater(() => { root._animContentX = false; });
+                    }
                 }
 
                 Behavior on contentX {
+                    enabled: root._animContentX
                     Anim {}
                 }
 
@@ -155,6 +168,10 @@ Item {
                             active: index === root.currentTab || root._othersReady
                             asynchronous: index !== root.currentTab
                             sourceComponent: modelData.content
+                            // Hide during async incubation: the item briefly exists
+                            // at x=0 before RowLayout repositions it, which bleeds
+                            // it into the current page's viewport for one frame.
+                            opacity: status === Loader.Ready ? 1 : 0
                         }
                     }
                 }

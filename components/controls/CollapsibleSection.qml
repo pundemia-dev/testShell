@@ -23,21 +23,20 @@ ColumnLayout {
     Item {
         id: sectionHeaderItem
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.max(titleRow.implicitHeight + Appearance.padding.normal * 2, 48)
+        Layout.preferredHeight: Math.max(titleRow.implicitHeight + Appearance.padding.medium * 2, 48)
 
         RowLayout {
             id: titleRow
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: Appearance.padding.normal
-            anchors.rightMargin: Appearance.padding.normal
-            spacing: Appearance.spacing.normal
+            anchors.leftMargin: Appearance.padding.medium
+            anchors.rightMargin: Appearance.padding.medium
+            spacing: Appearance.spacing.medium
 
             StyledText {
                 text: root.title
-                font.pointSize: Appearance.font.size.larger
-                font.weight: 500
+                font: Appearance.font.title.medium
             }
 
             Item {
@@ -51,8 +50,7 @@ ColumnLayout {
                 font.pointSize: Appearance.font.size.normal
                 Behavior on rotation {
                     Anim {
-                        duration: Appearance.anim.durations.small
-                        easing.bezierCurve: Appearance.anim.curves.standard
+                        type: Anim.StandardSmall
                     }
                 }
             }
@@ -61,7 +59,7 @@ ColumnLayout {
         StateLayer {
             anchors.fill: parent
             color: Colours.palette.on_surface
-            radius: Appearance.rounding.normal
+            radius: Appearance.rounding.large
             showHoverBackground: false
             function onClicked(): void {
                 root.toggleRequested();
@@ -87,7 +85,7 @@ ColumnLayout {
         StyledRect {
             id: backgroundRect
             anchors.fill: parent
-            radius: Appearance.rounding.normal
+            radius: Appearance.rounding.large
             color: Colours.transparency.enabled
                    ? Colours.layer(Colours.palette.surface_container, root.nested ? 3 : 2)
                    : (root.nested ? Colours.palette.surface_container_high : Colours.palette.surface_container)
@@ -106,8 +104,8 @@ ColumnLayout {
             anchors.left: parent.left
             anchors.right: parent.right
             y: Appearance.spacing.small
-            anchors.leftMargin: Appearance.padding.normal
-            anchors.rightMargin: Appearance.padding.normal
+            anchors.leftMargin: Appearance.padding.medium
+            anchors.rightMargin: Appearance.padding.medium
             anchors.bottomMargin: Appearance.spacing.small
             spacing: Appearance.spacing.small
             opacity: root.expanded ? 1.0 : 0.0
@@ -121,12 +119,12 @@ ColumnLayout {
             StyledText {
                 id: descriptionText
                 Layout.fillWidth: true
-                Layout.topMargin: root.description !== "" ? Appearance.spacing.smaller : 0
+                Layout.topMargin: root.description !== "" ? Appearance.spacing.small : 0
                 Layout.bottomMargin: root.description !== "" ? Appearance.spacing.small : 0
                 visible: root.description !== ""
                 text: root.description
                 color: Colours.palette.on_surface_variant
-                font.pointSize: Appearance.font.size.small
+                font: Appearance.font.body.small
                 wrapMode: Text.Wrap
             }
         }

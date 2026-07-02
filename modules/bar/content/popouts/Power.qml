@@ -29,7 +29,7 @@ ColumnLayout {
     }
 
     width: Appearance.font.size.normal * 20
-    spacing: Appearance.spacing.normal
+    spacing: Appearance.spacing.medium
 
     StyledText {
         Layout.fillWidth: true
@@ -50,15 +50,15 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.topMargin: Appearance.spacing.small
         visible: PowerProfiles.degradationReason !== PerformanceDegradationReason.None
-        implicitHeight: visible ? warn.implicitHeight + Appearance.padding.normal * 2 : 0
-        radius: Appearance.rounding.normal
+        implicitHeight: visible ? warn.implicitHeight + Appearance.padding.medium * 2 : 0
+        radius: Appearance.rounding.large
         color: Colours.palette.error
 
         ColumnLayout {
             id: warn
             anchors.centerIn: parent
-            width: parent.width - Appearance.padding.normal * 2
-            spacing: Appearance.spacing.smaller
+            width: parent.width - Appearance.padding.medium * 2
+            spacing: Appearance.spacing.small
 
             StyledText {
                 Layout.alignment: Qt.AlignHCenter
@@ -102,10 +102,10 @@ ColumnLayout {
 
         StyledRect {
             id: indicator
-            x: selector.activeIndex * selector.cellWidth + Appearance.padding.smaller
-            y: Appearance.padding.smaller
-            width: selector.cellWidth - Appearance.padding.smaller * 2
-            height: parent.height - Appearance.padding.smaller * 2
+            x: selector.activeIndex * selector.cellWidth + Appearance.padding.small
+            y: Appearance.padding.small
+            width: selector.cellWidth - Appearance.padding.small * 2
+            height: parent.height - Appearance.padding.small * 2
             radius: Appearance.rounding.full
             color: Colours.palette.primary
 

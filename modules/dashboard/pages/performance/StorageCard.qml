@@ -22,17 +22,20 @@ StyledRect {
         : Colours.palette.surface_container
 
     color: cardColour
-    radius: Appearance.rounding.large
+    radius: Appearance.rounding.extraExtraLarge
 
-    implicitWidth: layout.implicitWidth + Appearance.padding.large * 2
+    implicitWidth: layout.implicitWidth + Appearance.padding.extraLarge * 2
     implicitHeight: layout.implicitHeight + Appearance.padding.large * 2
 
     ServiceRef { service: Storage }
 
     ColumnLayout {
         id: layout
-        anchors.centerIn: parent
-        spacing: Appearance.spacing.normal
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.margins: Appearance.padding.extraLarge
+        spacing: 0
 
         RowLayout {
             id: row
@@ -78,7 +81,7 @@ StyledRect {
 
             ColumnLayout {
                 Layout.minimumWidth: Config.dashboard.performance.storageTextWidth
-                spacing: Appearance.spacing.small
+                spacing: Appearance.spacing.extraSmall
 
                 StyledText {
                     text: qsTr("Storage")
@@ -103,7 +106,7 @@ StyledRect {
             Layout.alignment: Qt.AlignHCenter
             type: SplitButton.Tonal
             disabled: !Storage.disks.length
-            fallbackIcon: "\uea88" // tabler database
+            fallbackIcon: "\uea88"
             fallbackText: qsTr("No disks")
             menuOnTop: true
 

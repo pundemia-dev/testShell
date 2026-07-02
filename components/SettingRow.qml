@@ -34,7 +34,7 @@ Item {
             id: rowLayout
 
             Layout.fillWidth: true
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.medium
 
             // Label + description column
             ColumnLayout {

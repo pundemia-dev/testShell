@@ -16,7 +16,7 @@ Item {
 
     readonly property real centerX: width / 2
     readonly property real centerY: height / 2
-    readonly property real spacing: Appearance.spacing.normal
+    readonly property real spacing: Appearance.spacing.medium
     readonly property real maxMagnitude: (implicitWidth - cover.implicitWidth) / 2 - spacing
     readonly property int bars: Config.dashboard.media.visualiserBars
 

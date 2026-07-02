@@ -35,7 +35,7 @@ Item {
     StyledRect {
         id: pill
 
-        readonly property real pad: Appearance.padding.normal
+        readonly property real pad: Appearance.padding.medium
         implicitHeight: contentRow.implicitHeight + pad
         implicitWidth: root.showDescription ? contentRow.implicitWidth + pad * 2 : implicitHeight
         clip: true
@@ -55,8 +55,8 @@ Item {
             id: contentRow
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
-            anchors.leftMargin: Appearance.padding.smaller
-            spacing: Appearance.spacing.normal
+            anchors.leftMargin: Appearance.padding.small
+            spacing: Appearance.spacing.medium
 
             StyledIcon {
                 anchors.verticalCenter: parent.verticalCenter

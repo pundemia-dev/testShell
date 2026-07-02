@@ -15,6 +15,22 @@ Singleton {
     property MprisPlayer manualActive: null
     readonly property MprisPlayer active: manualActive ?? list[0] ?? null
 
+    // Reactive cover-art URL for the active player. Declared as a property so
+    // QML tracks trackArtUrl and metadata as dependencies — a plain function
+    // call only re-evaluates when `active` itself changes, missing track
+    // changes on the same player (e.g. gapless playback).
+    readonly property string artUrl: {
+        const player = active;
+        if (!player) return "";
+        if (player.trackArtUrl) return player.trackArtUrl;
+        const url = player.metadata["xesam:url"] ?? "";
+        if (url.startsWith("https://www.youtube.com/watch")) {
+            const id = url.match(/[?&]v=([\w-]{11})/)?.[1];
+            return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : "";
+        }
+        return "";
+    }
+
     function getArtUrl(player: MprisPlayer): string {
         if (!player)
             return "";

@@ -31,7 +31,7 @@ Item {
         color: inputHover.containsMouse || inputField.activeFocus
                ? Colours.layer(Colours.palette.surface_container, 3)
                : Colours.layer(Colours.palette.surface_container, 2)
-        radius: Appearance.rounding.small
+        radius: Appearance.rounding.medium
         border.width: 1
         border.color: inputField.activeFocus
                       ? Colours.palette.primary
@@ -53,7 +53,7 @@ Item {
         StyledTextField {
             id: inputField
             anchors.centerIn: parent
-            width: parent.width - Appearance.padding.normal
+            width: parent.width - Appearance.padding.medium
             horizontalAlignment: root.horizontalAlignment
             validator: root.validator
             readOnly: root.readOnly

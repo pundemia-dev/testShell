@@ -225,7 +225,7 @@ LauncherModule {
 
                 anchors.centerIn: parent
                 width: parent.width - Appearance.padding.large * 2
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.medium
                 transformOrigin: Item.Center
 
                 // ── Превью GIF ────────────────────────────────────────────────
@@ -255,7 +255,7 @@ LauncherModule {
                         anchors.centerIn: parent
                         width: gifContainer.fittedWidth
                         height: gifContainer.fittedHeight
-                        radius: Appearance.rounding.normal
+                        radius: Appearance.rounding.large
                         color: Colours.alpha(Colours.palette.surface_variant, 0.4)
                         visible: gifPlayer.status === AnimatedImage.Ready
                             || gifPlayer.status === AnimatedImage.Loading
@@ -276,7 +276,7 @@ LauncherModule {
                         anchors.centerIn: parent
                         width: gifContainer.fittedWidth
                         height: gifContainer.fittedHeight
-                        radius: Appearance.rounding.normal
+                        radius: Appearance.rounding.large
                         color: "transparent"
                         z: 1
 

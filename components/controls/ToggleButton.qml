@@ -14,9 +14,9 @@ StyledRect {
     property string icon
     property string label
     property string accent: "Secondary"
-    property real iconSize: Appearance.font.size.large
+    property real iconSize: Appearance.font.icon.large.pointSize
     property real horizontalPadding: Appearance.padding.large
-    property real verticalPadding: Appearance.padding.normal
+    property real verticalPadding: Appearance.padding.medium
     property string tooltip: ""
 
     property bool hovered: false
@@ -36,11 +36,11 @@ StyledRect {
         }
     }
 
-    Layout.preferredWidth: implicitWidth + (toggleStateLayer.pressed ? Appearance.padding.normal * 2 : toggled ? Appearance.padding.small * 2 : 0)
+    Layout.preferredWidth: implicitWidth + (toggleStateLayer.pressed ? Appearance.padding.medium * 2 : toggled ? Appearance.padding.small * 2 : 0)
     implicitWidth: toggleBtnInner.implicitWidth + horizontalPadding * 2
     implicitHeight: toggleBtnIcon.implicitHeight + verticalPadding * 2
 
-    radius: toggled || toggleStateLayer.pressed ? Appearance.rounding.small : Math.min(width, height) / 2 * Math.min(1, Appearance.rounding.scale)
+    radius: toggled || toggleStateLayer.pressed ? Appearance.rounding.medium : Math.min(width, height) / 2 * Math.min(1, Appearance.rounding.scale)
     color: toggled ? Colours.palette[`${accent.toLowerCase()}`] : Colours.palette[`${accent.toLowerCase()}_container`]
 
     StateLayer {
@@ -57,7 +57,7 @@ StyledRect {
         id: toggleBtnInner
 
         anchors.centerIn: parent
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledIcon {
             id: toggleBtnIcon
@@ -69,11 +69,14 @@ StyledRect {
             font.pointSize: root.iconSize
 
             Behavior on fill {
-                Anim {}
+                Anim {
+                    type: Anim.DefaultEffects
+                }
             }
         }
 
         Loader {
+            asynchronous: true
             active: !!root.label
             visible: active
 
@@ -86,15 +89,13 @@ StyledRect {
 
     Behavior on radius {
         Anim {
-            duration: Appearance.anim.durations.expressiveFastSpatial
-            easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
+            type: Anim.FastSpatial
         }
     }
 
     Behavior on Layout.preferredWidth {
         Anim {
-            duration: Appearance.anim.durations.expressiveFastSpatial
-            easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
+            type: Anim.FastSpatial
         }
     }
 

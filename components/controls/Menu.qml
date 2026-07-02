@@ -71,8 +71,8 @@ Elevation {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.leftMargin: Appearance.padding.normal
-                            anchors.rightMargin: Appearance.padding.normal
+                            anchors.leftMargin: Appearance.padding.medium
+                            anchors.rightMargin: Appearance.padding.medium
                             implicitHeight: 1
                             color: Colours.palette.outline_variant
                             opacity: 0.5
@@ -85,7 +85,7 @@ Elevation {
                         visible: !del.isSep
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        implicitHeight: menuOptionRow.implicitHeight + Appearance.padding.normal * 2
+                        implicitHeight: menuOptionRow.implicitHeight + Appearance.padding.medium * 2
 
                         color: Qt.alpha(Colours.palette.secondary_container, del.active ? 1 : 0)
 
@@ -104,7 +104,7 @@ Elevation {
                             id: menuOptionRow
 
                             anchors.fill: parent
-                            anchors.margins: Appearance.padding.normal
+                            anchors.margins: Appearance.padding.medium
                             spacing: Appearance.spacing.small
 
                             StyledIcon {
@@ -126,7 +126,7 @@ Elevation {
                                 visible: text !== ""
                                 text: del.modelData.trailingText ?? ""
                                 color: Colours.palette.on_surface_variant
-                                font.pointSize: Appearance.font.size.small
+                                font: Appearance.font.label.small
                             }
 
                             Loader {
@@ -148,14 +148,13 @@ Elevation {
 
     Behavior on opacity {
         Anim {
-            duration: Appearance.anim.durations.expressiveDefaultSpatial
+            type: Anim.DefaultSpatial
         }
     }
 
     Behavior on implicitHeight {
         Anim {
-            duration: Appearance.anim.durations.expressiveDefaultSpatial
-            easing.bezierCurve: Appearance.anim.curves.expressiveDefaultSpatial
+            type: Anim.DefaultSpatial
         }
     }
 }

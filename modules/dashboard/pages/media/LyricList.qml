@@ -4,18 +4,17 @@ import qs.config
 import qs.services
 import qs.components
 import qs.components.containers
+import qs.components.controls
+import qs.components.effects
 import Caelestia.Services
 import Quickshell.Services.Mpris
 import QtQuick
+import QtQuick.Effects
+import QtQuick.Layouts
 
-// Time-synced lyric list. Purely a view over the Lyrics service's runtime output
-// (Lyrics.lyrics is fetched over the network by the C++ backend); this file
-// contains no lyric text of its own. The current line is highlighted and
-// centred; clicking a line seeks to it.
 Item {
     id: root
 
-    // Feed the current track to the backend so it fetches matching lyrics.
     readonly property var _track: {
         const p = Players.active;
         if (p)
@@ -23,6 +22,10 @@ Item {
         else
             Lyrics.clearTrack();
     }
+
+    readonly property real fadeAmount: 0.1
+    property bool flag
+    property list<string> lyricList: Lyrics.lyrics
 
     property real pos: 0
     Timer {
@@ -33,59 +36,238 @@ Item {
         onTriggered: root.pos = Players.active?.position ?? 0
     }
 
-    readonly property int currentIndex: Lyrics.hasLyrics ? Lyrics.indexForTime(root.pos) : -1
-    onCurrentIndexChanged: if (currentIndex >= 0) view.positionViewAtIndex(currentIndex, ListView.Center)
+    layer.enabled: true
+    layer.effect: Mask {
+        maskSource: mask
 
-    // Placeholder when nothing to show.
-    StyledText {
+        Rectangle {
+            id: mask
+
+            layer.enabled: true
+            visible: false
+            implicitWidth: root.width
+            implicitHeight: root.height
+
+            gradient: Gradient {
+                orientation: Gradient.Vertical
+
+                GradientStop { color: Qt.alpha("black", 0); position: 0 }
+                GradientStop { color: Qt.alpha("black", 1); position: root.fadeAmount }
+                GradientStop { color: Qt.alpha("black", 1); position: 1 - root.fadeAmount }
+                GradientStop { color: Qt.alpha("black", 0); position: 1 }
+            }
+        }
+    }
+
+    state: {
+        flag;
+        if (Lyrics.hasLyrics)
+            return "hasLyrics";
+        if (Lyrics.loading)
+            return "loading";
+        return "noLyrics";
+    }
+
+    states: [
+        State {
+            name: "loading"
+            PropertyChanges {
+                loadingIndicator.opacity: 1
+                lyricsView.opacity: 0
+                noLyrics.opacity: 0
+            }
+        },
+        State {
+            name: "hasLyrics"
+            PropertyChanges {
+                loadingIndicator.opacity: 0
+                lyricsView.opacity: 1
+                noLyrics.opacity: 0
+            }
+        },
+        State {
+            name: "noLyrics"
+            PropertyChanges {
+                loadingIndicator.opacity: 0
+                lyricsView.opacity: 0
+                noLyrics.opacity: 1
+            }
+        }
+    ]
+
+    transitions: [
+        Transition {
+            from: "loading"
+            SequentialAnimation {
+                Anim { target: loadingIndicator; property: "opacity"; type: Anim.DefaultEffects }
+                Anim { targets: [lyricsView, noLyrics]; property: "opacity"; type: Anim.SlowEffects }
+            }
+        },
+        Transition {
+            from: "hasLyrics"
+            SequentialAnimation {
+                Anim { target: lyricsView; property: "opacity"; type: Anim.DefaultEffects }
+                Anim { targets: [loadingIndicator, noLyrics]; property: "opacity"; type: Anim.SlowEffects }
+            }
+        },
+        Transition {
+            from: "noLyrics"
+            SequentialAnimation {
+                Anim { target: noLyrics; property: "opacity"; type: Anim.DefaultEffects }
+                Anim { targets: [loadingIndicator, lyricsView]; property: "opacity"; type: Anim.SlowEffects }
+            }
+        }
+    ]
+
+    Connections {
+        target: Lyrics
+        function onHasLyricsChanged(): void { root.flag = !root.flag; }
+    }
+
+    Loader {
+        id: loadingIndicator
+
         anchors.centerIn: parent
-        width: parent.width - Appearance.padding.large * 2
-        horizontalAlignment: Text.AlignHCenter
-        wrapMode: Text.WordWrap
-        visible: !Lyrics.hasLyrics
-        text: Lyrics.loading ? qsTr("Loading lyrics…") : qsTr("No lyrics found")
-        color: Colours.palette.on_surface_variant
-        font.pointSize: Appearance.font.size.normal
+        asynchronous: true
+        active: opacity > 0
+        opacity: 0
+
+        sourceComponent: ColumnLayout {
+            spacing: Appearance.spacing.large
+
+            StyledRect {
+                Layout.alignment: Qt.AlignHCenter
+                implicitWidth: shape.implicitSize + Appearance.padding.medium * 2
+                implicitHeight: shape.implicitSize + Appearance.padding.medium * 2
+                color: Colours.palette.primary_container
+                radius: Appearance.rounding.full
+
+                LoadingIndicator {
+                    id: shape
+
+                    anchors.centerIn: parent
+                    implicitSize: Math.round(Config.dashboard.media.sectionWidth / 5)
+                    containsIcon: true
+                }
+            }
+
+            StyledText {
+                text: qsTr("Loading lyrics...")
+                color: Colours.palette.on_surface_variant
+                font: Appearance.font.title.medium
+            }
+        }
+
+        Behavior on opacity { Anim { type: Anim.DefaultEffects } }
+    }
+
+    Loader {
+        id: noLyrics
+
+        anchors.centerIn: parent
+        asynchronous: true
+        active: opacity > 0
+        opacity: 0
+
+        sourceComponent: ColumnLayout {
+            spacing: Appearance.spacing.small
+
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                text: ""
+                font.family: Appearance.font.family.tabler
+                font.pointSize: Appearance.font.size.extraLarge * 2
+                color: Colours.palette.outline
+            }
+
+            StyledText {
+                text: qsTr("No lyrics found")
+                color: Colours.palette.outline
+                font: Appearance.font.title.medium
+            }
+        }
+
+        Behavior on opacity { Anim { type: Anim.DefaultEffects } }
     }
 
     StyledListView {
-        id: view
+        id: lyricsView
+
         anchors.fill: parent
-        clip: true
-        visible: Lyrics.hasLyrics
-        model: Lyrics.lyrics
+        anchors.topMargin: parent.height * root.fadeAmount / 2
+        anchors.bottomMargin: parent.height * root.fadeAmount / 2
+
+        displayMarginBeginning: anchors.topMargin
+        displayMarginEnd: anchors.bottomMargin
+
+        model: root.lyricList
+
+        Component.onCompleted: {
+            currentIndex = Qt.binding(() => {
+                model;
+                return Lyrics.hasLyrics ? Lyrics.indexForTime(root.pos) : -1;
+            });
+            positionViewAtIndex(currentIndex, ListView.Center);
+        }
+        onModelChanged: Qt.callLater(() => positionViewAtIndex(currentIndex, ListView.Center))
+
+        highlightRangeMode: ListView.ApplyRange
+        highlightMoveDuration: Appearance.anim.durations.large
+        highlightMoveVelocity: -1
+        preferredHighlightBegin: (height - (currentItem?.implicitHeight ?? 0)) / 2
+        preferredHighlightEnd: (height + (currentItem?.implicitHeight ?? 0)) / 2
+
         spacing: Appearance.spacing.small
-        // Leave room so first/last lines can centre.
-        header: Item { implicitHeight: view.height / 2 }
-        footer: Item { implicitHeight: view.height / 2 }
+        opacity: 0
 
         delegate: StyledText {
-            id: line
+            id: lyric
+
+            required property string modelData
             required property int index
-            required property var modelData
-            readonly property bool current: index === root.currentIndex
+            property real effectScale: ListView.isCurrentItem ? 1 : 0
 
-            width: view.width
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-            text: modelData
-            font.pointSize: current ? Appearance.font.size.large : Appearance.font.size.normal
-            font.weight: current ? Font.DemiBold : Font.Normal
-            color: current ? Colours.palette.primary : Colours.palette.on_surface_variant
-            opacity: current ? 1 : 0.6
+            anchors.left: lyricsView.contentItem.left
+            anchors.right: lyricsView.contentItem.right
 
-            Behavior on font.pointSize { Anim {} }
-            Behavior on color { CAnim {} }
+            text: modelData || ". . ."
+            color: ListView.isCurrentItem ? Colours.palette.primary : mouse.containsMouse ? Colours.palette.on_surface : Colours.palette.outline
+            font: Appearance.font.body.medium
+            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+
+            layer.enabled: effectScale > 0
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Colours.palette.primary
+                shadowOpacity: 0.5 * lyric.effectScale
+                shadowBlur: 0.6 * lyric.effectScale
+                blur: 0.4 * lyric.effectScale
+            }
+
+            Behavior on effectScale { Anim { type: Anim.SlowEffects } }
 
             MouseArea {
+                id: mouse
+
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
+                hoverEnabled: true
                 onClicked: {
                     const p = Players.active;
-                    if (p?.canSeek && p?.positionSupported)
-                        p.position = Lyrics.timeForIndex(line.index);
+                    if (p)
+                        p.position = Lyrics.timeForIndex(lyric.index);
                 }
             }
+        }
+
+        Behavior on opacity { Anim { type: Anim.SlowEffects } }
+    }
+
+    Behavior on lyricList {
+        SequentialAnimation {
+            Anim { target: lyricsView; property: "opacity"; to: 0; type: Anim.DefaultEffects }
+            PropertyAction {}
+            Anim { target: lyricsView; property: "opacity"; to: 1; type: Anim.SlowEffects }
         }
     }
 }

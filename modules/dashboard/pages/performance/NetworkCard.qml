@@ -18,7 +18,7 @@ StyledRect {
         : Colours.palette.surface_container
 
     color: cardColour
-    radius: Appearance.rounding.large
+    radius: Appearance.rounding.extraLarge
 
     implicitWidth: Config.dashboard.performance.networkCardWidth
     implicitHeight: Config.dashboard.performance.networkCardHeight
@@ -31,7 +31,7 @@ StyledRect {
         id: layout
         anchors.fill: parent
         anchors.margins: Appearance.padding.large
-        anchors.bottomMargin: Appearance.padding.normal
+        anchors.bottomMargin: Appearance.padding.medium
         spacing: 0
 
         RowLayout {
@@ -52,7 +52,7 @@ StyledRect {
 
         // Sparkline graph.
         Item {
-            Layout.topMargin: Appearance.spacing.normal
+            Layout.topMargin: Appearance.spacing.medium
             Layout.bottomMargin: Appearance.spacing.small
             Layout.fillWidth: true
             Layout.fillHeight: true

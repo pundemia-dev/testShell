@@ -48,7 +48,7 @@ Flickable {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledText {
             text: qsTr("Bar")
@@ -184,7 +184,7 @@ Flickable {
                 data: Config.bar.paddings
                 min: 0
                 max: 80
-                fallback: Appearance.padding.normal
+                fallback: Appearance.padding.medium
                 allCanInherit: true
                 presetGroup: Appearance.padding
             }
@@ -193,7 +193,7 @@ Flickable {
                 data: Config.bar.rounding
                 min: 0
                 max: 120
-                fallback: Appearance.rounding.normal
+                fallback: Appearance.rounding.large
                 allCanInherit: true
                 presetGroup: Appearance.rounding
             }

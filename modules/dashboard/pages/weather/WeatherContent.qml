@@ -25,7 +25,7 @@ Item {
     ColumnLayout {
         id: layout
         anchors.fill: parent
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         // Header.
         RowLayout {
@@ -112,7 +112,7 @@ Item {
         // Detail cards.
         RowLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.medium
 
             DetailCard {
                 glyph: "\uea97" // tabler droplet
@@ -136,8 +136,8 @@ Item {
 
         // Forecast heading.
         StyledText {
-            Layout.topMargin: Appearance.spacing.normal
-            Layout.leftMargin: Appearance.padding.normal
+            Layout.topMargin: Appearance.spacing.medium
+            Layout.leftMargin: Appearance.padding.medium
             visible: forecastRepeater.count > 0
             text: qsTr("7-Day Forecast")
             font.pointSize: Appearance.font.size.normal
@@ -148,7 +148,7 @@ Item {
         // Forecast row.
         RowLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.medium
 
             Repeater {
                 id: forecastRepeater
@@ -160,7 +160,7 @@ Item {
                     required property var modelData
 
                     Layout.fillWidth: true
-                    implicitHeight: fcCol.implicitHeight + Appearance.padding.normal * 2
+                    implicitHeight: fcCol.implicitHeight + Appearance.padding.medium * 2
                     radius: Appearance.rounding.large
                     color: root.cardColour
 
@@ -212,12 +212,12 @@ Item {
 
         Layout.fillWidth: true
         Layout.preferredHeight: 60
-        radius: Appearance.rounding.normal
+        radius: Appearance.rounding.large
         color: root.cardColour
 
         Row {
             anchors.centerIn: parent
-            spacing: Appearance.spacing.normal
+            spacing: Appearance.spacing.medium
 
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter

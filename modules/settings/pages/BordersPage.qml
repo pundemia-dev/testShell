@@ -16,7 +16,7 @@ Flickable {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledText {
             text: qsTr("Borders")

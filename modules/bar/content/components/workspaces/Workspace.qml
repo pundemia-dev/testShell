@@ -44,8 +44,8 @@ Item {
     }
 
     readonly property real size: isHorizontal
-        ? resolvedWidth + (hasWindows ? Appearance.padding.smaller : 0)
-        : resolvedHeight + (hasWindows ? Appearance.padding.smaller : 0)
+        ? resolvedWidth + (hasWindows ? Appearance.padding.small : 0)
+        : resolvedHeight + (hasWindows ? Appearance.padding.small : 0)
 
     implicitWidth: isHorizontal ? size : Math.max(resolvedWidth, unitSize)
     implicitHeight: isHorizontal ? Math.max(resolvedHeight, unitSize) : size

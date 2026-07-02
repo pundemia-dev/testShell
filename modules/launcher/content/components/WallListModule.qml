@@ -803,7 +803,7 @@ LauncherModule {
 
             // ── Empty state ──
             ColumnLayout {
-                anchors.centerIn: parent; spacing: Appearance.spacing.normal; z: 5
+                anchors.centerIn: parent; spacing: Appearance.spacing.medium; z: 5
                 property bool shouldShow: galleryModel.count === 0
                 opacity: shouldShow ? 1.0 : 0.0; scale: shouldShow ? 1.0 : 0.92; visible: opacity > 0
                 Behavior on opacity {
@@ -834,8 +834,8 @@ LauncherModule {
             Item {
                 id: carouselContainer
                 anchors.fill: parent
-                anchors.topMargin: Appearance.padding.normal
-                anchors.bottomMargin: Appearance.padding.normal
+                anchors.topMargin: Appearance.padding.medium
+                anchors.bottomMargin: Appearance.padding.medium
                 clip: true
 
                 readonly property real baseItemWidth:  root._baseCardW
@@ -970,7 +970,7 @@ LauncherModule {
 
                             StyledClippingRect {
                                 anchors.fill: parent; anchors.margins: Appearance.padding.small
-                                radius: Appearance.rounding.normal; color: Colours.palette.surface_variant
+                                radius: Appearance.rounding.large; color: Colours.palette.surface_variant
 
                                 CachingImage { anchors.fill: parent; path: cardDelegate.path; asynchronous: true }
 
@@ -1012,13 +1012,13 @@ LauncherModule {
 
                                 // Title
                                 ColumnLayout {
-                                    anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.right: parent.right; anchors.margins: Appearance.padding.normal; spacing: 2
+                                    anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.right: parent.right; anchors.margins: Appearance.padding.medium; spacing: 2
                                     opacity: cardDelegate.isCenterCard?1.0:0.0; visible: opacity>0
                                     StyledText { Layout.fillWidth: true; text: cardDelegate.name; color: "white"; font.weight: Font.DemiBold; elide: Text.ElideRight }
                                     StyledText { Layout.fillWidth: true; text: cardDelegate.tags||cardDelegate.path; color: "lightgray"; font.pointSize: Appearance.font.size.smaller; elide: Text.ElideRight }
                                 }
 
-                                StateLayer { anchors.fill: parent; radius: Appearance.rounding.normal; function onClicked() { root.execute("",false); } }
+                                StateLayer { anchors.fill: parent; radius: Appearance.rounding.large; function onClicked() { root.execute("",false); } }
                             }
                         }
 
@@ -1076,7 +1076,7 @@ LauncherModule {
             StyledRect {
                 id: settingsOverlay
                 anchors.fill: parent; z: 20
-                color: Colours.palette.surface_container; radius: Appearance.rounding.normal
+                color: Colours.palette.surface_container; radius: Appearance.rounding.large
                 opacity: root.isSettingsOpen ? 1.0 : 0.0; visible: opacity > 0
                 Behavior on opacity { OpacityAnimator { duration: Appearance.anim.durations.normal } }
 
@@ -1088,10 +1088,10 @@ LauncherModule {
                     // ── Navigation Rail ──
                     StyledRect {
                         Layout.fillHeight: true; Layout.preferredWidth: 72
-                        color: Colours.palette.surface_container_low; radius: Appearance.rounding.normal
+                        color: Colours.palette.surface_container_low; radius: Appearance.rounding.large
 
                         ColumnLayout {
-                            anchors.fill: parent; anchors.topMargin: Appearance.padding.normal; anchors.bottomMargin: Appearance.padding.normal; spacing: Appearance.spacing.small
+                            anchors.fill: parent; anchors.topMargin: Appearance.padding.medium; anchors.bottomMargin: Appearance.padding.medium; spacing: Appearance.spacing.small
 
                             Repeater {
                                 model: [
@@ -1127,7 +1127,7 @@ LauncherModule {
                         Layout.fillWidth: true; Layout.fillHeight: true; clip: true
 
                         StackLayout {
-                            anchors.fill: parent; anchors.margins: Appearance.padding.normal
+                            anchors.fill: parent; anchors.margins: Appearance.padding.medium
                             currentIndex: root.settingsTabIndex
 
                             // ════════════════════════════════════════════════════════════
@@ -1166,7 +1166,7 @@ LauncherModule {
                                     SectionHeader { title: "awww Namespace" }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         StyledText { text: "Namespace"; color: Colours.palette.on_surface }
                                         Item { Layout.fillWidth: true }
                                         StyledTextField {
@@ -1193,7 +1193,7 @@ LauncherModule {
                                     }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         StyledText { text: "Fill Color"; color: Colours.palette.on_surface }
                                         Item { Layout.fillWidth: true }
                                         Rectangle { width:24; height:24; radius:4; color:"#"+root.fillColor.substring(0,6); border.width:1; border.color:Colours.palette.outline }
@@ -1237,21 +1237,21 @@ LauncherModule {
 
                                         RowLayout {
                                             visible: root.transitionType==="grow"||root.transitionType==="outer"||root.transitionType==="any"
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Position"; color:Colours.palette.on_surface }
                                             Item { Layout.fillWidth: true }
                                             StyledTextField { Layout.preferredWidth:120; text:root.transitionPos; onEditingFinished: { root.transitionPos=text; root.saveAwwwDefault("transition_pos",text); } }
                                         }
                                         RowLayout {
                                             visible: root.transitionType==="fade"
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Bezier"; color:Colours.palette.on_surface }
                                             Item { Layout.fillWidth: true }
                                             StyledTextField { Layout.preferredWidth:150; text:root.transitionBezier; onEditingFinished: { root.transitionBezier=text; root.saveAwwwDefault("transition_bezier",text); } }
                                         }
                                         RowLayout {
                                             visible: root.transitionType==="wave"
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Wave (W,H)"; color:Colours.palette.on_surface }
                                             Item { Layout.fillWidth: true }
                                             StyledTextField { Layout.preferredWidth:80; text:root.transitionWave; onEditingFinished: { root.transitionWave=text; root.saveAwwwDefault("transition_wave",text); } }
@@ -1270,7 +1270,7 @@ LauncherModule {
                                         Repeater {
                                             model: root.monitorConfigs
                                             delegate: RowLayout {
-                                                Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                                Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                                 StyledText { text: modelData.monitor; font.weight: Font.DemiBold; color: Colours.palette.primary }
                                                 StyledText {
                                                     Layout.fillWidth: true; elide: Text.ElideRight
@@ -1300,7 +1300,7 @@ LauncherModule {
 
                                         // Add override for current monitor
                                         RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text: "Set override for:"; color: Colours.palette.on_surface }
                                             SplitButtonRow {
                                                 label: ""
@@ -1326,7 +1326,7 @@ LauncherModule {
                                         Layout.fillWidth: true; title: "Per-wallpaper Options"; expanded: false
                                         PropertyRow { label:"Current"; value: root.originalWallpaper?root._fileNameFromPath(root.originalWallpaper):"None" }
                                         RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             TextButton { text:"Save Current Options"; onClicked: { let args=["wallpaper","options","set","--resize",root.resizeMode,"--filter",root.imageFilter,"--transition-type",root.transitionType]; root.sendIpc(args); } }
                                             TextButton { text:"Clear Options";         onClicked: root.sendIpc(["wallpaper","options","clear"]) }
                                         }
@@ -1338,7 +1338,7 @@ LauncherModule {
                                         }
                                     }
 
-                                    Item { Layout.preferredHeight: Appearance.padding.larger }
+                                    Item { Layout.preferredHeight: Appearance.padding.large }
                                 }
                                 StyledScrollBar { flickable: displayScroll; anchors.right:parent.right; anchors.top:parent.top; anchors.bottom:parent.bottom }
                             }
@@ -1368,7 +1368,7 @@ LauncherModule {
                                     SectionHeader { title: "Auto Mode Schedule" }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         StyledText { text:"Sunrise"; color:Colours.palette.on_surface }
                                         Item { Layout.fillWidth: true }
                                         StyledTextField {
@@ -1381,7 +1381,7 @@ LauncherModule {
                                         }
                                     }
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         StyledText { text:"Sunset"; color:Colours.palette.on_surface }
                                         Item { Layout.fillWidth: true }
                                         StyledTextField {
@@ -1419,38 +1419,38 @@ LauncherModule {
                                         Layout.fillWidth: true; title: "Fine-tune"; expanded: true
 
                                         RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Contrast"; color:Colours.palette.on_surface }
                                             StyledSlider { id:contrastSl; Layout.fillWidth:true; from:-1.0; to:1.0; stepSize:0.05
                                                 value: root.themeContrast
-                                                onValueChanged: { root.themeContrast=value; root.setThemeParam("contrast",value.toFixed(2)); themeDebounce.restart(); }
+                                                onInteraction: v => { root.themeContrast=v; root.setThemeParam("contrast",v.toFixed(2)); themeDebounce.restart(); }
                                             }
                                             StyledText { text:contrastSl.value.toFixed(2); color:Colours.palette.on_surface_variant; Layout.preferredWidth:38 }
                                         }
                                         RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Dark brightness"; color:Colours.palette.on_surface }
                                             StyledSlider { id:darkSl; Layout.fillWidth:true; from:-1.0; to:1.0; stepSize:0.05
                                                 value: root.themeLightnessDark
-                                                onValueChanged: { root.themeLightnessDark=value; root.setThemeParam("lightness-dark",value.toFixed(2)); themeDebounce.restart(); }
+                                                onInteraction: v => { root.themeLightnessDark=v; root.setThemeParam("lightness-dark",v.toFixed(2)); themeDebounce.restart(); }
                                             }
                                             StyledText { text:darkSl.value.toFixed(2); color:Colours.palette.on_surface_variant; Layout.preferredWidth:38 }
                                         }
                                         RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Light brightness"; color:Colours.palette.on_surface }
                                             StyledSlider { id:lightSl; Layout.fillWidth:true; from:-1.0; to:1.0; stepSize:0.05
                                                 value: root.themeLightnessLight
-                                                onValueChanged: { root.themeLightnessLight=value; root.setThemeParam("lightness-light",value.toFixed(2)); themeDebounce.restart(); }
+                                                onInteraction: v => { root.themeLightnessLight=v; root.setThemeParam("lightness-light",v.toFixed(2)); themeDebounce.restart(); }
                                             }
                                             StyledText { text:lightSl.value.toFixed(2); color:Colours.palette.on_surface_variant; Layout.preferredWidth:38 }
                                         }
                                         RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Opacity"; color:Colours.palette.on_surface }
                                             StyledSlider { id:opacSl; Layout.fillWidth:true; from:0.0; to:1.0; stepSize:0.05
                                                 value: root.themeOpacity
-                                                onValueChanged: { root.themeOpacity=value; root.setThemeParam("opacity",value.toFixed(2)); themeDebounce.restart(); }
+                                                onInteraction: v => { root.themeOpacity=v; root.setThemeParam("opacity",v.toFixed(2)); themeDebounce.restart(); }
                                             }
                                             StyledText { text:opacSl.value.toFixed(2); color:Colours.palette.on_surface_variant; Layout.preferredWidth:38 }
                                         }
@@ -1475,7 +1475,7 @@ LauncherModule {
                                         }
 
                                         RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Fallback color"; color:Colours.palette.on_surface }
                                             Item { Layout.fillWidth: true }
                                             Rectangle { width:24;height:24;radius:4; color:"#"+(root.themeFallbackColor?root.themeFallbackColor.substring(0,6):"4285f4"); border.width:1;border.color:Colours.palette.outline }
@@ -1490,12 +1490,12 @@ LauncherModule {
                                     }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         TextButton { text:"Regenerate Theme"; onClicked: { if (root.originalWallpaper) root.sendIpc(["theme","generate",root.originalWallpaper]); } }
                                         TextButton { text:"Reset to Defaults"; onClicked: root.sendIpc(["theme","set","contrast","0"]) }
                                     }
 
-                                    Item { Layout.preferredHeight: Appearance.padding.larger }
+                                    Item { Layout.preferredHeight: Appearance.padding.large }
                                 }
                                 StyledScrollBar { flickable: themeScroll; anchors.right:parent.right; anchors.top:parent.top; anchors.bottom:parent.bottom }
                             }
@@ -1511,7 +1511,7 @@ LauncherModule {
                                     SectionHeader { title: "Index" }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         StyledText { text:"Directory"; color:Colours.palette.on_surface }
                                         StyledTextField { Layout.fillWidth:true; text:root.indexDir; onTextChanged:root.indexDir=text }
                                     }
@@ -1532,7 +1532,7 @@ LauncherModule {
                                     Repeater {
                                         model: root.watchDirs
                                         delegate: RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledIcon { text:"\ue2c7"; color:Colours.palette.on_surface_variant }
                                             StyledText { Layout.fillWidth:true; text:modelData; elide:Text.ElideLeft; color:Colours.palette.on_surface }
                                             IconButton {
@@ -1548,7 +1548,7 @@ LauncherModule {
                                     }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         StyledTextField {
                                             id: watchDirField; Layout.fillWidth:true
                                             placeholderText: "Path to watch…"
@@ -1595,7 +1595,7 @@ LauncherModule {
                                     }
                                     SwitchRow { label:"Reverse order"; checked:root.sortReverse; onToggled:function(){root.sortReverse=!root.sortReverse} }
 
-                                    Item { Layout.preferredHeight: Appearance.padding.larger }
+                                    Item { Layout.preferredHeight: Appearance.padding.large }
                                 }
                                 StyledScrollBar { flickable: galleryScroll; anchors.right:parent.right; anchors.top:parent.top; anchors.bottom:parent.bottom }
                             }
@@ -1633,7 +1633,7 @@ LauncherModule {
                                     }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         StyledText { text:"Directory"; color:Colours.palette.on_surface }
                                         StyledTextField { Layout.fillWidth:true; text:root.slideshowDir; onEditingFinished: { root.slideshowDir=text; root.saveSlideshowConfig("dir",text); } }
                                     }
@@ -1664,13 +1664,13 @@ LauncherModule {
                                             onToggled: function() { root.slideshowOnlyFavorites=!root.slideshowOnlyFavorites; root.saveSlideshowConfig("only_favorites",root.slideshowOnlyFavorites); }
                                         }
                                         RowLayout {
-                                            Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                            Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                             StyledText { text:"Text filter"; color:Colours.palette.on_surface }
                                             StyledTextField { Layout.fillWidth:true; placeholderText:"name, tags, or color…"; text:root.slideshowTextFilter; onEditingFinished: { root.slideshowTextFilter=text; root.saveSlideshowConfig("text_filter",text||""); } }
                                         }
                                     }
 
-                                    Item { Layout.preferredHeight: Appearance.padding.larger }
+                                    Item { Layout.preferredHeight: Appearance.padding.large }
                                 }
                                 StyledScrollBar { flickable: slideshowScroll; anchors.right:parent.right; anchors.top:parent.top; anchors.bottom:parent.bottom }
                             }
@@ -1691,7 +1691,7 @@ LauncherModule {
                                     PropertyRow { label:"Preview";  value:root.previewActive?"active":"off" }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         TextButton { text:"Restart Daemon"; onClicked: { root.sendIpc(["daemon","stop"]); root.daemonStatus="restarting…"; Qt.callLater(()=>{ Quickshell.execDetached([root.walltoolBin,"daemon","start"]); Qt.callLater(()=>root.fetchDaemonData(),1000); }); } }
                                         TextButton { text:"Refresh";        onClicked: root.fetchDaemonData() }
                                     }
@@ -1714,7 +1714,7 @@ LauncherModule {
 
                                     SectionHeader { title: "Profiles" }
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         StyledText { text:"Profile name"; color:Colours.palette.on_surface }
                                         StyledTextField { Layout.preferredWidth:140; text:root.currentProfile; onTextChanged:root.currentProfile=text; placeholderText:"my-profile" }
                                     }
@@ -1724,7 +1724,7 @@ LauncherModule {
                                         onSelected: item => root.currentProfile = item.val
                                     }
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         TextButton { text:"Save";   enabled:root.currentProfile!==""; onClicked: root.sendIpc(["config","profile","save",root.currentProfile]) }
                                         TextButton { text:"Load";   enabled:root.currentProfile!==""; onClicked: root.sendIpc(["config","profile","load",root.currentProfile]) }
                                         TextButton { text:"Delete"; enabled:root.currentProfile!==""; onClicked: { root.sendIpc(["config","profile","rm",root.currentProfile]); root.currentProfile=""; root.fetchDaemonData(); } }
@@ -1733,7 +1733,7 @@ LauncherModule {
                                     SectionHeader { title: "Config" }
 
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: Appearance.spacing.normal
+                                        Layout.fillWidth: true; spacing: Appearance.spacing.medium
                                         TextButton { text:"Open in Editor"; onClicked: root.sendIpc(["config","edit"]) }
                                         TextButton { text:"Reload";          onClicked: root.fetchDaemonData() }
                                     }
@@ -1743,13 +1743,13 @@ LauncherModule {
                                         Layout.fillWidth: true; title:"config.toml preview"; expanded:false
                                         Item {
                                             Layout.fillWidth: true
-                                            implicitHeight: cfgText.implicitHeight + Appearance.padding.normal*2
+                                            implicitHeight: cfgText.implicitHeight + Appearance.padding.medium*2
                                             StyledRect {
                                                 anchors.fill: parent
                                                 color: Colours.palette.surface_variant; radius: Appearance.rounding.small
                                                 StyledText {
                                                     id: cfgText
-                                                    anchors { left:parent.left; right:parent.right; top:parent.top; margins:Appearance.padding.normal }
+                                                    anchors { left:parent.left; right:parent.right; top:parent.top; margins:Appearance.padding.medium }
                                                     text: root.configFullText || "# (click Reload to fetch config)"
                                                     font.family: "monospace"; font.pointSize: Appearance.font.size.smaller
                                                     color: Colours.palette.on_surface_variant; wrapMode: Text.WordWrap
@@ -1758,7 +1758,7 @@ LauncherModule {
                                         }
                                     }
 
-                                    Item { Layout.preferredHeight: Appearance.padding.larger }
+                                    Item { Layout.preferredHeight: Appearance.padding.large }
                                 }
                                 StyledScrollBar { flickable: systemScroll; anchors.right:parent.right; anchors.top:parent.top; anchors.bottom:parent.bottom }
                             }
@@ -1801,7 +1801,7 @@ LauncherModule {
                                     SectionHeader { title: "In Favorites mode" }
                                     PropertyRow { label:"Shift+Ctrl+D (hold Shift)"; value:"Remove and hide item immediately" }
 
-                                    Item { Layout.preferredHeight: Appearance.padding.larger }
+                                    Item { Layout.preferredHeight: Appearance.padding.large }
                                 }
                                 StyledScrollBar { flickable: keysScroll; anchors.right:parent.right; anchors.top:parent.top; anchors.bottom:parent.bottom }
                             }
@@ -2838,7 +2838,7 @@ LauncherModule {
 //             ColumnLayout {
 //                 id: emptyState
 //                 anchors.centerIn: parent
-//                 spacing: Appearance.spacing.normal
+//                 spacing: Appearance.spacing.medium
 //                 z: 5
 
 //                 property bool shouldShow: galleryModel.count === 0
@@ -2872,8 +2872,8 @@ LauncherModule {
 //             Item {
 //                 id: carouselContainer
 //                 anchors.fill: parent
-//                 anchors.topMargin: Appearance.padding.normal
-//                 anchors.bottomMargin: Appearance.padding.normal
+//                 anchors.topMargin: Appearance.padding.medium
+//                 anchors.bottomMargin: Appearance.padding.medium
 //                 clip: true
 
 //                 readonly property real baseItemWidth: root._baseCardW
@@ -3085,7 +3085,7 @@ LauncherModule {
 //                                     id: imageClip
 //                                     anchors.fill: parent
 //                                     anchors.margins: Appearance.padding.small
-//                                     radius: Appearance.rounding.normal
+//                                     radius: Appearance.rounding.large
 //                                     color: Colours.palette.surface_variant
 
 //                                     CachingImage {
@@ -3174,7 +3174,7 @@ LauncherModule {
 //                                         anchors.left: parent.left
 //                                         anchors.bottom: parent.bottom
 //                                         anchors.right: parent.right
-//                                         anchors.margins: Appearance.padding.normal
+//                                         anchors.margins: Appearance.padding.medium
 //                                         spacing: 2
 //                                         opacity: cardDelegate.isCenterCard ? 1.0 : 0.0
 //                                         visible: opacity > 0
@@ -3197,7 +3197,7 @@ LauncherModule {
 
 //                                     StateLayer {
 //                                         anchors.fill: parent
-//                                         radius: Appearance.rounding.normal
+//                                         radius: Appearance.rounding.large
 //                                         function onClicked() { root.execute("", false); }
 //                                     }
 //                                 }
@@ -3315,7 +3315,7 @@ LauncherModule {
 //                 z: 20
 
 //                 color: Colours.palette.surface_container
-//                 radius: Appearance.rounding.normal
+//                 radius: Appearance.rounding.large
 //                 // Note: clip is handled by parent (rightPanel in LauncherWrapper)
 //                 // Don't add clip here as it would cut off dropdown menus
 
@@ -3343,12 +3343,12 @@ LauncherModule {
 //                         Layout.fillHeight: true
 //                         Layout.preferredWidth: 72
 //                         color: Colours.palette.surface_container_low
-//                         radius: Appearance.rounding.normal
+//                         radius: Appearance.rounding.large
 
 //                         ColumnLayout {
 //                             anchors.fill: parent
-//                             anchors.topMargin: Appearance.padding.normal
-//                             anchors.bottomMargin: Appearance.padding.normal
+//                             anchors.topMargin: Appearance.padding.medium
+//                             anchors.bottomMargin: Appearance.padding.medium
 //                             spacing: Appearance.spacing.small
 
 //                             Repeater {
@@ -3425,7 +3425,7 @@ LauncherModule {
 //                         StackLayout {
 //                             id: settingsStack
 //                             anchors.fill: parent
-//                             anchors.margins: Appearance.padding.normal
+//                             anchors.margins: Appearance.padding.medium
 //                             currentIndex: root.settingsTabIndex
 
 //                             // ══════════════════════════════════════════════════════════════
@@ -3487,7 +3487,7 @@ LauncherModule {
 
 //                                     RowLayout {
 //                                         Layout.fillWidth: true
-//                                         spacing: Appearance.spacing.normal
+//                                         spacing: Appearance.spacing.medium
 
 //                                         StyledText {
 //                                             text: "Fill Color"
@@ -3610,7 +3610,7 @@ LauncherModule {
 //                                         RowLayout {
 //                                             visible: root.transitionType === "grow" || root.transitionType === "outer" || root.transitionType === "any"
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Position"
@@ -3632,7 +3632,7 @@ LauncherModule {
 //                                         RowLayout {
 //                                             visible: root.transitionType === "fade"
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Bezier"
@@ -3654,7 +3654,7 @@ LauncherModule {
 //                                         RowLayout {
 //                                             visible: root.transitionType === "wave"
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Wave (W,H)"
@@ -3697,7 +3697,7 @@ LauncherModule {
 
 //                                         RowLayout {
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             TextButton {
 //                                                 text: "Save Current"
@@ -3720,7 +3720,7 @@ LauncherModule {
 //                                         }
 //                                     }
 
-//                                     Item { Layout.preferredHeight: Appearance.padding.larger }
+//                                     Item { Layout.preferredHeight: Appearance.padding.large }
 //                                 }
 
 //                                 StyledScrollBar { flickable: displayScroll; anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom }
@@ -3813,7 +3813,7 @@ LauncherModule {
 
 //                                         RowLayout {
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Contrast"
@@ -3842,7 +3842,7 @@ LauncherModule {
 
 //                                         RowLayout {
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Dark brightness"
@@ -3871,7 +3871,7 @@ LauncherModule {
 
 //                                         RowLayout {
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Light brightness"
@@ -3900,7 +3900,7 @@ LauncherModule {
 
 //                                         RowLayout {
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Opacity"
@@ -3958,7 +3958,7 @@ LauncherModule {
 
 //                                         RowLayout {
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Fallback color"
@@ -4001,7 +4001,7 @@ LauncherModule {
 //                                         }
 //                                     }
 
-//                                     Item { Layout.preferredHeight: Appearance.padding.larger }
+//                                     Item { Layout.preferredHeight: Appearance.padding.large }
 //                                 }
 
 //                                 StyledScrollBar { flickable: themeScroll; anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom }
@@ -4026,7 +4026,7 @@ LauncherModule {
 
 //                                     RowLayout {
 //                                         Layout.fillWidth: true
-//                                         spacing: Appearance.spacing.normal
+//                                         spacing: Appearance.spacing.medium
 
 //                                         StyledText {
 //                                             text: "Directory"
@@ -4117,7 +4117,7 @@ LauncherModule {
 //                                         onToggled: function() { root.sortReverse = !root.sortReverse }
 //                                     }
 
-//                                     Item { Layout.preferredHeight: Appearance.padding.larger }
+//                                     Item { Layout.preferredHeight: Appearance.padding.large }
 //                                 }
 
 //                                 StyledScrollBar { flickable: galleryScroll; anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom }
@@ -4172,7 +4172,7 @@ LauncherModule {
 
 //                                     RowLayout {
 //                                         Layout.fillWidth: true
-//                                         spacing: Appearance.spacing.normal
+//                                         spacing: Appearance.spacing.medium
 
 //                                         StyledText {
 //                                             text: "Directory"
@@ -4228,7 +4228,7 @@ LauncherModule {
 
 //                                         RowLayout {
 //                                             Layout.fillWidth: true
-//                                             spacing: Appearance.spacing.normal
+//                                             spacing: Appearance.spacing.medium
 
 //                                             StyledText {
 //                                                 text: "Text filter"
@@ -4247,7 +4247,7 @@ LauncherModule {
 //                                         }
 //                                     }
 
-//                                     Item { Layout.preferredHeight: Appearance.padding.larger }
+//                                     Item { Layout.preferredHeight: Appearance.padding.large }
 //                                 }
 
 //                                 StyledScrollBar { flickable: slideshowScroll; anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom }
@@ -4340,7 +4340,7 @@ LauncherModule {
 
 //                                     RowLayout {
 //                                         Layout.fillWidth: true
-//                                         spacing: Appearance.spacing.normal
+//                                         spacing: Appearance.spacing.medium
 
 //                                         TextButton {
 //                                             text: "Save"
@@ -4361,7 +4361,7 @@ LauncherModule {
 //                                         }
 //                                     }
 
-//                                     Item { Layout.preferredHeight: Appearance.padding.larger }
+//                                     Item { Layout.preferredHeight: Appearance.padding.large }
 //                                 }
 
 //                                 StyledScrollBar { flickable: systemScroll; anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom }
@@ -4408,7 +4408,7 @@ LauncherModule {
 //                                     PropertyRow { label: "Alt (hold)"; value: "View history" }
 //                                     PropertyRow { label: "Shift (hold)"; value: "View favorites" }
 
-//                                     Item { Layout.preferredHeight: Appearance.padding.larger }
+//                                     Item { Layout.preferredHeight: Appearance.padding.large }
 //                                 }
 
 //                                 StyledScrollBar { flickable: keysScroll; anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom }

@@ -4,7 +4,7 @@ import qs.config
 import QtQuick
 import QtQuick.Layouts
 
-StyledRect {
+ButtonBase {
     id: root
 
     enum Type {
@@ -15,44 +15,20 @@ StyledRect {
 
     property alias icon: iconLabel.text
     property alias text: label.text
-    property bool checked
-    property bool toggle
-    property real horizontalPadding: Appearance.padding.normal
-    property real verticalPadding: Appearance.padding.smaller
     property alias font: label.font
-    property int type: IconTextButton.Filled
+    readonly property alias iconLabel: iconLabel
+    readonly property alias label: label
 
-    property alias stateLayer: stateLayer
-    property alias iconLabel: iconLabel
-    property alias label: label
+    horizontalPadding: Appearance.padding.medium
+    verticalPadding: Appearance.padding.small
 
-    property bool internalChecked
-    property color activeColour: type === IconTextButton.Filled ? Colours.palette.primary : Colours.palette.secondary
-    property color inactiveColour: type === IconTextButton.Filled ? Colours.tPalette.surface_container : Colours.palette.secondary_container
-    property color activeOnColour: type === IconTextButton.Filled ? Colours.palette.on_primary : Colours.palette.on_secondary
-    property color inactiveOnColour: type === IconTextButton.Filled ? Colours.palette.on_surface : Colours.palette.on_secondary_container
-
-    signal clicked
-
-    onCheckedChanged: internalChecked = checked
-
-    radius: internalChecked ? Appearance.rounding.small : implicitHeight / 2 * Math.min(1, Appearance.rounding.scale)
-    color: type === IconTextButton.Text ? "transparent" : internalChecked ? activeColour : inactiveColour
+    activeColour: type === IconTextButton.Filled ? Colours.palette.primary : Colours.palette.secondary
+    inactiveColour: type === IconTextButton.Filled ? Colours.tPalette.surface_container : Colours.palette.secondary_container
+    activeOnColour: type === IconTextButton.Filled ? Colours.palette.on_primary : Colours.palette.on_secondary
+    inactiveOnColour: type === IconTextButton.Filled ? Colours.palette.on_surface : Colours.palette.on_secondary_container
 
     implicitWidth: row.implicitWidth + horizontalPadding * 2
     implicitHeight: row.implicitHeight + verticalPadding * 2
-
-    StateLayer {
-        id: stateLayer
-
-        color: root.internalChecked ? root.activeOnColour : root.inactiveOnColour
-
-        function onClicked(): void {
-            if (root.toggle)
-                root.internalChecked = !root.internalChecked;
-            root.clicked();
-        }
-    }
 
     RowLayout {
         id: row
@@ -65,11 +41,13 @@ StyledRect {
 
             Layout.alignment: Qt.AlignVCenter
             Layout.topMargin: Math.round(fontInfo.pointSize * 0.0575)
-            color: root.internalChecked ? root.activeOnColour : root.inactiveOnColour
+            color: root.onColour
             fill: root.internalChecked ? 1 : 0
 
             Behavior on fill {
-                Anim {}
+                Anim {
+                    type: Anim.DefaultEffects
+                }
             }
         }
 
@@ -78,11 +56,7 @@ StyledRect {
 
             Layout.alignment: Qt.AlignVCenter
             Layout.topMargin: -Math.round(iconLabel.fontInfo.pointSize * 0.0575)
-            color: root.internalChecked ? root.activeOnColour : root.inactiveOnColour
+            color: root.onColour
         }
-    }
-
-    Behavior on radius {
-        Anim {}
     }
 }

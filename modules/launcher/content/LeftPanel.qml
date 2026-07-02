@@ -38,11 +38,11 @@ StyledRect {
                 anchors.centerIn: parent
                 visible: innerListView.count === 0
                 opacity: 0.45
-                spacing: Appearance.spacing.normal
+                spacing: Appearance.spacing.medium
 
                 StyledRect {
                     implicitWidth: implicitHeight
-                    implicitHeight: hintIcon.implicitHeight + Appearance.padding.smaller * 2
+                    implicitHeight: hintIcon.implicitHeight + Appearance.padding.small * 2
                     radius: Appearance.rounding.full
                     color: Colours.palette.surface_variant
                     anchors.verticalCenter: parent.verticalCenter

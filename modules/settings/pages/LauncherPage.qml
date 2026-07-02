@@ -16,7 +16,7 @@ Flickable {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: Appearance.spacing.normal
+        spacing: Appearance.spacing.medium
 
         StyledText {
             text: qsTr("Launcher")
@@ -67,8 +67,8 @@ Flickable {
                     text: Config.launcher.magicSymbol
                     onEditingFinished: Config.launcher.magicSymbol = text
                     padding: Appearance.padding.small
-                    leftPadding: Appearance.padding.normal
-                    rightPadding: Appearance.padding.normal
+                    leftPadding: Appearance.padding.medium
+                    rightPadding: Appearance.padding.medium
                     background: StyledRect {
                         radius: Appearance.rounding.small
                         color: Colours.palette.surface_container_high
@@ -119,8 +119,8 @@ Flickable {
                     onEditingFinished: Config.launcher.giphyApiKey = text
                     echoMode: TextInput.PasswordEchoOnEdit
                     padding: Appearance.padding.small
-                    leftPadding: Appearance.padding.normal
-                    rightPadding: Appearance.padding.normal
+                    leftPadding: Appearance.padding.medium
+                    rightPadding: Appearance.padding.medium
                     background: StyledRect {
                         radius: Appearance.rounding.small
                         color: Colours.palette.surface_container_high

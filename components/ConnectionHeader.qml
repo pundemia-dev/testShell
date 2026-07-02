@@ -10,7 +10,7 @@ ColumnLayout {
     required property string icon
     required property string title
 
-    spacing: Appearance.spacing.normal
+    spacing: Appearance.spacing.medium
     Layout.alignment: Qt.AlignHCenter
 
     StyledIcon {

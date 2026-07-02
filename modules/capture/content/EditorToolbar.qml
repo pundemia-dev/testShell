@@ -43,7 +43,7 @@ Item {
         { kind: "close", glyph: "" }
     ]
 
-    readonly property real btnSize: Appearance.font.size.large + Appearance.padding.normal * 2 + Appearance.padding.small
+    readonly property real btnSize: Appearance.font.size.large + Appearance.padding.medium * 2 + Appearance.padding.small
     readonly property real sep: Appearance.spacing.small
 
     readonly property var positions: layout()

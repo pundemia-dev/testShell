@@ -9,7 +9,7 @@ Shape {
 
     property real value
     property int startAngle: -90
-    property int strokeWidth: Appearance.padding.smaller
+    property int strokeWidth: Appearance.padding.small
     property int padding: 0
     property int spacing: Appearance.spacing.small
     property color fgColour: Colours.palette.primary

@@ -267,7 +267,7 @@ Item {
 
             direction: host.isHorizontal ? FlexboxLayout.Row : FlexboxLayout.Column
             alignItems: FlexboxLayout.AlignCenter
-            gap: Appearance.spacing.normal
+            gap: Appearance.spacing.medium
 
             Repeater {
                 model: host.isGroup ? host.modelData.children : []
@@ -437,7 +437,7 @@ Item {
         y: host._contentY - 3
         width: host._contentW + 6
         height: host._contentH + 6
-        radius: Appearance.rounding.normal
+        radius: Appearance.rounding.large
         color: Colours.palette.primary
         opacity: 0.18
         z: 5

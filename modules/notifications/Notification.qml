@@ -21,7 +21,7 @@ StyledRect {
     property bool expanded: Config.notifs.openExpanded
 
     color: root.modelData.urgency === NotificationUrgency.Critical ? Colours.palette.secondary_container : Colours.tPalette.surface_container
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.large
     implicitWidth: Config.notifs.sizes.width
     implicitHeight: inner.implicitHeight
 
@@ -93,7 +93,7 @@ StyledRect {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.margins: Appearance.padding.normal
+            anchors.margins: Appearance.padding.medium
 
             implicitHeight: root.nonAnimHeight
 
@@ -182,7 +182,7 @@ StyledRect {
 
                 anchors.top: parent.top
                 anchors.left: image.right
-                anchors.leftMargin: Appearance.spacing.smaller
+                anchors.leftMargin: Appearance.spacing.small
 
                 animate: true
                 text: appNameMetrics.elidedText
@@ -212,7 +212,7 @@ StyledRect {
 
                 anchors.top: parent.top
                 anchors.left: image.right
-                anchors.leftMargin: Appearance.spacing.smaller
+                anchors.leftMargin: Appearance.spacing.small
 
                 animate: true
                 text: summaryMetrics.elidedText
@@ -402,7 +402,7 @@ StyledRect {
                 anchors.top: body.bottom
                 anchors.topMargin: Appearance.spacing.small
 
-                spacing: Appearance.spacing.smaller
+                spacing: Appearance.spacing.small
 
                 opacity: root.expanded ? 1 : 0
 
@@ -438,9 +438,9 @@ StyledRect {
         radius: Appearance.rounding.full
         color: root.modelData.urgency === NotificationUrgency.Critical ? Colours.palette.secondary : Colours.palette.surface_container_high
 
-        Layout.preferredWidth: actionText.width + Appearance.padding.normal * 2
+        Layout.preferredWidth: actionText.width + Appearance.padding.medium * 2
         Layout.preferredHeight: actionText.height + Appearance.padding.small * 2
-        implicitWidth: actionText.width + Appearance.padding.normal * 2
+        implicitWidth: actionText.width + Appearance.padding.medium * 2
         implicitHeight: actionText.height + Appearance.padding.small * 2
 
         StateLayer {
@@ -470,7 +470,7 @@ StyledRect {
             elide: Text.ElideRight
             elideWidth: {
                 const numActions = root.modelData.actions.length + 1;
-                return (inner.width - actions.spacing * (numActions - 1)) / numActions - Appearance.padding.normal * 2;
+                return (inner.width - actions.spacing * (numActions - 1)) / numActions - Appearance.padding.medium * 2;
             }
         }
     }

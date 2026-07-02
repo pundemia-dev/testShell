@@ -19,9 +19,9 @@ StyledRect {
         : Colours.palette.surface_container
 
     color: cardColour
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.medium
 
-    implicitWidth: layout.implicitWidth + Appearance.padding.large * 2
+    implicitWidth: layout.implicitWidth + Appearance.padding.extraLargeIncreased * 2
     implicitHeight: layout.implicitHeight + Appearance.padding.large * 2
 
     ServiceRef { service: Memory }
@@ -29,7 +29,7 @@ StyledRect {
     ColumnLayout {
         id: layout
         anchors.centerIn: parent
-        spacing: Appearance.spacing.small
+        spacing: Appearance.spacing.extraSmall
 
         RowLayout {
             spacing: Appearance.spacing.small
@@ -61,6 +61,7 @@ StyledRect {
             ColumnLayout {
                 id: usageColumn
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: Appearance.padding.extraSmall
                 spacing: 0
 
                 StyledText {

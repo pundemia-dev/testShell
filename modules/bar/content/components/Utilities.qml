@@ -52,7 +52,7 @@ Item {
         anchors.fill: undefined
         anchors.centerIn: parent
         implicitWidth: implicitHeight
-        implicitHeight: icon.implicitHeight + Appearance.padding.normal * 1.5
+        implicitHeight: icon.implicitHeight + Appearance.padding.medium * 1.5
 
         radius: Appearance.rounding.full
 

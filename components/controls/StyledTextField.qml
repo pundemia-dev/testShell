@@ -11,8 +11,7 @@ TextField {
 
     color: Colours.palette.on_surface
     placeholderTextColor: Colours.palette.outline
-    font.family: Appearance.font.family.sans
-    font.pointSize: Appearance.font.size.smaller
+    font: Appearance.font.body.small
     renderType: echoMode === TextField.Password ? TextField.QtRendering : TextField.NativeRendering
     cursorVisible: !readOnly
 
@@ -25,7 +24,7 @@ TextField {
 
         implicitWidth: 2
         color: Colours.palette.primary
-        radius: Appearance.rounding.normal
+        radius: Appearance.rounding.large
 
         Connections {
             target: root
@@ -61,7 +60,7 @@ TextField {
 
         Behavior on opacity {
             Anim {
-                duration: Appearance.anim.durations.small
+                type: Anim.StandardSmall
             }
         }
     }

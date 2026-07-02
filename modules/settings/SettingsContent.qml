@@ -25,7 +25,7 @@ Item {
     readonly property int railPadH: Appearance.padding.large
     readonly property int railIconBox: 26
     readonly property int railIconSize: Appearance.font.size.large
-    readonly property int railBtnH: railIconBox + Appearance.padding.normal * 2
+    readonly property int railBtnH: railIconBox + Appearance.padding.medium * 2
     readonly property int railCollapsedW: railIconBox + railPadH * 2
 
     // Third-party pages discovered from *.settings.qml schemas.
@@ -273,7 +273,7 @@ Item {
                     // Presets: apply / save presets for the current page's scope.
                     PresetButton {
                         Layout.alignment: Qt.AlignLeft
-                        Layout.bottomMargin: Appearance.spacing.normal
+                        Layout.bottomMargin: Appearance.spacing.medium
                         expanded: root.navExpanded
                         scope: root.pages[root.currentPage].scope ?? "full"
                         padH: root.railPadH
@@ -382,7 +382,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                radius: Appearance.rounding.normal
+                radius: Appearance.rounding.large
                 color: Colours.tPalette.surface_container_low
                 clip: true
 

@@ -18,12 +18,12 @@ StyledRect {
     signal rescan
 
     color: Colours.tPalette.surface
-    radius: Appearance.rounding.normal
+    radius: Appearance.rounding.large
     opacity: 0.97
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Appearance.padding.normal
+        anchors.margins: Appearance.padding.medium
         spacing: Appearance.spacing.small
 
         // Header: state label + lone rescan button.
@@ -116,10 +116,10 @@ StyledRect {
             Layout.fillHeight: true
             // Hard ceiling. Each row ≈ deviceRowH (kept in sync with
             // StashContent._deviceRowH). +spacing for the gap.
-            Layout.maximumHeight: Config.stash.visibleDevicesMax * 60 + (Config.stash.visibleDevicesMax - 1) * Appearance.spacing.smaller
+            Layout.maximumHeight: Config.stash.visibleDevicesMax * 60 + (Config.stash.visibleDevicesMax - 1) * Appearance.spacing.small
             model: root.devices
             clip: true
-            spacing: Appearance.spacing.smaller
+            spacing: Appearance.spacing.small
             visible: !root.sending
 
             delegate: Item {

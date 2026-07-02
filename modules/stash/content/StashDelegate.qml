@@ -110,7 +110,7 @@ Item {
         StyledClippingRect {
             id: surface
             anchors.fill: parent
-            radius: Appearance.rounding.normal
+            radius: Appearance.rounding.large
             color: Colours.tPalette.surface_container
 
             // System theme icon underneath — always present, gets faded out
@@ -121,7 +121,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 // Nudge up so the rendered icon leaves room at the bottom
                 // for the filename label without crowding it.
-                anchors.verticalCenterOffset: -Appearance.padding.normal
+                anchors.verticalCenterOffset: -Appearance.padding.medium
                 width: Math.min(parent.width, parent.height) * 0.66
                 height: width
                 source: Quickshell.iconPath(del.themeIcon, "application-x-generic")
