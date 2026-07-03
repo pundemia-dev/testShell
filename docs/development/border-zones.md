@@ -227,5 +227,5 @@ when the cursor is on the bg painted rect.
 | Single `BlobInvertedRect` driver | [`drawers/backgrounds/Backgrounds.qml`](../../drawers/backgrounds/Backgrounds.qml) |
 | Rail/zone helpers + slotRect/slotHover/slotDragOver maps | [`services/BackgroundsManager.qml`](../../services/BackgroundsManager.qml) |
 | Bridge regions, slot envelope, holdover, slot publishing | [`drawers/backgrounds/components/WindowSlot.qml`](../../drawers/backgrounds/components/WindowSlot.qml) |
-| Per-zone shader gating (sink, boost, frame smin) | [`plugin/src/Caelestia/Blobs/shaders/blob.frag`](../../plugin/src/Caelestia/Blobs/shaders/blob.frag) |
-| Plugin material extensions (`zoneRoundings`, `zoneIndex`) | [`plugin/src/Caelestia/Blobs/blobmaterial.{hpp,cpp}`](../../plugin/src/Caelestia/Blobs/blobmaterial.cpp), [`blobinvertedrect.{hpp,cpp}`](../../plugin/src/Caelestia/Blobs/blobinvertedrect.cpp), [`blobrect.{hpp,cpp}`](../../plugin/src/Caelestia/Blobs/blobrect.cpp) |
+| Per-zone shader gating (sink, boost, frame smin) | [`plugin/pshell/Blobs/shaders/blob.frag`](../../plugin/pshell/Blobs/shaders/blob.frag) |
+| Plugin material extensions (`zoneRoundings`, `zoneIndex`) | [`plugin/pshell/Blobs/blobmaterial.{hpp,cpp}`](../../plugin/pshell/Blobs/blobmaterial.cpp), [`blobinvertedrect.{hpp,cpp}`](../../plugin/pshell/Blobs/blobinvertedrect.cpp), [`blobrect.{hpp,cpp}`](../../plugin/pshell/Blobs/blobrect.cpp) |

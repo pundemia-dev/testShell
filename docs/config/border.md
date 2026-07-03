@@ -225,4 +225,4 @@ slide/drop semantics. Currently unused.
   присасывание:
   [`drawers/backgrounds/Backgrounds.qml`](../../drawers/backgrounds/Backgrounds.qml)
 - Per-zone shader logic (zoneStrength → sink + boost + frame smin):
-  [`plugin/src/Caelestia/Blobs/shaders/blob.frag`](../../plugin/src/Caelestia/Blobs/shaders/blob.frag)
+  [`plugin/pshell/Blobs/shaders/blob.frag`](../../plugin/pshell/Blobs/shaders/blob.frag)

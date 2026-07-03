@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-pShell is a desktop shell built on **Quickshell**, a Qt6-based Wayland shell framework. It targets the **Niri** compositor (Hyprland support is legacy and partially stripped on the active branch). The UI is written in QML; the C++ lives in two plugin modules under `plugin/src/Caelestia/`: **Caelestia.Blobs** (SDF-based rounded panel rendering) and **Caelestia** (`ImageAnalyser` — wallpaper luminance / dominant colour; plus `CUtils` — QML utility helpers).
+pShell is a desktop shell built on **Quickshell**, a Qt6-based Wayland shell framework. It targets the **Niri** compositor (Hyprland support is legacy and partially stripped on the active branch). The UI is written in QML; the C++ lives in two plugin modules under `plugin/pshell/`: **Caelestia.Blobs** (SDF-based rounded panel rendering) and **Caelestia** (`ImageAnalyser` — wallpaper luminance / dominant colour; plus `CUtils` — QML utility helpers).
 
 **Key technologies:** QML/Qt6, C++20 (plugin only), Quickshell, CMake.
 
@@ -78,7 +78,7 @@ pShell's `components/` base is **ported from caelestia** (checkout under `tmp/ca
 
 ### Always use Appearance design tokens
 
-Never hardcode pixel/ms/radius/font-size literals in module code. Always pull from `Appearance.rounding.*`, `Appearance.padding.*`, `Appearance.spacing.*`, the font typescale (`Appearance.font.{body,title,label,…}.*`), `Appearance.anim.durations.*`, `Appearance.anim.curves.*`. Hardcoded values lurk only in `config/*Config.qml` defaults (where they're per-module configuration, not styling).
+Never hardcode pixel/ms/radius/font-size literals in module code. Always pull from `Appearance.rounding.*`, `Appearance.padding.*`, `Appearance.spacing.*`, the font typescale (`Appearance.font.{body,title,label,…}.*`), `Appearance.anim.durations.*`, `Appearance.anim.curves.*`. Hardcoded values lurk only in config defaults (`config/*config/` and `modules/<name>/config/`), where they're per-module configuration, not styling.
 
 ### Token scale & which step to use where
 

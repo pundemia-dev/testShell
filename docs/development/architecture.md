@@ -214,7 +214,7 @@ Singletons in `services/`:
 
 Three `add_subdirectory`s in top-level `CMakeLists.txt`.
 
-**`plugin/src/Caelestia/`** — pShell's own:
+**`plugin/pshell/`** — pShell's own:
 - `Caelestia.Blobs` — SDF panel renderer. Types: `BlobGroup` (`smoothing`,
   `stickSmooth`), `BlobRect` (`radius`, per-corner radii, `zoneIndex`, `sticks`),
   `BlobInvertedRect` (`borderLeft/Right/Top/Bottom`, `zoneRoundings`).
@@ -223,7 +223,7 @@ Three `add_subdirectory`s in top-level `CMakeLists.txt`.
   via QtConcurrent) + `CUtils` singleton (`clamp`, `saveItem`, `copyFile`,
   `deleteFile`, `toLocalFile`, `version`, `qtVersion`).
 
-**`plugin/caelestia/`** — vendored caelestia modules (dashboard backing):
+**`plugin/vendor/caelestia/`** — vendored caelestia modules (dashboard backing):
 - `Caelestia.Config` — GlobalConfig/Tokens/Appearance (parallel config system,
   NOT pShell's `qs.config`)
 - `Caelestia.Internal` — sparkline, visualiser bars, CircularBuffer,
@@ -234,7 +234,7 @@ Three `add_subdirectory`s in top-level `CMakeLists.txt`.
 
 System deps: pipewire, aubio, libsensors, libcava.
 
-**`plugin/m3shapes/`** — vendored `M3Shapes`: organic shapes (Pill/Gem/ClamShell/
+**`plugin/vendor/m3shapes/`** — vendored `M3Shapes`: organic shapes (Pill/Gem/ClamShell/
 Diamond/Sunny/Cookie…) + `distanceAtAngle`/`pointAtAngle`.
 
 All install to `/usr/lib/qt6/qml/`. C++ changes require:

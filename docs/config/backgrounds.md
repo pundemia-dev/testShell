@@ -248,4 +248,4 @@ its own content (on top) and every older wrapper's content (below).
 - SDF union host (`bgRenderHost`) and rail composition:
   [`drawers/backgrounds/Backgrounds.qml`](../../drawers/backgrounds/Backgrounds.qml)
 - C++ SDF compositor:
-  `plugin/src/Caelestia/Blobs/` (BlobGroup, BlobRect, BlobInvertedRect)
+  `plugin/pshell/Blobs/` (BlobGroup, BlobRect, BlobInvertedRect)

@@ -15,8 +15,8 @@
 | LocalSend send | `modules/stash/content/StashContent.qml`, `modules/stash/content/{DevicePicker,DeviceUnit}.qml`, `scripts/localsend_{discover,send}.py` |
 | LocalSend receive | `services/LocalSend.qml`, `modules/stash/content/IncomingRequest.qml`, `scripts/localsend_receive.py`, `scripts/localsend_pickdir.sh` |
 | Dashed-border component | `components/effects/DashedRect.qml` |
-| Per-zone shader logic | `plugin/src/Caelestia/Blobs/shaders/blob.frag`, `plugin/src/Caelestia/Blobs/blobmaterial.{hpp,cpp}` |
-| `sticks` toggle + `stickSmooth` capsule | `plugin/src/Caelestia/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
+| Per-zone shader logic | `plugin/pshell/Blobs/shaders/blob.frag`, `plugin/pshell/Blobs/blobmaterial.{hpp,cpp}` |
+| `sticks` toggle + `stickSmooth` capsule | `plugin/pshell/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
 | SDF frame inset | `drawers/backgrounds/Backgrounds.qml` (`_frameInset*`) |
 | Settings UI | `modules/settings/{SettingsContent,SettingsDiscovery,PresetButton}.qml`, `modules/settings/pages/*.qml`, `components/{SettingsSchema,SettingRow,SettingSection}.qml`, `components/controls/{SchemaForm,Hint,HintIcon}.qml`, `services/PresetsManager.qml` |
 | Dashboard | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/`, `components/misc/DashboardPage.qml`, `modules/dashboard/config/DashboardConfig.qml`, `modules/dashboard/settings/DashboardSettingsPage.qml` |
