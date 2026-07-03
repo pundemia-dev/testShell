@@ -7,6 +7,7 @@ import Caelestia.Components
 import qs.components
 import qs.config
 import qs.services
+import qs.components.effects
 
 // Ported from caelestia: controlled M3 slider — a custom drag MouseArea emits
 // `interaction(v)` (with v mapped through from/to + stepSize) rather than

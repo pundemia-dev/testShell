@@ -343,7 +343,7 @@ derived from it.
 - Per-device row:
   [`modules/stash/content/DeviceUnit.qml`](../../modules/stash/content/DeviceUnit.qml)
 - Dashed border component:
-  [`components/DashedRect.qml`](../../components/DashedRect.qml)
+  [`components/effects/DashedRect.qml`](../../components/effects/DashedRect.qml)
 - LocalSend scripts (uv, PEP 723):
   [`scripts/localsend_discover.py`](../../scripts/localsend_discover.py),
   [`scripts/localsend_send.py`](../../scripts/localsend_send.py),

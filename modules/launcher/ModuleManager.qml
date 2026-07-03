@@ -3,6 +3,12 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.config
 import qs.utils
+// Registers qs.modules.launcher.content.components with the qml scanner so the
+// dynamically-loaded launcher modules can import it for sibling types
+// (LauncherModule, PropertyRow) — implicit same-dir resolution doesn't work
+// through the qsintercept scheme, and the scanner only creates qs.* modules
+// referenced from statically-reachable files.
+import qs.modules.launcher.content.components
 
 Item {
     id: root

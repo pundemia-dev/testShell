@@ -3,6 +3,7 @@ import qs.services
 import qs.config
 import QtQuick
 import QtQuick.Layouts
+import qs.components.effects
 
 // Placeholder — translator page to be implemented. Page contract: the root
 // exposes implicitWidth/implicitHeight for the swipeable view.

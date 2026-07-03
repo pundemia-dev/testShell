@@ -1,4 +1,5 @@
 import qs.components
+import qs.components.misc
 
 // Per-widget settings for the Battery / power status indicator. Values persist
 // in Config.custom["powerStatus"]; read by PowerStatus.qml via getCustom.

@@ -5,6 +5,7 @@ import qs.utils
 import Quickshell
 import QtQuick
 import "../popouts" as BarPopouts
+import qs.components.misc
 
 
 RadialSliderIcon {

@@ -4,6 +4,8 @@ import qs.components
 import qs.components.controls
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
+import qs.components.misc
 
 // First real settings page. Doubles as the Phase-1 verification surface:
 // it exercises the Advanced toggle, an inline hint, and the generic SchemaForm

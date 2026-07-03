@@ -4,6 +4,7 @@ import qs.utils
 import qs.config
 import Quickshell
 import QtQuick
+import qs.components.misc
 
 Item {
     id: root

@@ -7,6 +7,7 @@ import qs.components.controls
 import "../../dashboard/content" as Dash
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
 
 // Config.dashboard → dashboardconfig/DashboardConfig.qml
 // Lets the user enable/disable the whole dashboard, choose its anchor, and

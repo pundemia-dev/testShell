@@ -7,6 +7,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import "tools"
+import qs.components.effects
 
 // Flameshot-style region editor. The toolbar with every annotation tool is
 // visible as soon as a selection exists, and the selection stays movable and

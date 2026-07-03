@@ -8,6 +8,7 @@ import qs.utils
 import Quickshell.Services.SystemTray
 import QtQuick
 import "../popouts" as BarPopouts
+import qs.components.misc
 
 MouseArea {
     id: root

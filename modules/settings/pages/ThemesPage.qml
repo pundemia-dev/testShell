@@ -8,6 +8,7 @@ import qs.components.controls
 import Qt.labs.folderlistmodel
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
 
 // Full-config theme manager. Each card is a presets/full/<name>.json snapshot:
 // click to apply, pencil to rename, trash to delete; the top field saves the

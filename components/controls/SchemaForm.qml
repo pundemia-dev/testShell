@@ -5,6 +5,7 @@ import qs.services
 import qs.config
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
 
 // Generic settings form rendered from a SettingsSchema (or a plain object with
 // the same shape). Each field maps to a styled control inside a SettingRow,

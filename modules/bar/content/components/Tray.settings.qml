@@ -1,4 +1,5 @@
 import qs.components
+import qs.components.misc
 
 // Per-widget settings for the system tray. Values persist in
 // Config.custom["tray"]; read by Tray.qml / TrayItem.qml via getCustom.

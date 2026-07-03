@@ -7,6 +7,7 @@ import qs.components.controls
 import qs.services
 import Quickshell
 import Quickshell.Io
+import qs.modules.launcher.content.components
 
 LauncherModule {
     id: root

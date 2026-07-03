@@ -1,4 +1,5 @@
 import qs.components
+import qs.components.misc
 
 // Per-widget settings for the Clock. Values persist in Config.custom["clock"]
 // and are read by Clock.qml via Config.getCustom("clock", <field>, <default>).

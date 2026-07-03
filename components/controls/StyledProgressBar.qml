@@ -8,6 +8,7 @@ import Caelestia.Internal
 import qs.components
 import qs.config
 import qs.services
+import qs.components.effects
 
 // Ported from caelestia: M3 linear progress bar (determinate + indeterminate)
 // with an optional wavy filled portion and a trailing stop dot. Backed by the

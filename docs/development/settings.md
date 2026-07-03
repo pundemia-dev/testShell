@@ -32,7 +32,7 @@ confirmed (red tint → confirm, 3 s auto-reset).
 
 ## Third-party module contract
 
-A module ships a `<Name>.settings.qml` sibling — a pure `components/SettingsSchema.qml`:
+A module ships a `<Name>.settings.qml` sibling — a pure `components/misc/SettingsSchema.qml`:
 
 ```qml
 QtObject {
@@ -103,7 +103,7 @@ page descriptor in `SettingsContent.qml`'s `pages` array.
 | Module root | `modules/settings/{Settings,SettingsContent,SettingsDiscovery}.qml` |
 | Pages | `modules/settings/pages/*.qml` |
 | Preset management | `utils/PresetsManager.qml` |
-| Third-party contract | `components/SettingsSchema.qml`, `components/controls/SchemaForm.qml` |
+| Third-party contract | `components/misc/SettingsSchema.qml`, `components/controls/SchemaForm.qml` |
 | Hints | `components/controls/{Hint,HintIcon}.qml` |
 | Sidebar preset button | `modules/settings/PresetButton.qml` |
 | General config (advanced toggle) | `config/generalconfig/GeneralConfig.qml` |

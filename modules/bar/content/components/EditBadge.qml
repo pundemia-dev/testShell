@@ -1,4 +1,5 @@
 import QtQuick
+import qs.components
 import qs.config
 import qs.services
 

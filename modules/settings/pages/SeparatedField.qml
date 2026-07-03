@@ -3,6 +3,7 @@ import qs.components
 import qs.components.controls
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
 
 // One collapsible group for a barconfig `SeparatedData` value (all/begin/center/
 // end). `all` is the base; begin/center/end override their segment and, when set

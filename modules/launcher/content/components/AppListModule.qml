@@ -9,6 +9,8 @@ import qs.components.images
 import qs.services
 import Quickshell.Widgets
 import Quickshell
+import qs.components.containers
+import qs.modules.launcher.content.components
 // import qs.modules.launcher.content.components
 // import "." // Для доступа к BaseModule
 

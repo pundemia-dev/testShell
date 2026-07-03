@@ -1,5 +1,6 @@
 import qs.components
 import QtQuick
+import qs.components.misc
 
 // Manifest for the primary Dashboard page. Declares its own title + icon (the
 // modular contract) and lazily builds Dash on demand.

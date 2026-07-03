@@ -6,6 +6,7 @@ import qs.components
 import qs.components.controls
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
 
 // Full hand-written settings for the Workspaces bar widget, bound directly to
 // the typed Config.bar.workspaces sub-config (the rich nested config doesn't fit

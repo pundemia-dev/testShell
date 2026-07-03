@@ -14,11 +14,11 @@
 | Niri integration | `services/Niri.qml`, `utils/NiriFocusGrab.qml` |
 | LocalSend send | `modules/stash/content/StashContent.qml`, `modules/stash/content/{DevicePicker,DeviceUnit}.qml`, `scripts/localsend_{discover,send}.py` |
 | LocalSend receive | `services/LocalSend.qml`, `modules/stash/content/IncomingRequest.qml`, `scripts/localsend_receive.py`, `scripts/localsend_pickdir.sh` |
-| Dashed-border component | `components/DashedRect.qml` |
+| Dashed-border component | `components/effects/DashedRect.qml` |
 | Per-zone shader logic | `plugin/src/Caelestia/Blobs/shaders/blob.frag`, `plugin/src/Caelestia/Blobs/blobmaterial.{hpp,cpp}` |
 | `sticks` toggle + `stickSmooth` capsule | `plugin/src/Caelestia/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
 | SDF frame inset | `drawers/backgrounds/Backgrounds.qml` (`_frameInset*`) |
 | Settings UI | `modules/settings/{SettingsContent,SettingsDiscovery,PresetButton}.qml`, `modules/settings/pages/*.qml`, `components/{SettingsSchema,SettingRow,SettingSection}.qml`, `components/controls/{SchemaForm,Hint,HintIcon}.qml`, `utils/PresetsManager.qml` |
-| Dashboard | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/`, `components/DashboardPage.qml`, `config/dashboardconfig/DashboardConfig.qml`, `modules/settings/pages/DashboardSettingsPage.qml` |
+| Dashboard | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/`, `components/misc/DashboardPage.qml`, `config/dashboardconfig/DashboardConfig.qml`, `modules/settings/pages/DashboardSettingsPage.qml` |
 | Dashboard rich progress | `components/controls/{DashProgress,StyledProgressBar}.qml` |
 | Dashboard backing services | `services/{Players,SystemUsage,Weather,NetworkUsage,Audio,SysInfo}.qml`, `utils/Icons.qml` |

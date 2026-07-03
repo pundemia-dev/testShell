@@ -1,4 +1,5 @@
 import qs.components
+import qs.components.misc
 
 // Per-widget settings for the Bluetooth status indicator. Values persist in
 // Config.custom["bluetoothStatus"]; read by BluetoothStatus.qml via getCustom.

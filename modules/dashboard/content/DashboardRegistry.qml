@@ -7,7 +7,7 @@ import QtQuick
 
 // Discovers modular dashboard pages without hardcoding a tab list. Each page is
 // a folder under ../pages/<id>/ shipping one `*.page.qml` manifest (a
-// components/DashboardPage). We scan pages/ for subfolders, then scan each
+// components/misc/DashboardPage). We scan pages/ for subfolders, then scan each
 // subfolder for its manifest, load only the manifest (cheap — content is a
 // Component that isn't instantiated until a Loader uses it), and stamp the
 // folder name as the stable `id`. Mirrors modules/settings/SettingsDiscovery.

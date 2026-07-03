@@ -22,7 +22,7 @@ JsonObject {
     property bool showAimLines: true
     // Dim strength of the area outside the selection (0..1 alpha over black).
     property real dimStrength: 0.45
-    // Dashed selection border (feeds components/DashedRect.qml).
+    // Dashed selection border (feeds components/effects/DashedRect.qml).
     property int dashWidth: 2
     property int dashLength: 8
     property int dashGap: 4

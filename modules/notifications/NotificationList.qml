@@ -1,6 +1,5 @@
 import qs.components
 import qs.components.containers
-import qs.components.widgets
 import qs.services
 import qs.config
 import qs.utils

@@ -158,7 +158,7 @@ Hover-triggered panel (default: top-center) hosting **modular self-discovering p
 - **Wrapper** `DashboardWrapper.qml` — opens on hover via
   `InteractionManager.registerHover`; `mode: "push"`.
 - **Page contract** — each page is a folder `modules/dashboard/pages/<id>/` with
-  a `<id>.page.qml` manifest (`components/DashboardPage.qml`:
+  a `<id>.page.qml` manifest (`components/misc/DashboardPage.qml`:
   `id`/`title`/`icon`/`order`/`Component content`).
   `content/DashboardRegistry.qml` auto-discovers via `FolderListModel`.
   Add a folder → tab appears automatically; no hardcoded tab list.

@@ -4,6 +4,7 @@ import qs.components
 import qs.components.controls
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
 
 // Config.corners → cornersconfig/CornersConfig.qml
 Flickable {

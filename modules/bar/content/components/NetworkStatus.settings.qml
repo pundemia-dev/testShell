@@ -1,4 +1,5 @@
 import qs.components
+import qs.components.misc
 
 // Per-widget settings for the Network status indicator. Values persist in
 // Config.custom["networkStatus"]; read by NetworkStatus.qml via getCustom.

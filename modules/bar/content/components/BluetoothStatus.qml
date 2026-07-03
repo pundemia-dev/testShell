@@ -7,6 +7,7 @@ import QtQuick
 import Quickshell.Bluetooth
 import QtQuick.Layouts
 import "../popouts" as BarPopouts
+import qs.components.misc
 
 
 FlexboxLayout {

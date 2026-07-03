@@ -6,6 +6,7 @@ import qs.components
 import Caelestia.Components as CComp
 import QtQuick
 import QtQuick.Shapes
+import qs.components.effects
 
 // Rich circular progress ported from caelestia (adds sweepAngle gauges + a wavy
 // active arc via Caelestia.Components.WavyLine). Kept separate from the simple

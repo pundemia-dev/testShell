@@ -1,4 +1,5 @@
 import qs.components
+import qs.components.misc
 
 // Per-widget settings for the Keyboard layout indicator. Values persist in
 // Config.custom["keyboardPreview"]; read by KeyboardPreview.qml via getCustom.

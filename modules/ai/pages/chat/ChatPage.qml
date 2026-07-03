@@ -8,6 +8,7 @@ import qs.config
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import qs.components.effects
 
 // Chat page: message list + model picker + input row. Page contract (see
 // modules/dashboard): the root exposes implicitWidth/implicitHeight so the

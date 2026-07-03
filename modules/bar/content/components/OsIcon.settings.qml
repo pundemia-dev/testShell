@@ -1,4 +1,5 @@
 import qs.components
+import qs.components.misc
 
 // Per-widget settings for the OS icon. Surfaced inline on the Bar settings page
 // (WidgetSettings.qml); values persist in Config.custom["osIcon"] and are read

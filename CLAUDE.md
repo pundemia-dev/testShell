@@ -152,7 +152,7 @@ write a new module/component, pick the fill colour by this rule:**
   depth `n`. Use it (not tPalette) for nested cards: tPalette only emits layer
   0/1, so deeper nesting needs explicit `n` to stay visually distinct. A common
   shape is `Colours.transparency.enabled ? Colours.layer(palette.surface_container, 2) : palette.surface_container`
-  (see `components/SettingSection.qml`).
+  (see `components/containers/SettingSection.qml`).
 - **Never make text/icons/outlines/state-fills translucent** — they must read.
   And don't hand-roll panel translucency with `opacity:` or `Qt.rgba(...,0.x)`;
   route it through `tPalette`/`layer` so the global toggle + light/dark + wallpaper

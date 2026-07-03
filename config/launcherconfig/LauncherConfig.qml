@@ -1,7 +1,6 @@
 import Quickshell.Io
 import qs.config
 
-import "components"
 import "structures"
 
 JsonObject {

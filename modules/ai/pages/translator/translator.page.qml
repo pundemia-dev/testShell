@@ -1,5 +1,6 @@
 import qs.components
 import QtQuick
+import qs.components.misc
 
 DashboardPage {
     title: qsTr("Translate")

@@ -5,6 +5,7 @@ import qs.components
 import qs.components.controls
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
 
 // Config.bar → barconfig/BarConfig.qml
 Flickable {

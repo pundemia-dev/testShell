@@ -10,6 +10,7 @@ import qs.components.effects
 import qs.components.images
 import qs.components.containers
 import qs.services
+import qs.modules.launcher.content.components
 
 LauncherModule {
     id: root

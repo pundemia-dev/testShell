@@ -4,6 +4,7 @@ import qs.components
 import qs.components.controls
 import QtQuick
 import QtQuick.Layouts
+import qs.components.containers
 
 // Generic page for a discovered third-party SettingsSchema. Rendered via
 // SchemaForm; values persist in Config.custom[schema.key]. See
