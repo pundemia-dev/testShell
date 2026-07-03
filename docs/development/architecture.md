@@ -129,20 +129,24 @@ binds {
 
 ## Configuration
 
-`config/Config.qml` reads `~/.config/pShell/shell.json`. Sub-configs in
+`config/Config.qml` reads `~/.config/pShell/shell.json`. Feature modules own
+their sub-config (`modules/<name>/config/`); chrome/global sub-configs stay in
 `config/<name>config/`:
 
 | Key | File | Notes |
 |-----|------|-------|
 | `Config.bar` | `barconfig/BarConfig.qml` | |
-| `Config.launcher` | `launcherconfig/LauncherConfig.qml` | |
+| `Config.launcher` | `modules/launcher/config/LauncherConfig.qml` | |
 | `Config.notifs` | `modules/notifications/config/NotifsConfig.qml` | |
 | `Config.backgrounds` | `backgroundsconfig/BackgroundsConfig.qml` | |
 | `Config.border` | `borderconfig/BorderConfig.qml` | visible chrome + 8 zonal `zoneRoundings` |
 | `Config.corners` | `cornersconfig/CornersConfig.qml` | |
-| `Config.stash` | `stashconfig/StashConfig.qml` | |
+| `Config.stash` | `modules/stash/config/StashConfig.qml` | |
+| `Config.capture` | `modules/capture/config/CaptureConfig.qml` | |
+| `Config.ai` | `modules/ai/config/AiConfig.qml` | |
+| `Config.popouts` | `popoutsconfig/PopoutsConfig.qml` | |
 | `Config.general` | `generalconfig/GeneralConfig.qml` | `advanced` toggle, shell-wide prefs |
-| `Config.dashboard` | `dashboardconfig/DashboardConfig.qml` | per-page tokens, `order[]`/`disabled[]` |
+| `Config.dashboard` | `modules/dashboard/config/DashboardConfig.qml` | per-page tokens, `order[]`/`disabled[]` |
 | `Config.custom` | open `var` map | third-party settings; `getCustom(key, field, fallback)` / `setCustom(key, field, value)` |
 
 Presets: `~/.config/pShell/presets/<scope>/<name>.json`, managed by

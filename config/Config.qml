@@ -5,7 +5,7 @@ import Quickshell
 import Quickshell.Io
 
 import "barconfig"
-import "launcherconfig"
+import qs.modules.launcher.config
 import "borderconfig"
 import "cornersconfig"
 import "backgroundsconfig"
@@ -13,12 +13,12 @@ import "backgroundsconfig"
 // architecture cleanup); the remaining relative imports migrate as each
 // module is sliced.
 import qs.modules.notifications.config
-import "stashconfig"
-import "captureconfig"
+import qs.modules.stash.config
+import qs.modules.capture.config
 import "popoutsconfig"
-import "dashboardconfig"
+import qs.modules.dashboard.config
 import "generalconfig"
-import "aiconfig"
+import qs.modules.ai.config
 
 Singleton {
     id: root

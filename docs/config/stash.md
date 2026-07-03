@@ -5,7 +5,7 @@ drawer that holds dropped files for quick re-use, and routes outbound
 file drops to LocalSend devices on the local network. Reads from
 `~/.config/pShell/shell.json` under the `"stash"` key.
 
-Source: [`config/stashconfig/StashConfig.qml`](../../config/stashconfig/StashConfig.qml)
+Source: [`modules/stash/config/StashConfig.qml`](../../modules/stash/config/StashConfig.qml)
 
 ---
 
@@ -331,7 +331,7 @@ derived from it.
 ## Where the implementation lives
 
 - Config schema:
-  [`config/stashconfig/StashConfig.qml`](../../config/stashconfig/StashConfig.qml)
+  [`modules/stash/config/StashConfig.qml`](../../modules/stash/config/StashConfig.qml)
 - Wrapper (trigger strip, watcher, contract):
   [`modules/stash/StashWrapper.qml`](../../modules/stash/StashWrapper.qml)
 - Three-state content & LocalSend orchestration:

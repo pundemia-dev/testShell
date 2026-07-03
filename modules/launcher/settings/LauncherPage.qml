@@ -6,7 +6,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components.containers
 
-// Config.launcher → launcherconfig/LauncherConfig.qml
+// Config.launcher → modules/launcher/config/LauncherConfig.qml
 Flickable {
     id: root
 

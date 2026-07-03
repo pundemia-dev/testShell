@@ -268,6 +268,9 @@ Item {
 
                             Connections {
                                 target: leftPanel.model
+                                // Only module ScriptModels have valuesChanged; the
+                                // selecting ListModel doesn't — don't warn on it.
+                                ignoreUnknownSignals: true
                                 function onValuesChanged() {
                                     Qt.callLater(() => leftPanel.listView.currentIndex = 0)
                                 }

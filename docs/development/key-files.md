@@ -19,6 +19,6 @@
 | `sticks` toggle + `stickSmooth` capsule | `plugin/src/Caelestia/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
 | SDF frame inset | `drawers/backgrounds/Backgrounds.qml` (`_frameInset*`) |
 | Settings UI | `modules/settings/{SettingsContent,SettingsDiscovery,PresetButton}.qml`, `modules/settings/pages/*.qml`, `components/{SettingsSchema,SettingRow,SettingSection}.qml`, `components/controls/{SchemaForm,Hint,HintIcon}.qml`, `services/PresetsManager.qml` |
-| Dashboard | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/`, `components/misc/DashboardPage.qml`, `config/dashboardconfig/DashboardConfig.qml`, `modules/settings/pages/DashboardSettingsPage.qml` |
+| Dashboard | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/`, `components/misc/DashboardPage.qml`, `modules/dashboard/config/DashboardConfig.qml`, `modules/dashboard/settings/DashboardSettingsPage.qml` |
 | Dashboard rich progress | `components/controls/{DashProgress,StyledProgressBar}.qml` |
 | Dashboard backing services | `services/{Players,SystemUsage,Weather,NetworkUsage,Audio,SysInfo}.qml`, `services/Icons.qml` |

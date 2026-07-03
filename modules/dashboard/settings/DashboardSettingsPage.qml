@@ -4,12 +4,12 @@ import qs.config
 import qs.services
 import qs.components
 import qs.components.controls
-import "../../dashboard/content" as Dash
+import qs.modules.dashboard.content as Dash
 import QtQuick
 import QtQuick.Layouts
 import qs.components.containers
 
-// Config.dashboard → dashboardconfig/DashboardConfig.qml
+// Config.dashboard → modules/dashboard/config/DashboardConfig.qml
 // Lets the user enable/disable the whole dashboard, choose its anchor, and
 // enable/disable + reorder the modular pages (drag rows by the grip handle).
 Flickable {
