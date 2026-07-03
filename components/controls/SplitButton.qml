@@ -20,6 +20,13 @@ Row {
     property string fallbackIcon
     property string fallbackText
 
+    // Optional overlay item the dropdown is reparented into. Pointer events
+    // never reach items placed outside their ancestors' bounds inside the
+    // layershell panels (the menu renders but is unpickable), so a host that
+    // CONTAINS the dropdown area (e.g. the page root) must be provided there.
+    // Null keeps the legacy in-tree anchoring (regular windows are fine).
+    property Item menuHost: null
+
     property alias menuItems: menu.items
     property alias active: menu.active
     property alias expanded: menu.expanded
@@ -146,20 +153,41 @@ Row {
         Menu {
             id: menu
 
-            states: State {
-                when: root.menuOnTop
+            parent: root.menuHost ?? expandBtn
 
-                AnchorChanges {
-                    target: menu
-                    anchors.top: undefined
-                    anchors.bottom: expandBtn.top
-                }
-            }
-
-            anchors.top: parent.bottom
-            anchors.right: parent.right
+            // In-tree (legacy) anchoring, disabled when hosted.
+            anchors.top: root.menuHost ? undefined
+                : (root.menuOnTop ? undefined : expandBtn.bottom)
+            anchors.bottom: root.menuHost ? undefined
+                : (root.menuOnTop ? expandBtn.top : undefined)
+            anchors.right: root.menuHost ? undefined : expandBtn.right
             anchors.topMargin: Appearance.spacing.small
             anchors.bottomMargin: Appearance.spacing.small
+
+            // Hosted positioning: computed in host coordinates and clamped to
+            // the host's bounds so the whole dropdown stays pickable.
+            readonly property point _btnOrigin: {
+                if (!root.menuHost)
+                    return Qt.point(0, 0);
+                void root.menuHost.width;
+                void root.menuHost.height;
+                void expandBtn.x;
+                void expandBtn.y;
+                return expandBtn.mapToItem(root.menuHost, 0, 0);
+            }
+            x: root.menuHost
+                ? Math.max(0, Math.min(_btnOrigin.x + expandBtn.width - width,
+                                       root.menuHost.width - width))
+                : 0
+            y: {
+                if (!root.menuHost)
+                    return 0;
+                const gap = Appearance.spacing.small;
+                const target = root.menuOnTop
+                    ? _btnOrigin.y - height - gap
+                    : _btnOrigin.y + expandBtn.height + gap;
+                return Math.max(0, Math.min(target, root.menuHost.height - height));
+            }
         }
     }
 }

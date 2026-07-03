@@ -150,7 +150,16 @@ Item {
             borderRight: root._invertedFrameMargin + root._frameInsetRight
             borderTop: root._invertedFrameMargin + root._frameInsetTop
             borderBottom: root._invertedFrameMargin + root._frameInsetBottom
-            zoneRoundings: Config.border.zoneRoundings
+            // Normalised to exactly 8 entries: a truncated stored array (the
+            // old sparse default collapsed to 7 elements on persist) would
+            // otherwise zero-pad in C++ and silently disable the last zones.
+            zoneRoundings: {
+                const src = Config.border.zoneRoundings ?? [];
+                const a = [];
+                for (let i = 0; i < 8; i++)
+                    a.push(src[i] ?? 0);
+                return a;
+            }
         }
 
         Repeater {

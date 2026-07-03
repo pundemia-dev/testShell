@@ -17,6 +17,7 @@ import qs.modules.notifications
 import qs.modules.stash
 import qs.modules.dashboard
 import qs.modules.capture
+import qs.modules.ai
 
 import qs.config
 import qs.components
@@ -233,6 +234,10 @@ Variants {
                     anchors.fill: parent
                 }
                 RecordWrapper {
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
+                }
+                AiWrapper {
                     manager: scope.backgroundsManager
                     screen: scope.modelData
                 }

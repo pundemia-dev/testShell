@@ -15,6 +15,7 @@ import "captureconfig"
 import "popoutsconfig"
 import "dashboardconfig"
 import "generalconfig"
+import "aiconfig"
 
 Singleton {
     id: root
@@ -30,6 +31,7 @@ Singleton {
     property alias popouts: adapter.popouts
     property alias dashboard: adapter.dashboard
     property alias general: adapter.general
+    property alias ai: adapter.ai
     // Open map for third-party module settings, keyed by SettingsSchema.key.
     // Official modules use their typed sub-configs above; custom modules read
     // their values as Config.custom["<key>"]?.field ?? default. See
@@ -93,6 +95,7 @@ Singleton {
             property PopoutsConfig popouts: PopoutsConfig {}
             property DashboardConfig dashboard: DashboardConfig {}
             property GeneralConfig general: GeneralConfig {}
+            property AiConfig ai: AiConfig {}
             property var custom: ({})
         }
     }

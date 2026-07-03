@@ -24,5 +24,8 @@ JsonObject {
 
     // Per-zone присасывание strengths (0 = disabled, 1 = full).
     // Order: topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left.
-    property list<real> zoneRoundings: [0, 0, 0, 1, 0, , 1, 1]
+    // MUST hold exactly 8 elements — a sparse literal (an accidental `, ,`
+    // hole) collapses to a shorter list on persist, shifting every later zone
+    // and silently disabling the last one(s).
+    property list<real> zoneRoundings: [0, 0, 0, 1, 0, 1, 1, 1]
 }
