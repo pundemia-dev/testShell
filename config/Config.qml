@@ -9,7 +9,10 @@ import "launcherconfig"
 import "borderconfig"
 import "cornersconfig"
 import "backgroundsconfig"
-import "notifsconfig"
+// Feature-sliced module configs live inside their modules (stage 4 of the
+// architecture cleanup); the remaining relative imports migrate as each
+// module is sliced.
+import qs.modules.notifications.config
 import "stashconfig"
 import "captureconfig"
 import "popoutsconfig"

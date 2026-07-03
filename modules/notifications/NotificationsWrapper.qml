@@ -5,6 +5,8 @@ import qs.services
 import Quickshell
 import QtQuick
 
+import "content"
+
 Item {
     id: root
 

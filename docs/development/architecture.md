@@ -136,7 +136,7 @@ binds {
 |-----|------|-------|
 | `Config.bar` | `barconfig/BarConfig.qml` | |
 | `Config.launcher` | `launcherconfig/LauncherConfig.qml` | |
-| `Config.notifs` | `notifsconfig/NotifsConfig.qml` | |
+| `Config.notifs` | `modules/notifications/config/NotifsConfig.qml` | |
 | `Config.backgrounds` | `backgroundsconfig/BackgroundsConfig.qml` | |
 | `Config.border` | `borderconfig/BorderConfig.qml` | visible chrome + 8 zonal `zoneRoundings` |
 | `Config.corners` | `cornersconfig/CornersConfig.qml` | |
