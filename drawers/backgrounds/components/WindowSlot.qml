@@ -7,7 +7,6 @@ import Caelestia.Blobs
 import Quickshell
 import qs.config
 import qs.services
-import qs.utils
 import qs.components
 
 // One window on a rail. Renders a BlobRect (in the rail's shared BlobGroup)
@@ -91,7 +90,7 @@ Item {
     readonly property int paintedWidth: Math.max(0, _rawWidth)
     readonly property int paintedHeight: Math.max(0, _rawHeight)
 
-    // ── Appear/collapse content blur (see utils/Liquid.qml §4) ───────
+    // ── Appear/collapse content blur (see services/Liquid.qml §4) ───────
     // Time-based blur amount (0..1), decoupled from the size spring so it stays
     // visible on the full-size panel. Driven by the two animations below; fed to
     // the content MultiEffect in the content tree. Appear blur is gated to NON-
@@ -117,7 +116,7 @@ Item {
     // visible "liquid glass" squash/stretch is NOT produced here — it's the SDF
     // deform engine on the BlobRect below, driven by the centre velocity this
     // motion generates (resize from an edge moves the centre toward that edge, so
-    // the stretch direction encodes the expansion origin). See utils/Liquid.qml.
+    // the stretch direction encodes the expansion origin). See services/Liquid.qml.
     Behavior on _rawWidth {
         enabled: !root._sizeNoAnim
         SpringAnimation {
@@ -887,7 +886,7 @@ Item {
         implicitWidth: root.paintedWidth
         implicitHeight: root.paintedHeight
         radius: root.effectiveRounding
-        // Liquid-glass velocity deform (see utils/Liquid.qml). The engine tracks
+        // Liquid-glass velocity deform (see services/Liquid.qml). The engine tracks
         // this rect's centre speed in the scene and stretches along motion.
         deformScale: Liquid.deformScale
         stiffness: Liquid.deformStiffness

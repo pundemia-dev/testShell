@@ -172,7 +172,7 @@ is the canonical example — see
 
 | Concern | File |
 |---|---|
-| `Region` collection + mask aggregation | [`utils/InputManager.qml`](../../utils/InputManager.qml), [`drawers/Drawers.qml`](../../drawers/Drawers.qml) (mask block) |
+| `Region` collection + mask aggregation | [`services/InputManager.qml`](../../services/InputManager.qml), [`drawers/Drawers.qml`](../../drawers/Drawers.qml) (mask block) |
 | Bridges + holdover + envelope per WindowSlot | [`drawers/backgrounds/components/WindowSlot.qml`](../../drawers/backgrounds/components/WindowSlot.qml) |
-| Slot state publishing (`slotRects` / `slotHover` / `slotDragOver`) | [`utils/BackgroundsManager.qml`](../../utils/BackgroundsManager.qml) |
+| Slot state publishing (`slotRects` / `slotHover` / `slotDragOver`) | [`services/BackgroundsManager.qml`](../../services/BackgroundsManager.qml) |
 | Strip resize-union (parallel concept on the BorderZone side) | [`drawers/border/BorderZone.qml`](../../drawers/border/BorderZone.qml) |

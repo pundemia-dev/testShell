@@ -1,6 +1,6 @@
 # InteractionManager
 
-`utils/InteractionManager.qml` is a global Singleton that turns the
+`services/InteractionManager.qml` is a global Singleton that turns the
 8 `BorderZone` strips into a programmable per-rail interaction
 surface. Three orthogonal modes share one set of rails:
 
@@ -106,7 +106,7 @@ isolation is an open follow-up — single-screen behavior is unaffected.
 
 | Concern | File |
 |---|---|
-| Singleton (registrations + fire + reset) | [`utils/InteractionManager.qml`](../../utils/InteractionManager.qml) |
+| Singleton (registrations + fire + reset) | [`services/InteractionManager.qml`](../../services/InteractionManager.qml) |
 | Strip wiring (`HoverHandler`, `MouseArea`, `DropArea`) | [`drawers/border/BorderZone.qml`](../../drawers/border/BorderZone.qml) |
 | Per-screen `BackgroundsManager` reference (set from Drawers' `Component.onCompleted`) | [`drawers/Drawers.qml`](../../drawers/Drawers.qml) |
 | Module-side registration example | [`modules/stash/StashWrapper.qml`](../../modules/stash/StashWrapper.qml) |

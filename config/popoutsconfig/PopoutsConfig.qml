@@ -2,7 +2,7 @@ import Quickshell.Io
 
 // Popout backgrounds: transient panels attached to a host widget (bar/dock).
 // One bg per edge is reused (slides + morphs between widgets).
-// See utils/PopoutsManager.qml.
+// See services/PopoutsManager.qml.
 JsonObject {
     property bool enabled: true
 

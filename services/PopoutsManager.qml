@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import qs.utils
+import qs.services
 
 // Per-screen popout coordinator. Instantiated once per Drawers scope with the
 // screen's BackgroundsManager. Owns one EdgeChannel per edge; each channel

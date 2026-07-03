@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.modules.bar
-import qs.utils
+import qs.services
 
 Item {
     id: root

@@ -4,7 +4,6 @@ import qs.components.effects
 import qs.components
 import qs.services
 import qs.config
-import qs.utils
 import Quickshell.Services.SystemTray
 import QtQuick
 import "../popouts" as BarPopouts

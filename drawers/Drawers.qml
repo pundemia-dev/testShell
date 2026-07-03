@@ -23,7 +23,6 @@ import qs.config
 import qs.components
 import qs.components.containers
 import qs.services
-import qs.utils
 
 Variants {
     model: Quickshell.screens
@@ -114,7 +113,7 @@ Variants {
             // Compositor-side background blur (niri ext-background-effect-v1).
             // The union of all settled panels' blur sub-regions is committed
             // with this surface, so niri blurs exactly the panel shapes with no
-            // lag (and auto-enables xray inside them). See utils/BlurManager.qml,
+            // lag (and auto-enables xray inside them). See services/BlurManager.qml,
             // WindowSlot.qml.
             //
             // BackgroundEffect.blurRegion must be RE-applied imperatively on

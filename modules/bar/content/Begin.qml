@@ -3,7 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import qs.config
-import qs.utils
+import qs.services
 import qs.components
 import "components"
 import "components/workspaces"

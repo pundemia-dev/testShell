@@ -35,7 +35,7 @@ Screen
   live here at z=−1.
 
 Key files:
-- `utils/BackgroundsManager.qml` — `rails[][]`, `requestBackground/removeBackground`,
+- `services/BackgroundsManager.qml` — `rails[][]`, `requestBackground/removeBackground`,
   `reservedTop/Bottom/Left/Right`, zone helpers, `slotRects/slotHover/slotDragOver`.
 - `drawers/backgrounds/components/Rail.qml` — sorts `pinned → push → overlay`.
 - `drawers/backgrounds/components/WindowSlot.qml` — BlobRect + content Loader,
@@ -111,13 +111,13 @@ Register the config in `config/Config.qml`. Import and instance the wrapper in
 
 ## Visibility, focus & interaction
 
-- `utils/VisibilitiesManager.qml` — `addVisibility(screen, name, shortcut,
+- `services/VisibilitiesManager.qml` — `addVisibility(screen, name, shortcut,
   isolated, autostart, description)` / `setVisibility(screen, name, bool)`.
-- `utils/InteractionManager.qml` — per-rail hover/slide/drop stacks.
+- `services/InteractionManager.qml` — per-rail hover/slide/drop stacks.
   See [interaction-manager.md](./interaction-manager.md).
-- `utils/FocusManager.qml` — `requestFocus(name)` / `releaseFocus(name)` via
+- `services/FocusManager.qml` — `requestFocus(name)` / `releaseFocus(name)` via
   `NiriFocusGrab`.
-- `utils/InputManager.qml` — layershell input mask. See [input-mask.md](./input-mask.md).
+- `services/InputManager.qml` — layershell input mask. See [input-mask.md](./input-mask.md).
 
 Niri shortcuts use `Quickshell.Io.IpcHandler` (`components/misc/CustomShortcut.qml`).
 Bind in `~/.config/niri/config.kdl`:
@@ -146,7 +146,7 @@ binds {
 | `Config.custom` | open `var` map | third-party settings; `getCustom(key, field, fallback)` / `setCustom(key, field, value)` |
 
 Presets: `~/.config/pShell/presets/<scope>/<name>.json`, managed by
-`utils/PresetsManager.qml` (IPC target `presets`).
+`services/PresetsManager.qml` (IPC target `presets`).
 
 `config/Appearance.qml` — design-token singleton (M3 scale). CLAUDE.md has the
 full token usage rules.
@@ -196,7 +196,7 @@ Singletons in `services/`:
 | `Audio.qml` | CavaProvider + BeatTracker for the media visualiser |
 | `SysInfo.qml` | Uptime / WM / OS glyph |
 
-`utils/Icons.qml` — `getWeatherIconWmo(code)` (WMO → tabler).
+`services/Icons.qml` — `getWeatherIconWmo(code)` (WMO → tabler).
 
 ## Plugin modules
 

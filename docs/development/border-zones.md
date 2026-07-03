@@ -225,7 +225,7 @@ when the cursor is on the bg painted rect.
 | Zone strip + resize-union + interaction wiring | [`drawers/border/BorderZone.qml`](../../drawers/border/BorderZone.qml) |
 | Visible chrome | [`drawers/border/Border.qml`](../../drawers/border/Border.qml) |
 | Single `BlobInvertedRect` driver | [`drawers/backgrounds/Backgrounds.qml`](../../drawers/backgrounds/Backgrounds.qml) |
-| Rail/zone helpers + slotRect/slotHover/slotDragOver maps | [`utils/BackgroundsManager.qml`](../../utils/BackgroundsManager.qml) |
+| Rail/zone helpers + slotRect/slotHover/slotDragOver maps | [`services/BackgroundsManager.qml`](../../services/BackgroundsManager.qml) |
 | Bridge regions, slot envelope, holdover, slot publishing | [`drawers/backgrounds/components/WindowSlot.qml`](../../drawers/backgrounds/components/WindowSlot.qml) |
 | Per-zone shader gating (sink, boost, frame smin) | [`plugin/src/Caelestia/Blobs/shaders/blob.frag`](../../plugin/src/Caelestia/Blobs/shaders/blob.frag) |
 | Plugin material extensions (`zoneRoundings`, `zoneIndex`) | [`plugin/src/Caelestia/Blobs/blobmaterial.{hpp,cpp}`](../../plugin/src/Caelestia/Blobs/blobmaterial.cpp), [`blobinvertedrect.{hpp,cpp}`](../../plugin/src/Caelestia/Blobs/blobinvertedrect.cpp), [`blobrect.{hpp,cpp}`](../../plugin/src/Caelestia/Blobs/blobrect.cpp) |

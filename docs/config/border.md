@@ -220,7 +220,7 @@ slide/drop semantics. Currently unused.
   hover/click/slide/drop wiring):
   [`drawers/border/BorderZone.qml`](../../drawers/border/BorderZone.qml)
 - Rail ↔ zone mapping and zone-edge-nearest helpers:
-  [`utils/BackgroundsManager.qml`](../../utils/BackgroundsManager.qml)
+  [`services/BackgroundsManager.qml`](../../services/BackgroundsManager.qml)
 - Invisible `BlobInvertedRect` at screen edges driving the SDF
   присасывание:
   [`drawers/backgrounds/Backgrounds.qml`](../../drawers/backgrounds/Backgrounds.qml)

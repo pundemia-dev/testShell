@@ -2,7 +2,6 @@ import ".."
 import qs.components.effects
 import qs.services
 import qs.config
-import qs.utils
 import Caelestia.Blobs
 import QtQuick
 import QtQuick.Controls

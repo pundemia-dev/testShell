@@ -4,7 +4,6 @@ import qs.components
 import qs.components.controls
 import qs.services
 import qs.config
-import qs.utils
 import Quickshell
 import QtQuick
 import QtQuick.Layouts

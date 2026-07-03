@@ -1,7 +1,7 @@
 //@ pragma IconTheme Linox-Custom
 import Quickshell
 import QtQuick
-import qs.utils
+import qs.services
 import "drawers"
 import "modules/settings"
 import "modules/capture"

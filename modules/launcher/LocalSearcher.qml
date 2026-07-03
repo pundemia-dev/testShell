@@ -4,7 +4,7 @@ import Quickshell
 // import "../scripts/fuzzysort.js" as Fuzzy
 // import QtQuick
 import qs.config
-import qs.utils
+import qs.services
 import Quickshell
 import "../../scripts/fzf.js" as Fzf
 import "../../scripts/fuzzysort.js" as Fuzzy

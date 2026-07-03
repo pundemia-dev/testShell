@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.config
 import qs.services
-import qs.utils
 
 // One of 8 logical zones around the screen perimeter. Renders 1 (side) or 2
 // (corner) blocking debug MouseArea strips along its edge(s), with geometry

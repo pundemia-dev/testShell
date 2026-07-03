@@ -2,7 +2,6 @@ import QtQuick
 import QtMultimedia
 import qs.services
 import qs.config
-import qs.utils
 import qs.components
 import qs.components.images
 

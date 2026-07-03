@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import qs.utils
+import qs.services
 
 // Declarative popout trigger. Drop one inside a bar/dock widget (or any
 // sub-element of it) — it tracks its `anchorItem` (the parent by default) and

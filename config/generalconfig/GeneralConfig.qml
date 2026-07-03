@@ -20,7 +20,7 @@ JsonObject {
 
         // Compositor-side background blur (niri ext-background-effect-v1). The
         // blur region is the union of settled panel shapes, published at
-        // runtime via BackgroundEffect.blurRegion (see utils/BlurManager.qml,
+        // runtime via BackgroundEffect.blurRegion (see services/BlurManager.qml,
         // drawers/Drawers.qml). niri auto-enables xray inside it.
         property bool blur: false
         // Shader frosted-glass (Approach A): the Blobs plugin fills panels with

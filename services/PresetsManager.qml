@@ -1,6 +1,6 @@
 pragma Singleton
 
-import qs.utils
+import qs.services
 import Quickshell
 import Quickshell.Io
 import QtQuick

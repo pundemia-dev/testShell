@@ -4,7 +4,6 @@ import qs.components
 import qs.components.effects
 import qs.services
 import qs.config
-import qs.utils
 import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.Notifications

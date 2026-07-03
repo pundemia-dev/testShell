@@ -16,7 +16,7 @@ adapter section names (`bar`, `launcher`, `border`, `corners`, `backgrounds`,
 `notifs`, `stash`, `general`, `custom`) plus `full`.
 
 Apply always goes through the file (write → `reload()`), never through direct
-binding. `utils/PresetsManager.qml` (Singleton, IPC target `presets`):
+binding. `services/PresetsManager.qml` (Singleton, IPC target `presets`):
 
 ```qml
 listPresets(scope) → [names]
@@ -102,7 +102,7 @@ page descriptor in `SettingsContent.qml`'s `pages` array.
 |---------|------|
 | Module root | `modules/settings/{Settings,SettingsContent,SettingsDiscovery}.qml` |
 | Pages | `modules/settings/pages/*.qml` |
-| Preset management | `utils/PresetsManager.qml` |
+| Preset management | `services/PresetsManager.qml` |
 | Third-party contract | `components/misc/SettingsSchema.qml`, `components/controls/SchemaForm.qml` |
 | Hints | `components/controls/{Hint,HintIcon}.qml` |
 | Sidebar preset button | `modules/settings/PresetButton.qml` |

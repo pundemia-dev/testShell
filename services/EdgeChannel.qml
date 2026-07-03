@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import qs.config
-import qs.utils
+import qs.services
 
 // One edge (top/bottom/left/right) of one screen. In reuse mode (the only mode
 // for now) it owns a single persistent rails wrapper that slides + morphs

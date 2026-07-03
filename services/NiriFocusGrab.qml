@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
-import qs.utils
+import qs.services
 
 // Niri replacement for HyprlandFocusGrab.
 // Grants exclusive keyboard focus to `window` when active and catches outside-clicks.
