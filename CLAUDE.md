@@ -181,22 +181,29 @@ When adding a keyboard shortcut for a module:
 
 ### File layout for new modules
 
+Modules are feature-sliced: the module owns everything in its domain; only the
+entry point(s) live at the module root.
+
 ```
 modules/<name>/
-    <Name>Wrapper.qml         ← contract QtObject + lifecycle Loader
+    <Name>Wrapper.qml         ← contract QtObject + lifecycle Loader (root holds only entry points)
+    config/
+        <Name>Config.qml      ← JsonObject (hot-reloaded)
+        structures/<X>Data.qml ← nested JsonObject sub-types
+    settings/
+        <Name>Page.qml        ← official settings page (if any)
     content/
         <Name>Content.qml     ← top-level UI
         <other components>.qml
-config/<name>config/
-    <Name>Config.qml          ← JsonObject (hot-reloaded)
-    structures/<X>Data.qml    ← nested JsonObject sub-types
 ```
 
-Register the config in `config/Config.qml`'s adapter. Import the wrapper in `drawers/Drawers.qml` and instance it as a sibling of the existing wrappers.
+Register the config type in `config/Config.qml`'s adapter (`import qs.modules.<name>.config`). Import the wrapper in `drawers/Drawers.qml` and instance it as a sibling of the existing wrappers. Chrome/global configs (border, corners, backgrounds, popouts, general) stay in `config/<name>config/`; their settings pages stay in `modules/settings/pages/`.
+
+Types loaded dynamically (`Qt.createComponent`) can't rely on implicit same-dir resolution (qsintercept), and the scanner only registers `qs.*` dirs imported from statically-reachable files — anchor the dir with an import from a static file and import it explicitly in the dynamic ones (see `modules/launcher/ModuleManager.qml`).
 
 ### Settings for a new module
 
-- **Official module**: add `modules/settings/pages/<Name>Page.qml` (a `Flickable` of `SettingSection`/`SettingRow` bound to `Config.<section>.*`) and register it in `SettingsContent.qml`'s `pages` array (`name`/`icon`/`scope`/`component`). Gate rarely-used controls with `advanced: true` on the row/section.
+- **Official module**: add `modules/<name>/settings/<Name>Page.qml` (a `Flickable` of `SettingSection`/`SettingRow` bound to `Config.<section>.*`) and register it in `SettingsContent.qml`'s `pages` array (`name`/`icon`/`scope`/`component`; import `qs.modules.<name>.settings`). Gate rarely-used controls with `advanced: true` on the row/section. Core/chrome pages (General, Themes, Borders, Corners, Backgrounds) live in `modules/settings/pages/`.
 - **Third-party module**: ship `<Name>.settings.qml` (a `SettingsSchema`) next to the component and read values at runtime via `Config.getCustom(key, field, default)`. No `Config.qml` edit and no settings-page code needed — discovery + `SchemaForm` surface it automatically. **Never widen the rails contract for settings state — it lives in `Config.custom`.**
 
 ### Hover-trigger pattern (auto-hide drawers)

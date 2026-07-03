@@ -96,18 +96,26 @@ Wrapper owns the contract object(s) and lifecycle; content is a `Component`.
 | `modules/settings` | Settings UI (normal Window). See [settings.md](./settings.md). |
 | `modules/dashboard` | Hover dashboard; modular self-discovering pages |
 
-New module file layout:
+New module file layout (feature-sliced — the module owns everything in its
+domain; the root holds only the entry point(s)):
 ```
 modules/<name>/
-    <Name>Wrapper.qml
+    <Name>Wrapper.qml            ← contract + lifecycle (only file(s) at root)
+    config/
+        <Name>Config.qml
+        structures/<X>Data.qml   (if needed)
+    settings/
+        <Name>Page.qml           (official settings page, if any)
     content/
-        <Name>Content.qml
-config/<name>config/
-    <Name>Config.qml
-    structures/<X>Data.qml   (if needed)
+        <Name>Content.qml        ← top-level UI + local components
+    <slot>/                      (optional extension point, e.g. dashboard pages/)
 ```
-Register the config in `config/Config.qml`. Import and instance the wrapper in
-`drawers/Drawers.qml`. Add a settings page per [settings.md](./settings.md).
+Register the config type in `config/Config.qml`'s adapter (import
+`qs.modules.<name>.config`). Import and instance the wrapper in
+`drawers/Drawers.qml`. Register the settings page in `SettingsContent.qml`
+(import `qs.modules.<name>.settings`); see [settings.md](./settings.md).
+Chrome/global configs (border, corners, backgrounds, popouts, general) stay in
+`config/<name>config/` and their pages in `modules/settings/pages/`.
 
 ## Visibility, focus & interaction
 
@@ -135,7 +143,7 @@ their sub-config (`modules/<name>/config/`); chrome/global sub-configs stay in
 
 | Key | File | Notes |
 |-----|------|-------|
-| `Config.bar` | `barconfig/BarConfig.qml` | |
+| `Config.bar` | `modules/bar/config/BarConfig.qml` | |
 | `Config.launcher` | `modules/launcher/config/LauncherConfig.qml` | |
 | `Config.notifs` | `modules/notifications/config/NotifsConfig.qml` | |
 | `Config.backgrounds` | `backgroundsconfig/BackgroundsConfig.qml` | |

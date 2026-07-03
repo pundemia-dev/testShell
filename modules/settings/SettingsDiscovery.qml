@@ -12,7 +12,7 @@ import QtQuick
 // page appears. See docs/development/settings.md.
 //
 // Bar widgets are intentionally NOT scanned here — their schemas are surfaced
-// inline as a block at the bottom of the Bar page (pages/WidgetSettings.qml),
+// inline as a block at the bottom of the Bar page (modules/bar/settings/WidgetSettings.qml),
 // not as standalone top-level pages.
 Item {
     id: root

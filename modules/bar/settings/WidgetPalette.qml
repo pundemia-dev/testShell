@@ -233,7 +233,7 @@ ColumnLayout {
                         enabled: false // visual only — the tile owns the drag
                         scale: previewBox._scale
                         transformOrigin: Item.Center
-                        source: active ? Qt.resolvedUrl("../../bar/content/components/" + tile.modelData.name + ".qml") : ""
+                        source: active ? Qt.resolvedUrl("../content/components/" + tile.modelData.name + ".qml") : ""
                         onLoaded: if (item && item.hasOwnProperty("screen"))
                             item.screen = QsWindow.window ? QsWindow.window.screen : null
                     }
@@ -249,7 +249,7 @@ ColumnLayout {
                     id: grabLoader
                     x: -100000
                     active: ma.containsMouse || tile.preview
-                    source: active ? Qt.resolvedUrl("../../bar/content/components/" + tile.modelData.name + ".qml") : ""
+                    source: active ? Qt.resolvedUrl("../content/components/" + tile.modelData.name + ".qml") : ""
                     onLoaded: if (item && item.hasOwnProperty("screen"))
                         item.screen = QsWindow.window ? QsWindow.window.screen : null
                 }

@@ -4,7 +4,7 @@ import qs.services
 import Quickshell
 import Quickshell.Io
 
-import "barconfig"
+import qs.modules.bar.config
 import qs.modules.launcher.config
 import "borderconfig"
 import "cornersconfig"

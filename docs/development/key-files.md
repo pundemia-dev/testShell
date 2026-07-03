@@ -4,7 +4,7 @@
 |------|---------|
 | Color scheme / design tokens | `config/Appearance.qml`, `services/Colours.qml` |
 | Bar layout sections | `modules/bar/content/Begin.qml`, `Center.qml`, `End.qml` |
-| Bar thickness/position | `config/barconfig/BarConfig.qml`, `modules/bar/BarWrapper.qml` |
+| Bar thickness/position | `modules/bar/config/BarConfig.qml`, `modules/bar/BarWrapper.qml` |
 | Backgrounds rendering | `drawers/backgrounds/Backgrounds.qml`, `drawers/backgrounds/components/*.qml`, `services/BackgroundsManager.qml` |
 | Border (chrome + 8 zonal interaction strips) | `drawers/border/Border.qml`, `drawers/border/Borders.qml`, `drawers/border/BorderZone.qml`, `config/borderconfig/BorderConfig.qml` |
 | Per-rail interaction stack (hover/slide/drop) | `services/InteractionManager.qml` |

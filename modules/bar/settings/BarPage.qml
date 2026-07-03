@@ -6,7 +6,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components.containers
 
-// Config.bar → barconfig/BarConfig.qml
+// Config.bar → modules/bar/config/BarConfig.qml
 Flickable {
     id: root
 

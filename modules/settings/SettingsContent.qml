@@ -11,6 +11,7 @@ import QtQuick.Window
 import "pages"
 // Feature-sliced modules own their settings page (modules/<name>/settings/);
 // pages/ keeps the core/chrome pages that belong to the settings module itself.
+import qs.modules.bar.settings
 import qs.modules.dashboard.settings
 import qs.modules.launcher.settings
 

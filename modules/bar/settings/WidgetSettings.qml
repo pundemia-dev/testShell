@@ -70,7 +70,7 @@ ColumnLayout {
 
     FolderListModel {
         id: fm
-        folder: Qt.resolvedUrl("../../bar/content/components")
+        folder: Qt.resolvedUrl("../content/components")
         nameFilters: ["*.settings.qml"]
         showDirs: false
         onStatusChanged: if (status === FolderListModel.Ready)
