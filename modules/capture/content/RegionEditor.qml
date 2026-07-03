@@ -102,7 +102,7 @@ Item {
         id: regionsProc
 
         running: root.srcReady && Config.capture.smartRegions
-        command: [`${Quickshell.configDir}/scripts/capture_regions.py`, root.srcPath]
+        command: [`${Quickshell.shellDir}/scripts/capture_regions.py`, root.srcPath]
 
         stdout: StdioCollector {
             id: regionsOut

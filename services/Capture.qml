@@ -221,7 +221,7 @@ Singleton {
         recordAudio = audio;
         discardRequested = false;
         recordFile = recordPath();
-        const cmd = [`${Quickshell.configDir}/scripts/capture_record.sh`, audio, recordFile];
+        const cmd = [`${Quickshell.shellDir}/scripts/capture_record.sh`, audio, recordFile];
         if (pendingGeom)
             cmd.push("--geometry", pendingGeom);
         else if (pendingOutput)

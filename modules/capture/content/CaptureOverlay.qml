@@ -118,7 +118,7 @@ PanelWindow {
         // the pointer moves, so the crosshair/loupe/bubble would stay hidden
         // until the user wiggles the mouse. A ±1px virtual-pointer nudge
         // forces a focus recompute and delivers the position immediately.
-        Quickshell.execDetached([`${Quickshell.configDir}/scripts/capture_nudge.py`]);
+        Quickshell.execDetached([`${Quickshell.shellDir}/scripts/capture_nudge.py`]);
     }
 
     Item {
