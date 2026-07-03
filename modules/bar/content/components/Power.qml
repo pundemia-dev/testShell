@@ -5,7 +5,6 @@ import qs.config
 import Quickshell
 import QtQuick
 
-import qs.widgets
 import qs.services
 import qs.config
 import Quickshell

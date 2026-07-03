@@ -5,7 +5,6 @@ import Quickshell
 import qs.config
 import qs.utils
 import qs.components
-import qs.widgets
 import "components"
 import "components/workspaces"
 
