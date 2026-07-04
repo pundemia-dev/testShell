@@ -2,7 +2,7 @@ import qs.components
 import QtQuick
 import qs.components.misc
 
-DashboardPage {
+PluginManifest {
     title: qsTr("Performance")
     icon: "\ueab1" // tabler gauge
     order: 20

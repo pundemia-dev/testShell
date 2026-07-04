@@ -36,7 +36,7 @@ JsonObject {
     // ── Modular pages ──────────────────────────────────────────────────
     // Pages are folders under modules/dashboard/pages/ that each ship a
     // *.page.qml manifest declaring their own title + icon (see
-    // components/misc/DashboardPage.qml). These two lists are keyed by the stable
+    // components/misc/PluginManifest.qml). These two lists are keyed by the stable
     // page id (= the page's folder name) so they survive pages being
     // added/removed:
     //   order    — display order of the tabs (unknown pages appended by their

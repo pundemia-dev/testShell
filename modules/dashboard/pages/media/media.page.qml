@@ -2,7 +2,7 @@ import qs.components
 import QtQuick
 import qs.components.misc
 
-DashboardPage {
+PluginManifest {
     title: qsTr("Media")
     icon: "\ueafc" // tabler music
     order: 10

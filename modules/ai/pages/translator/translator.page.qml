@@ -2,7 +2,7 @@ import qs.components
 import QtQuick
 import qs.components.misc
 
-DashboardPage {
+PluginManifest {
     title: qsTr("Translate")
     icon: "" // tabler language
     order: 20

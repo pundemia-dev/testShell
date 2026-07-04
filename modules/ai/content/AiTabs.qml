@@ -12,7 +12,7 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    // Array of DashboardPage manifests (id/title/icon).
+    // Array of PluginManifest page manifests (id/title/icon).
     property var tabs: []
     property int currentIndex: 0
     readonly property int count: tabs.length

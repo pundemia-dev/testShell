@@ -117,6 +117,24 @@ Register the config type in `config/Config.qml`'s adapter (import
 Chrome/global configs (border, corners, backgrounds, popouts, general) stay in
 `config/<name>config/` and their pages in `modules/settings/pages/`.
 
+### Extension points (modularity inside a module)
+
+When a module hosts pluggable units (dashboard pages, AI pages, future
+widgets), use the shared mechanics instead of a bespoke manager:
+
+- **Unit layout**: `<slot>/<id>/<id>.<slot-singular>.qml` — a manifest
+  (`components/misc/PluginManifest.qml`: `id`/`title`/`icon`/`order`/
+  `settingsSchema`/lazy `Component content`) plus its implementation files in
+  the same folder. Subclass the manifest if the slot needs extra fields.
+- **Discovery**: instance `components/misc/PluginRegistry.qml` with `folder`,
+  `suffix`, and optionally `order`/`disabled` bound to the host config
+  (blocklist semantics: everything found is active unless disabled). It
+  exposes `all` and `active`; rendering stays host-specific. See
+  `modules/dashboard/content/DashboardRegistry.qml` for the canonical binding.
+- Manifests are loaded dynamically — they must explicitly import every module
+  they use (`qs.components.misc` etc.); implicit same-dir resolution doesn't
+  work through qsintercept.
+
 ## Visibility, focus & interaction
 
 - `services/VisibilitiesManager.qml` — `addVisibility(screen, name, shortcut,
@@ -170,7 +188,7 @@ Hover-triggered panel (default: top-center) hosting **modular self-discovering p
 - **Wrapper** `DashboardWrapper.qml` — opens on hover via
   `InteractionManager.registerHover`; `mode: "push"`.
 - **Page contract** — each page is a folder `modules/dashboard/pages/<id>/` with
-  a `<id>.page.qml` manifest (`components/misc/DashboardPage.qml`:
+  a `<id>.page.qml` manifest (`components/misc/PluginManifest.qml`:
   `id`/`title`/`icon`/`order`/`Component content`).
   `content/DashboardRegistry.qml` auto-discovers via `FolderListModel`.
   Add a folder → tab appears automatically; no hardcoded tab list.
