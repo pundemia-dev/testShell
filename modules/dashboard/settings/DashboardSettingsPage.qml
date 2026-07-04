@@ -212,6 +212,14 @@ Flickable {
                 property var work: root.orderedIds
                 property bool dragging: false
 
+                // Stable identity list — one delegate per page, created once.
+                // The Repeater must NOT model `work`: reassigning `work`
+                // mid-drag would rebuild every delegate and kill the active
+                // drag (the grip's MouseArea dies with its row, so release —
+                // and the Config.dashboard.order write — never happens).
+                // Reordering only moves rows through their `slot` binding.
+                readonly property var stableIds: (registry.all ?? []).map(p => p.id).sort()
+
                 // Re-sync from config unless a drag is mid-flight.
                 Connections {
                     target: root
@@ -224,7 +232,7 @@ Flickable {
                 implicitHeight: work.length * rowH
 
                 Repeater {
-                    model: reorder.work
+                    model: reorder.stableIds
 
                     delegate: StyledRect {
                         id: row
