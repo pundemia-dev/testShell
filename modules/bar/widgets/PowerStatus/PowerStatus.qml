@@ -4,7 +4,8 @@ import qs.services
 import Quickshell
 import Quickshell.Services.UPower
 import QtQuick
-import "../popouts" as BarPopouts
+
+import "../../content/components"
 import qs.components.misc
 
 
@@ -41,7 +42,7 @@ RadialSliderIcon {
     PopoutHandle {
         edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
         popoutContent: Component {
-            BarPopouts.Power {}
+            PowerPopout {}
         }
     }
 }

@@ -5,7 +5,8 @@ import Quickshell
 import QtQuick
 import Quickshell.Bluetooth
 import QtQuick.Layouts
-import "../popouts" as BarPopouts
+
+import "../../content/components"
 import qs.components.misc
 
 
@@ -22,7 +23,7 @@ FlexboxLayout {
     PopoutHandle {
         edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
         popoutContent: Component {
-            BarPopouts.Bluetooth {}
+            BluetoothPopout {}
         }
     }
 

@@ -232,7 +232,7 @@ Item {
         Loader {
             id: mainLoader
             active: host.isWidget && !!host.modelData.name
-            source: active ? Qt.resolvedUrl("../components/" + host.modelData.name + ".qml") : ""
+            source: active ? `file://${Quickshell.shellDir}/modules/bar/widgets/${host.modelData.name}/${host.modelData.name}.qml` : ""
             onLoaded: if (item && item.hasOwnProperty("screen")) item.screen = host.screen
         }
     }
@@ -336,7 +336,7 @@ Item {
                         Loader {
                             id: childLoader
                             active: !!childHost.modelData && !!childHost.modelData.name
-                            source: active ? Qt.resolvedUrl("../components/" + childHost.modelData.name + ".qml") : ""
+                            source: active ? `file://${Quickshell.shellDir}/modules/bar/widgets/${childHost.modelData.name}/${childHost.modelData.name}.qml` : ""
                             onLoaded: if (item && item.hasOwnProperty("screen")) item.screen = host.screen
                         }
                     }

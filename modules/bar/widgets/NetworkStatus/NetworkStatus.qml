@@ -3,7 +3,8 @@ import qs.services
 import qs.config
 import Quickshell
 import QtQuick
-import "../popouts" as BarPopouts
+
+import "../../content/components"
 import qs.components.misc
 
 
@@ -19,7 +20,7 @@ RadialSliderIcon {
     PopoutHandle {
         edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
         popoutContent: Component {
-            BarPopouts.Network {}
+            NetworkPopout {}
         }
     }
 }

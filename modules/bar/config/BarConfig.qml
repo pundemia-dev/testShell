@@ -112,7 +112,7 @@ JsonObject {
     // before they're offered to merge into a group (layout editor).
     property int groupDwellMs: 1000
     // KeyboardPreview settings moved to Config.custom["keyboardPreview"] (see
-    // KeyboardPreview.settings.qml). Tray keeps only iconSubs here; its
+    // KeyboardPreview manifest). Tray keeps only iconSubs here; its
     // background/compact/recolour toggles moved to Config.custom["tray"].
     property TrayConfig tray: TrayConfig {}
     property WorkspacesConfig workspaces: WorkspacesConfig {}

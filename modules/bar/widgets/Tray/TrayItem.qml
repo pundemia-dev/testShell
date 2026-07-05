@@ -6,7 +6,7 @@ import qs.services
 import qs.config
 import Quickshell.Services.SystemTray
 import QtQuick
-import "../popouts" as BarPopouts
+
 import qs.components.misc
 
 MouseArea {
@@ -33,7 +33,7 @@ MouseArea {
         edge: !Config.bar.orientation ? (Config.bar.position ? "right" : "left") : (Config.bar.position ? "bottom" : "top")
         contentReady: root.modelData.hasMenu
         popoutContent: Component {
-            BarPopouts.TrayMenu {
+            TrayMenu {
                 trayItem: root.modelData.menu
             }
         }

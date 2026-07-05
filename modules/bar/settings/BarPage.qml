@@ -258,7 +258,7 @@ Flickable {
             }
         }
 
-        // Per-widget settings, discovered from each widget's `<Name>.settings.qml`
+        // Per-widget settings, read from each widget manifest's settingsSchema
         // schema (built-in widgets we ship + any third-party widget that drops one).
         SettingSection {
             visible: widgetSettings.schemas.length > 0

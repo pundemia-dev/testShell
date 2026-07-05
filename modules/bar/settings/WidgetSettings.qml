@@ -4,48 +4,35 @@ import qs.config
 import qs.services
 import qs.components
 import qs.components.controls
+import qs.modules.bar.content
 import Quickshell
-import Qt.labs.folderlistmodel
 import QtQuick
 import QtQuick.Layouts
 
-// Auto-generating block of per-widget settings for the Bar page. Scans the bar
-// component dir for lightweight `<Name>.settings.qml` schemas (the built-in
-// defaults we ship alongside our widgets, plus any third-party widget that drops
-// its own) and renders each as a collapsible SchemaForm, persisting values into
-// Config.custom[key]. Mirrors SettingsDiscovery, but surfaces bar widgets inline
-// here instead of as standalone top-level pages. See docs/development/settings.md.
+// Auto-generating block of per-widget settings for the Bar page. Reads the
+// bar-widget manifests (modules/bar/widgets/<id>/<id>.widget.qml) through
+// WidgetRegistry and renders each manifest's `settingsSchema` as a collapsible
+// SchemaForm, persisting values into Config.custom[key]. Surfaces bar widgets
+// inline here instead of as standalone top-level pages (unlike
+// SettingsDiscovery). See docs/development/settings.md.
 ColumnLayout {
     id: root
 
+    // Discovers the widget manifests. Object property — no layout cell.
+    readonly property WidgetRegistry registry: WidgetRegistry {}
+
     // Populated SettingsSchema instances (have title/icon/key/fields).
-    property var schemas: []
+    readonly property var schemas: {
+        const out = (registry.all ?? [])
+            .map(m => m.settingsSchema)
+            .filter(s => s && s.key);
+        out.sort((a, b) => String(a.title).localeCompare(String(b.title)));
+        return out;
+    }
+
+    onSchemasChanged: _seedDefaults(schemas)
 
     spacing: Appearance.spacing.small
-
-    function _rebuild(): void {
-        const out = [];
-        const base = String(fm.folder);
-        for (let i = 0; i < fm.count; i++) {
-            const name = fm.get(i, "fileName");
-            if (!name)
-                continue;
-            const url = `${base}/${name}`;
-            const c = Qt.createComponent(url);
-            if (c.status === Component.Ready) {
-                const obj = c.createObject(root);
-                if (obj && obj.key)
-                    out.push(obj);
-                else if (obj)
-                    obj.destroy();
-            } else if (c.status === Component.Error) {
-                console.warn("[WidgetSettings] failed:", url, c.errorString());
-            }
-        }
-        out.sort((a, b) => String(a.title).localeCompare(String(b.title)));
-        root.schemas = out;
-        _seedDefaults(out);
-    }
 
     // Seed each schema's defaults into Config.custom so a widget reading
     // Config.getCustom(key, field, …) has values even before its form is shown.
@@ -66,15 +53,6 @@ ColumnLayout {
         }
         if (changed)
             Config.custom = c;
-    }
-
-    FolderListModel {
-        id: fm
-        folder: Qt.resolvedUrl("../content/components")
-        nameFilters: ["*.settings.qml"]
-        showDirs: false
-        onStatusChanged: if (status === FolderListModel.Ready)
-            root._rebuild()
     }
 
     StyledText {

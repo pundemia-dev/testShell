@@ -53,8 +53,10 @@ Field descriptor shape:
 Supported types: `bool` → `StyledSwitch`, `int`/`real` → `CustomSpinBox`,
 `string` → `StyledTextField`, `enum` → chip row.
 
-`SettingsDiscovery.qml` scans `modules/{bar,launcher}/content/components/` for
-`*.settings.qml`. `components/controls/SchemaForm.qml` renders the schema
+`SettingsDiscovery.qml` scans `modules/launcher/content/components/` for
+`*.settings.qml`; bar widgets carry their schema in the widget manifest
+(`modules/bar/widgets/<id>/<id>.widget.qml`, `settingsSchema:`), surfaced by
+`modules/bar/settings/WidgetSettings.qml`. `components/controls/SchemaForm.qml` renders the schema
 generically, persisting values in `Config.custom[key]` and seeding defaults on
 first show. No edits to `Config.qml` needed.
 

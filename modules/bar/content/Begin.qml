@@ -6,7 +6,6 @@ import qs.config
 import qs.services
 import qs.components
 import "components"
-import "components/workspaces"
 
 FlexboxLayout {
     id: root

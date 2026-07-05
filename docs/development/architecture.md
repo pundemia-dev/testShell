@@ -126,6 +126,12 @@ widgets), use the shared mechanics instead of a bespoke manager:
   (`components/misc/PluginManifest.qml`: `id`/`title`/`icon`/`order`/
   `settingsSchema`/lazy `Component content`) plus its implementation files in
   the same folder. Subclass the manifest if the slot needs extra fields.
+  A unit folder is **fully self-contained** — implementation, popout content,
+  helpers, settings schema all live inside it, so installing a third-party
+  unit (the future widget store) means dropping one folder in, nothing else.
+  Shared visuals come from `qs.components*`; bar-widget implementations are
+  loaded via `file://` URLs (`WidgetHost`), which is what makes same-dir
+  types inside the folder resolve (qsintercept URLs can't).
 - **Discovery**: instance `components/misc/PluginRegistry.qml` with `folder`,
   `suffix`, and optionally `order`/`disabled` bound to the host config
   (blocklist semantics: everything found is active unless disabled). It

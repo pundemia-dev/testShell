@@ -20,11 +20,16 @@ import Quickshell
 import qs.config
 import qs.services
 import qs.components
+import qs.modules.bar.content
 
 ColumnLayout {
     id: root
 
     property bool previewMode: false
+
+    // Discovers the bar-widget manifests (modules/bar/widgets/<id>/). Held as
+    // an object property so the layout doesn't reserve a cell for it.
+    readonly property WidgetRegistry registry: WidgetRegistry {}
 
     Layout.fillWidth: true
     spacing: Appearance.spacing.medium
@@ -83,6 +88,16 @@ ColumnLayout {
             _tiles.push(t);
             scheduleRelayout();
         }
+        // The registry model resets while manifests stream in — delegates get
+        // destroyed and rebuilt, so dead tiles must leave _tiles or relayout
+        // trips over them.
+        function unregister(t) {
+            const i = _tiles.indexOf(t);
+            if (i >= 0) {
+                _tiles.splice(i, 1);
+                scheduleRelayout();
+            }
+        }
         function scheduleRelayout() {
             Qt.callLater(relayout);
         }
@@ -115,7 +130,7 @@ ColumnLayout {
         Component.onCompleted: relayout()
 
         Repeater {
-            model: BarWidgets.widgets
+            model: registry.active
 
             delegate: Item {
                 id: tile
@@ -149,6 +164,7 @@ ColumnLayout {
                 }
 
                 Component.onCompleted: board.register(tile)
+                Component.onDestruction: board.unregister(tile)
                 onImplicitHeightChanged: board.scheduleRelayout()
 
                 StyledRect {
@@ -182,7 +198,7 @@ ColumnLayout {
 
                 StyledText {
                     id: labelT
-                    text: tile.modelData.label ?? tile.modelData.name
+                    text: tile.modelData.title || tile.modelData.id
                     font.pointSize: Appearance.font.size.small
                     color: Colours.palette.on_surface_variant
                     elide: Text.ElideRight
@@ -233,7 +249,7 @@ ColumnLayout {
                         enabled: false // visual only — the tile owns the drag
                         scale: previewBox._scale
                         transformOrigin: Item.Center
-                        source: active ? Qt.resolvedUrl("../content/components/" + tile.modelData.name + ".qml") : ""
+                        source: active ? `file://${Quickshell.shellDir}/modules/bar/widgets/${tile.modelData.id}/${tile.modelData.id}.qml` : ""
                         onLoaded: if (item && item.hasOwnProperty("screen"))
                             item.screen = QsWindow.window ? QsWindow.window.screen : null
                     }
@@ -249,7 +265,7 @@ ColumnLayout {
                     id: grabLoader
                     x: -100000
                     active: ma.containsMouse || tile.preview
-                    source: active ? Qt.resolvedUrl("../content/components/" + tile.modelData.name + ".qml") : ""
+                    source: active ? `file://${Quickshell.shellDir}/modules/bar/widgets/${tile.modelData.id}/${tile.modelData.id}.qml` : ""
                     onLoaded: if (item && item.hasOwnProperty("screen"))
                         item.screen = QsWindow.window ? QsWindow.window.screen : null
                 }
@@ -274,7 +290,7 @@ ColumnLayout {
                     on_DragArmedChanged: {
                         if (!_dragArmed || ghost.Drag.active)
                             return;
-                        const entry = { "type": "widget", "name": tile.modelData.name };
+                        const entry = { "type": "widget", "name": tile.modelData.id };
                         const size = Config.bar.thickness.all ?? 44;
                         // Grab the real widget for the cursor image (like an
                         // in-bar drag); fall back to the tile if it isn't loaded.
