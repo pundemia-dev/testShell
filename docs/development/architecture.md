@@ -119,8 +119,8 @@ Chrome/global configs (border, corners, backgrounds, popouts, general) stay in
 
 ### Extension points (modularity inside a module)
 
-When a module hosts pluggable units (dashboard pages, AI pages, future
-widgets), use the shared mechanics instead of a bespoke manager:
+When a module hosts pluggable units (dashboard pages, AI pages, bar widgets,
+launcher modules), use the shared mechanics instead of a bespoke manager:
 
 - **Unit layout**: `<slot>/<id>/<id>.<slot-singular>.qml` — a manifest
   (`components/misc/PluginManifest.qml`: `id`/`title`/`icon`/`order`/
@@ -140,6 +140,16 @@ widgets), use the shared mechanics instead of a bespoke manager:
 - Manifests are loaded dynamically — they must explicitly import every module
   they use (`qs.components.misc` etc.); implicit same-dir resolution doesn't
   work through qsintercept.
+- **Launcher slot** (`modules/launcher/plugins/<id>/<id>.plugin.qml`): the
+  manifest subclass is `LauncherManifest` (adds `description`/`trigger`), the
+  content root extends `LauncherModule` — both from
+  `qs.modules.launcher.content` (anchored by `ModuleManager`'s static import).
+  `ModuleManager` keeps the host state machine (default/selecting/active, FZF,
+  magic symbol) but takes its module list from `LauncherRegistry`
+  (`Config.launcher.order`/`.disabled`, blocklist; `active[0]` = default
+  module) and instantiates a module's `content` lazily on first activation.
+  Per-module settings ship as `settingsSchema` on the manifest and surface as
+  standalone settings pages via `modules/settings/SettingsDiscovery.qml`.
 
 ## Visibility, focus & interaction
 
@@ -168,7 +178,7 @@ their sub-config (`modules/<name>/config/`); chrome/global sub-configs stay in
 | Key | File | Notes |
 |-----|------|-------|
 | `Config.bar` | `modules/bar/config/BarConfig.qml` | |
-| `Config.launcher` | `modules/launcher/config/LauncherConfig.qml` | |
+| `Config.launcher` | `modules/launcher/config/LauncherConfig.qml` | plugin `order[]`/`disabled[]` |
 | `Config.notifs` | `modules/notifications/config/NotifsConfig.qml` | |
 | `Config.backgrounds` | `backgroundsconfig/BackgroundsConfig.qml` | |
 | `Config.border` | `borderconfig/BorderConfig.qml` | visible chrome + 8 zonal `zoneRoundings` |

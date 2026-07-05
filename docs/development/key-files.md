@@ -19,6 +19,8 @@
 | `sticks` toggle + `stickSmooth` capsule | `plugin/pshell/Blobs/blobrect.{hpp,cpp}`, `blobgroup.{hpp,cpp}`, `shaders/blob.frag`, `drawers/backgrounds/components/WindowSlot.qml`, `config/backgroundsconfig/BackgroundsConfig.qml` |
 | SDF frame inset | `drawers/backgrounds/Backgrounds.qml` (`_frameInset*`) |
 | Settings UI | `modules/settings/{SettingsContent,SettingsDiscovery,PresetButton}.qml`, `modules/settings/pages/*.qml`, `components/{SettingsSchema,SettingRow,SettingSection}.qml`, `components/controls/{SchemaForm,Hint,HintIcon}.qml`, `services/PresetsManager.qml` |
+| Launcher host (state machine, FZF, input row) | `modules/launcher/{LauncherWrapper,ModuleManager,LocalSearcher}.qml`, `modules/launcher/content/{RowInput,LeftPanel,UniversalDelegate}.qml` |
+| Launcher plugin slot (contract + units) | `modules/launcher/content/{LauncherManifest,LauncherModule,LauncherRegistry}.qml`, `modules/launcher/plugins/<id>/` |
 | Dashboard | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/`, `components/misc/PluginManifest.qml`, `modules/dashboard/config/DashboardConfig.qml`, `modules/dashboard/settings/DashboardSettingsPage.qml` |
 | Dashboard rich progress | `components/controls/{DashProgress,StyledProgressBar}.qml` |
 | Dashboard backing services | `services/{Players,SystemUsage,Weather,NetworkUsage,Audio,SysInfo}.qml`, `services/Icons.qml` |

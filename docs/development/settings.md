@@ -32,7 +32,8 @@ confirmed (red tint → confirm, 3 s auto-reset).
 
 ## Third-party module contract
 
-A module ships a `<Name>.settings.qml` sibling — a pure `components/misc/SettingsSchema.qml`:
+A plugin unit declares a `settingsSchema:` on its manifest — a
+`components/misc/SettingsSchema.qml`:
 
 ```qml
 QtObject {
@@ -53,10 +54,12 @@ Field descriptor shape:
 Supported types: `bool` → `StyledSwitch`, `int`/`real` → `CustomSpinBox`,
 `string` → `StyledTextField`, `enum` → chip row.
 
-`SettingsDiscovery.qml` scans `modules/launcher/content/components/` for
-`*.settings.qml`; bar widgets carry their schema in the widget manifest
-(`modules/bar/widgets/<id>/<id>.widget.qml`, `settingsSchema:`), surfaced by
-`modules/bar/settings/WidgetSettings.qml`. `components/controls/SchemaForm.qml` renders the schema
+Launcher modules carry their schema in the plugin manifest
+(`modules/launcher/plugins/<id>/<id>.plugin.qml`), surfaced as standalone
+settings pages by `SettingsDiscovery.qml` (reads them through
+`LauncherRegistry`); bar widgets carry theirs in the widget manifest
+(`modules/bar/widgets/<id>/<id>.widget.qml`), surfaced inline on the Bar page
+by `modules/bar/settings/WidgetSettings.qml`. `components/controls/SchemaForm.qml` renders the schema
 generically, persisting values in `Config.custom[key]` and seeding defaults on
 first show. No edits to `Config.qml` needed.
 

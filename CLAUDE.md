@@ -204,7 +204,7 @@ Types loaded dynamically (`Qt.createComponent`) can't rely on implicit same-dir 
 ### Settings for a new module
 
 - **Official module**: add `modules/<name>/settings/<Name>Page.qml` (a `Flickable` of `SettingSection`/`SettingRow` bound to `Config.<section>.*`) and register it in `SettingsContent.qml`'s `pages` array (`name`/`icon`/`scope`/`component`; import `qs.modules.<name>.settings`). Gate rarely-used controls with `advanced: true` on the row/section. Core/chrome pages (General, Themes, Borders, Corners, Backgrounds) live in `modules/settings/pages/`.
-- **Third-party module**: ship `<Name>.settings.qml` (a `SettingsSchema`) next to the component and read values at runtime via `Config.getCustom(key, field, default)`. No `Config.qml` edit and no settings-page code needed — discovery + `SchemaForm` surface it automatically. **Never widen the rails contract for settings state — it lives in `Config.custom`.**
+- **Plugin unit** (bar widget, launcher module, …): declare `settingsSchema: SettingsSchema { … }` on the unit's manifest and read values at runtime via `Config.getCustom(key, field, default)`. No `Config.qml` edit and no settings-page code needed — bar-widget schemas render inline on the Bar page (`WidgetSettings`), launcher-plugin schemas become standalone pages (`SettingsDiscovery`), both via `SchemaForm`. **Never widen the rails contract for settings state — it lives in `Config.custom`.**
 
 ### Hover-trigger pattern (auto-hide drawers)
 
