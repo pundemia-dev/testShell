@@ -1,49 +1,23 @@
 import QtQuick
 
+// Base type for a launcher plugin's content (the lazily-instantiated part of
+// the unit — see LauncherManifest for the metadata half). Identity fields
+// (id/title/icon/description/trigger/settingsSchema) live on the manifest;
+// this carries only the runtime contract the host drives while the module is
+// active. Instantiated by ModuleManager from the manifest's `content` on
+// first activation.
 Item {
     id: root
 
     // ==========================================
-    // 1. ИДЕНТИФИКАЦИЯ (Используется для FZF и CLI)
-    // ==========================================
-
-    // Уникальный ID модуля (например, "clipboard", "calc"). Используется для вызова через CLI/шорткаты
-    property string moduleId: ""
-
-    // Название модуля для отображения в левом списке при выборе
-    property string name: ""
-
-    // Описание модуля для левого списка
-    property string description: ""
-
-    // Иконка (юникод или путь) для левого списка
-    property string icon: ""
-
-    // Строка-триггер (БЕЗ магического символа). Например: "gif", "pic", "calc"
-    property string trigger: ""
-
-    // ==========================================
-    // 1b. КОНТРАКТ НАСТРОЕК (опционально)
-    // ==========================================
-
-    // Опциональная SettingsSchema — если задана, настройки модуля
-    // автоматически появятся в модуле настроек (рендерятся SchemaForm,
-    // значения хранятся в Config.custom[settingsKey]).
-    // См. docs/development/settings.md.
-    property var settingsSchema: null
-
-    // Ключ поддерева в Config.custom для значений этого модуля.
-    property string settingsKey: moduleId
-
-    // ==========================================
-    // 2. СОСТОЯНИЕ (Управляется Менеджером)
+    // 1. СОСТОЯНИЕ (Управляется Менеджером)
     // ==========================================
 
     // Флаг, указывающий, что этот модуль сейчас активен
     property bool isActive: false
 
     // ==========================================
-    // 3. НАСТРОЙКИ ИНТЕРФЕЙСА (Панели)
+    // 2. НАСТРОЙКИ ИНТЕРФЕЙСА (Панели)
     // ==========================================
 
     property bool hasLeftPanel: true
@@ -57,11 +31,11 @@ Item {
     property real customRightHeight: -1
 
     // ==========================================
-    // 4. ДАННЫЕ И КОМПОНЕНТЫ (UI)
+    // 3. ДАННЫЕ И КОМПОНЕНТЫ (UI)
     // ==========================================
 
     // Модель данных для LeftPanel (массив объектов или ListModel/QAbstractListModel).
-    // Должна соответствовать формату твоего UniversalDelegate.
+    // Должна соответствовать формату UniversalDelegate.
     property var listModel: null
 
     // UI для правой панели (Превью, настройки и т.д.)
@@ -75,7 +49,7 @@ Item {
     property Component shortcutsComponent: null
 
     // ==========================================
-    // 5. НАВИГАЦИЯ (Вызывается Менеджером при Up/Down в RowInput)
+    // 4. НАВИГАЦИЯ (Вызывается Менеджером при Up/Down в RowInput)
     // ==========================================
 
     // Если модуль не переопределяет navigateUp/Down — эмитирует сигнал,
@@ -87,7 +61,7 @@ Item {
     function navigateDown() { defaultNavigateDown() }
 
     // ==========================================
-    // 6. МЕТОДЫ ЖИЗНЕННОГО ЦИКЛА
+    // 5. МЕТОДЫ ЖИЗНЕННОГО ЦИКЛА
     // ==========================================
 
     // Вызывается Менеджером каждый раз, когда меняется текст в RowInput (исключая триггер)
@@ -114,11 +88,10 @@ Item {
     }
 
     // ==========================================
-    // 7. СИГНАЛЫ
+    // 6. СИГНАЛЫ
     // ==========================================
 
     // Модуль может вызвать этот сигнал, чтобы принудительно закрыть сам себя (например, при клике/выборе элемента)
     // closeLauncher: если true, закроется весь лаунчер; если false, лаунчер вернется в дефолтное состояние.
     signal requestClose(bool closeLauncher)
-
 }

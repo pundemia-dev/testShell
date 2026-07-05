@@ -6,15 +6,17 @@ import "structures"
 JsonObject {
     // property bool direction: false
     property int gap: 10
-    property string giphyApiKey: ""
     // property int rounding: 10
     property bool excludeBareArea: true
-    property var modules: ["AppListModule", "GifListModule", "WallListModule"]
+    // Плагины (modules/launcher/plugins/<id>/) — blocklist-семантика:
+    // всё найденное активно, если id не в disabled; order задаёт порядок
+    // (order[0] = дефолтный модуль). Пер-модульные настройки живут в
+    // Config.custom[<id>] через settingsSchema манифеста.
+    property var order: []
+    property var disabled: []
     property int itemHeight: 50      // высота одного элемента делегата
     property int maxShown: 7         // максимум видимых элементов
     property string magicSymbol: "!" // символ вызова модулей
-    property int carouselVisibleItems: 5  // 5 или 7 — кол-во видимых обоев в карусели
-    property real carouselImageScale: 2.0 // множитель размера карточек (1.0 = базовый, 2.0 = удвоенный)
     property AnchorsData anchors: AnchorsData {
         // top: true
         // bottom: true

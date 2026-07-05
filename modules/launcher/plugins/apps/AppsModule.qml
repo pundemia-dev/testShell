@@ -1,33 +1,17 @@
 import QtQuick
-import QtQuick.Layouts
 import qs.config
 import qs.components
 import qs.components.controls
-import qs.components.images
-// import qs.components.images
 import qs.services
-import Quickshell.Widgets
 import Quickshell
-import qs.components.containers
-import qs.modules.launcher.content.components
-// import qs.modules.launcher.content.components
-// import "." // Для доступа к BaseModule
+import qs.modules.launcher.content
 
 LauncherModule {
     id: root
 
-    moduleId: "Apps"
-    name: "Applications"
-    description: "Search and launch applications"
-    icon: "💻"
-    trigger: "" // Дефолтный модуль
-
     hasLeftPanel: true
     hasRightPanel: false
     customRightWidth: 350
-
-    // listModel: internalModel
-    // ListModel { id: internalModel }
 
     // Текущее выбранное приложение для отображения в правой панели
     property var selectedApp: null
@@ -47,8 +31,6 @@ LauncherModule {
         interval: 80
         onTriggered: selectedApp = _pendingApp
     }
-
-    // В onSelected вместо прямого присвоения:
 
     // Если панель открыли кнопкой, автоматически выбираем первое приложение
     onHasRightPanelChanged: {
@@ -96,9 +78,6 @@ LauncherModule {
         }
     }
 
-    property var callbacks: []
-
-    // ListModel { id: internalModel }
     ScriptModel {
         id: internalModel
     }
@@ -113,7 +92,7 @@ LauncherModule {
                 text: app.comment || app.genericName || "",
                 leftIcon: app.icon ?? "",
                 isLeftIconImage: true,
-                rightIcon: "\uea61",
+                rightIcon: "",
                 rightText: "",
                 onClicked: function() {
                     Apps.launch(app)
@@ -146,7 +125,7 @@ LauncherModule {
         internalModel.values = _results.map(app => _modelEntry(app))
 
         if (hasRightPanel) {
-            // \u041d\u0435 \u0431\u0440\u043e\u0441\u0430\u0435\u043c \u043f\u0440\u0430\u0432\u0443\u044e \u043f\u0430\u043d\u0435\u043b\u044c \u043f\u0443\u0441\u0442\u043e\u0439: \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u043c \u043f\u0435\u0440\u0432\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442
+            // Не бросаем правую панель пустой: показываем первый результат
             _pendingApp = _results[0] ?? null
             debounceTimer.restart()
         } else {
@@ -167,7 +146,7 @@ LauncherModule {
             StyledIcon {
                 anchors.centerIn: parent
                 // Иконка сайдбара из Material: view_sidebar / chrome_reader_mode
-                text: root.hasRightPanel ? "\ufc3d" : "\ufc3e"
+                text: root.hasRightPanel ? "ﰽ" : "ﰾ"
                 font.pointSize: Appearance.font.size.large ?? 16
                 color: root.hasRightPanel ? Colours.palette.primary : Colours.palette.on_surface_variant
             }
@@ -190,126 +169,21 @@ LauncherModule {
         Item {
             Shortcut {
                 sequence: "Ctrl+P"
-                onActivated: togglePin()
+                onActivated: root.togglePin()
             }
             Shortcut {
                 sequence: "Ctrl+H"
-                onActivated: toggleHide()
+                onActivated: root.toggleHide()
             }
         }
     }
 
-    // function togglePin() {
-    //     if (!selectedApp) return;
-    //     console.log("Pinning app:", selectedApp.name);
-    // }
-
-    // function toggleHide() {
-    //     if (!selectedApp) return;
-    //     console.log("Hiding app:", selectedApp.name);
-    //     hasRightPanel = false;
-    //     handleInput("");
-    // }
-
     // ==========================================
     // ПРАВАЯ ПАНЕЛЬ (Детали приложения)
     // ==========================================
-    //
     rightPanelComponent: Component {
-        Item {
-            id: panelRoot
-            anchors.fill: parent
-
-            property var displayedApp: root.selectedApp
-
-            Connections {
-                target: root
-                function onSelectedAppChanged() { fadeOut.start() }
-            }
-
-            SequentialAnimation {
-                id: fadeOut
-                ParallelAnimation {
-                    Anim { target: content; property: "opacity"; to: 0; duration: Appearance.anim.durations.small }
-                    Anim { target: content; property: "scale";   to: 0.97; duration: Appearance.anim.durations.small }
-                }
-                ScriptAction {
-                    script: { panelRoot.displayedApp = root.selectedApp; fadeIn.start() }
-                }
-            }
-
-            ParallelAnimation {
-                id: fadeIn
-                Anim { target: content; property: "opacity"; to: 1; duration: Appearance.anim.durations.small }
-                Anim { target: content; property: "scale";   to: 1; duration: Appearance.anim.durations.small }
-            }
-
-            ColumnLayout {
-                id: content
-                anchors.centerIn: parent
-                width: parent.width - Appearance.padding.large * 2
-                spacing: 12
-                transformOrigin: Item.Center
-
-                // ── Иконка + заголовок ────────────────────────────────────────
-                CachingIconImage {
-                // IconImage {
-                    // asynchronous: true
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: 128
-                    Layout.preferredHeight: 128
-                    source: panelRoot.displayedApp
-                        ? Quickshell.iconPath(panelRoot.displayedApp.icon, "application-x-executable")
-                        : ""
-                }
-
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    text: panelRoot.displayedApp?.name ?? ""
-                    font.pointSize: Appearance.font.size.large
-                    font.weight: Font.DemiBold
-                    color: Colours.palette.primary
-                }
-
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    text: panelRoot.displayedApp?.comment || panelRoot.displayedApp?.genericName || ""
-                    font.pointSize: Appearance.font.size.small
-                    color: Colours.alpha(Colours.palette.on_surface, 0.5)
-                    visible: text !== ""
-                }
-
-                // ── Настройки ─────────────────────────────────────────────────
-                SectionContainer {
-                    Layout.fillWidth: true
-
-                    SwitchRow {
-                        label: "Pin app"
-                        checked: root.isPinned
-                        onToggled: function() { root.togglePin() }
-                        tooltip: "Ctrl+P"
-                        icon: root.isPinned ? "\uf68d" : "\uec9c"
-                        color: "transparent"
-                        paddings: 0
-                    }
-
-                    SwitchRow {
-                        label: "Hide app"
-                        checked: root.isHidden
-                        onToggled: function() { root.toggleHide() }
-                        tooltip: "Ctrl+H"
-                        icon: root.isHidden ? "\uecf0" : "\uea9a"
-                        color: "transparent"
-                        paddings: 0
-                    }
-                }
-            }
+        AppsDetailsPanel {
+            mod: root
         }
     }
 }

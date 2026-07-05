@@ -78,57 +78,9 @@ Flickable {
             }
         }
 
-        SettingSection {
-            title: qsTr("Wallpaper carousel")
-            icon: "\uec45" // tabler rocket
-
-            SettingRow {
-                label: qsTr("Visible items")
-                CustomSpinBox {
-                    value: Config.launcher.carouselVisibleItems
-                    min: 3
-                    max: 9
-                    step: 2
-                    onValueModified: v => Config.launcher.carouselVisibleItems = v
-                }
-            }
-            SettingRow {
-                label: qsTr("Image scale")
-                showSeparator: false
-                CustomSpinBox {
-                    value: Config.launcher.carouselImageScale
-                    min: 1
-                    max: 4
-                    step: 0.1
-                    onValueModified: v => Config.launcher.carouselImageScale = v
-                }
-            }
-        }
-
-        SettingSection {
-            title: qsTr("Integrations")
-            icon: "\uec45" // tabler rocket
-            advanced: true
-
-            SettingRow {
-                label: qsTr("Giphy API key")
-                description: qsTr("Used by the GIF search module.")
-                showSeparator: false
-                StyledTextField {
-                    implicitWidth: 220
-                    text: Config.launcher.giphyApiKey
-                    onEditingFinished: Config.launcher.giphyApiKey = text
-                    echoMode: TextInput.PasswordEchoOnEdit
-                    padding: Appearance.padding.small
-                    leftPadding: Appearance.padding.medium
-                    rightPadding: Appearance.padding.medium
-                    background: StyledRect {
-                        radius: Appearance.rounding.small
-                        color: Colours.palette.surface_container_high
-                    }
-                }
-            }
-        }
+        // Per-module settings (GIF Search, Wallpaper Engine, …) live on each
+        // plugin's manifest settingsSchema and surface as their own pages via
+        // SettingsDiscovery — this page keeps only host-level options.
 
         Item {
             Layout.fillHeight: true

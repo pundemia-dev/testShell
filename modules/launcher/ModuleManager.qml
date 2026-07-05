@@ -2,13 +2,12 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import qs.config
-import qs.services
-// Registers qs.modules.launcher.content.components with the qml scanner so the
-// dynamically-loaded launcher modules can import it for sibling types
-// (LauncherModule, PropertyRow) — implicit same-dir resolution doesn't work
-// through the qsintercept scheme, and the scanner only creates qs.* modules
-// referenced from statically-reachable files.
-import qs.modules.launcher.content.components
+// Statically anchors qs.modules.launcher.content with the qml scanner so the
+// file://-loaded plugin units (modules/launcher/plugins/<id>/) can explicitly
+// import it for the slot contract types (LauncherModule, LauncherManifest) —
+// implicit resolution only covers a unit's own folder, and the scanner only
+// creates qs.* modules referenced from statically-reachable files.
+import qs.modules.launcher.content
 
 Item {
     id: root
@@ -25,84 +24,42 @@ Item {
     property string magicSymbol: Config.launcher?.magicSymbol ?? "!"
 
     // ==========================================
-    // 2. ДАННЫЕ МОДУЛЕЙ
+    // 2. МОДУЛИ: DISCOVERY + ЛЕНИВЫЕ ИНСТАНСЫ
     // ==========================================
-    property list<QtObject> loadedModules: []
-    // property var loadedModules:   []   // массив инстансов BaseModule
+    // Манифесты (metadata only) приходят из реестра; content инстанцируется
+    // только при первой активации модуля и кэшируется на сессию.
+    readonly property LauncherRegistry registry: LauncherRegistry {}
+    readonly property var manifests: registry.active
+
+    property var _instances: ({})  // manifest.id → LauncherModule instance
+
+    readonly property QtObject defaultManifest: manifests.length > 0 ? manifests[0] : null
+    property QtObject activeManifest: null
+    property QtObject activeModule: null  // content-инстанс activeManifest
+
     property var selectingResults: []  // параллельный массив для FZF-результатов
-
-    property QtObject defaultModule: null
-    property QtObject activeModule:  null
-
     property ListModel selectingModel: ListModel {}
+
+    // Реестр наполняется асинхронно и active[] может переупорядочиваться по
+    // мере загрузки манифестов — пока пользователь ничего не выбрал
+    // (stateDefault), активный модуль следует за актуальным дефолтом.
+    onDefaultManifestChanged: {
+        if (defaultManifest && currentState === stateDefault && activeManifest !== defaultManifest)
+            _setActiveManifest(defaultManifest, "");
+    }
 
     // ==========================================
     // 3. FZF ПОИСК
     // ==========================================
     LocalSearcher {
         id: fzfEngine
-        list: root.loadedModules
-        key: "name"
+        list: root.manifests
+        key: "title"
         useFuzzy: true
     }
 
     // ==========================================
-    // 4. ИНИЦИАЛИЗАЦИЯ
-    // ==========================================
-    Component.onCompleted: {
-        let moduleNames = Config.launcher?.modules ?? ["AppListModule"]
-        let temp = []
-
-        for (let i = 0; i < moduleNames.length; i++) {
-            let url  = Qt.resolvedUrl("content/components/" + moduleNames[i] + ".qml")
-            let comp = Qt.createComponent(url)
-
-            if (comp.status === Component.Ready) {
-                let inst = comp.createObject(root)
-                temp.push(inst)
-            } else {
-                console.error("[ModuleManager] Ошибка загрузки модуля:",
-                              moduleNames[i], comp.errorString())
-            }
-        }
-
-        loadedModules = temp  // присваиваем весь массив целиком
-        if (temp.length > 0) {
-            defaultModule = temp[0]
-            activeModule  = temp[0]
-            activeModule.isActive = true
-            activeModule.onActivated("")
-        }
-    }
-    // Component.onCompleted: {
-    //     let moduleNames = Config.launcher?.modules ?? ["AppListModule"]
-    //     let tempModules = []
-
-    //     for (let i = 0; i < moduleNames.length; i++) {
-    //         // let comp = Qt.resolvedUrl("../components/" + moduleNames[i] + ".qml")
-    //         let url  = Qt.resolvedUrl("content/components/" + moduleNames[i] + ".qml")
-    //         let comp = Qt.createComponent(url)
-    //         // let comp = Qt.createComponent("/home/pundemia/quickshell/pShell/modules/laucher/content/components/" + moduleNames[i] + ".qml")
-
-    //         if (comp.status === Component.Ready) {
-    //             let inst = comp.createObject(root)
-    //             tempModules.push(inst)
-
-    //             if (i === 0) {
-    //                 root.defaultModule = inst
-    //                 root.activeModule  = inst
-    //             }
-    //         } else {
-    //             console.error("[ModuleManager] Ошибка загрузки модуля:",
-    //                           moduleNames[i], comp.errorString())
-    //         }
-    //     }
-
-    //     root.loadedModules = tempModules
-    // }
-
-    // ==========================================
-    // 5. ЛОГИКА ОБРАБОТКИ ВВОДА
+    // 4. ЛОГИКА ОБРАБОТКИ ВВОДА
     // ==========================================
     function cancelEscape() {
         if (isEscapePending) {
@@ -122,6 +79,7 @@ Item {
             if (currentState !== stateSelecting) {
                 currentState = stateSelecting
                 if (activeModule) activeModule.isActive = false
+                activeManifest = null
                 activeModule = null
             }
 
@@ -131,37 +89,43 @@ Item {
         } else {
             if (currentState !== stateDefault) {
                 currentState = stateDefault
-                _setActiveModule(defaultModule, "")
+                _setActiveManifest(defaultManifest, "")
             }
             if (activeModule) activeModule.handleInput(text)
         }
     }
 
     // ==========================================
-    // 6. АКТИВАЦИЯ И ДЕАКТИВАЦИЯ
+    // 5. АКТИВАЦИЯ И ДЕАКТИВАЦИЯ
     // ==========================================
 
     // Вызывается из делегата левой панели по индексу FZF-результата
     function activateBySelectingIndex(index) {
         if (index < 0 || index >= selectingResults.length) return
-        activateModuleInstance(selectingResults[index], "")
+        activateManifest(selectingResults[index], "")
     }
 
-    function activateModuleInstance(mod, initialQuery) {
+    function activateManifest(manifest, initialQuery) {
         currentState = stateActive
-        _setActiveModule(mod, initialQuery)
-        moduleActivatedForUI(mod.name)
+        _setActiveManifest(manifest, initialQuery)
+        moduleActivatedForUI(manifest.title)
     }
 
     function activateModuleById(mId, initialQuery) {
         initialQuery = initialQuery ?? ""
-        for (let i = 0; i < loadedModules.length; i++) {
-            if (loadedModules[i].moduleId === mId) {
-                activateModuleInstance(loadedModules[i], initialQuery)
+        for (let i = 0; i < manifests.length; i++) {
+            if (manifests[i].id === mId) {
+                activateManifest(manifests[i], initialQuery)
                 return
             }
         }
         console.warn("[ModuleManager] Модуль с ID", mId, "не найден!")
+    }
+
+    // Возврат в дефолтное состояние (используется Wrapper'ом при открытии)
+    function resetToDefault() {
+        currentState = stateDefault
+        _setActiveManifest(defaultManifest, "")
     }
 
     // Вызывается из RowInput при двойном Backspace (пустая строка)
@@ -169,34 +133,56 @@ Item {
     function escapeCurrentState() {
         if (currentState === stateActive) {
             currentState = stateSelecting
-            _setActiveModule(null, "")
+            _setActiveManifest(null, "")
             return magicSymbol
         }
         if (currentState === stateSelecting) {
             currentState = stateDefault
-            _setActiveModule(defaultModule, "")
+            _setActiveManifest(defaultManifest, "")
             return ""
         }
         return null
     }
 
     // ==========================================
-    // 7. СИГНАЛЫ
+    // 6. СИГНАЛЫ
     // ==========================================
     signal moduleActivatedForUI(string moduleName)
 
     // ==========================================
-    // 8. ПРИВАТНЫЕ ФУНКЦИИ
+    // 7. ПРИВАТНЫЕ ФУНКЦИИ
     // ==========================================
-    function _setActiveModule(mod, initialQuery) {
-        if (activeModule && activeModule !== mod) {
+    function _instanceFor(manifest) {
+        if (!manifest)
+            return null
+        let inst = _instances[manifest.id]
+        if (!inst) {
+            if (!manifest.content) {
+                console.warn("[ModuleManager] У модуля", manifest.id, "нет content")
+                return null
+            }
+            inst = manifest.content.createObject(root)
+            if (!inst) {
+                console.warn("[ModuleManager] Ошибка инстанцирования модуля:",
+                             manifest.id, manifest.content.errorString())
+                return null
+            }
+            _instances[manifest.id] = inst
+        }
+        return inst
+    }
+
+    function _setActiveManifest(manifest, initialQuery) {
+        const inst = _instanceFor(manifest)
+        if (activeModule && activeModule !== inst) {
             activeModule.isActive = false
             activeModule.onDeactivated()
         }
-        activeModule = mod
-        if (activeModule) {
-            activeModule.isActive = true
-            activeModule.onActivated(initialQuery)
+        activeManifest = manifest
+        activeModule = inst
+        if (inst) {
+            inst.isActive = true
+            inst.onActivated(initialQuery)
         }
     }
 
@@ -208,7 +194,7 @@ Item {
         for (let i = 0; i < results.length; i++) {
             let mod = results[i]
             selectingModel.append({
-                header:          mod.name,
+                header:          mod.title,
                 text:            mod.description,
                 leftIcon:        mod.icon,
                 isLeftIconImage: false
@@ -216,6 +202,7 @@ Item {
             selectingResults.push(mod)
         }
     }
+
     // ── Escape pending (для пилюли) ───────────────────────────────────────
     property bool isEscapePending: false
 

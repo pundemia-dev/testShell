@@ -24,16 +24,8 @@ Item {
     property bool clearTrigger: false
 
     onLauncherVisibleChanged: {
-        // onLauncherVisibleChanged: {
-        //     if (launcherVisible) {
-        //         rowInput.clear()
-        //         moduleManager.activeModule?.onActivated("")
-        //         moduleManager.processInput("")
-        //     }
-        // }f
             if (launcherVisible) {
-                moduleManager._setActiveModule(moduleManager.defaultModule, "")
-                moduleManager.currentState = moduleManager.stateDefault
+                moduleManager.resetToDefault()
                 FocusManager.requestFocus("launcher");
             } else {
                 FocusManager.releaseFocus("launcher");
@@ -260,7 +252,7 @@ Item {
 
                             model: moduleManager.currentState === moduleManager.stateSelecting
                                    ? moduleManager.selectingModel
-                                   : moduleManager.activeModule?.listModel
+                                   : (moduleManager.activeModule?.listModel ?? null)
 
                             delegate: UniversalDelegate {
                                 list: leftPanel

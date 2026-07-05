@@ -1,52 +1,39 @@
 pragma ComponentBehavior: Bound
 
 import qs.config
-import Quickshell
-import Qt.labs.folderlistmodel
+import qs.modules.launcher.content
 import QtQuick
 
-// Discovers third-party settings without instantiating the modules themselves:
-// scans component dirs for lightweight `<Name>.settings.qml` files (each a pure
-// SettingsSchema) and loads only those. The settings UI turns each schema into
-// a generic page via SchemaForm. Drop a widget + its .settings.qml and its
-// page appears. See docs/development/settings.md.
+// Surfaces launcher-plugin settings as standalone settings pages without
+// instantiating the modules themselves: reads each unit's `settingsSchema`
+// straight from its manifest (modules/launcher/plugins/<id>/<id>.plugin.qml)
+// through LauncherRegistry. Drop a plugin folder in and its page appears —
+// the settings UI turns each schema into a generic page via SchemaForm,
+// persisting values into Config.custom[key]. See docs/development/settings.md.
 //
-// Bar widgets are intentionally NOT scanned here — their schemas are surfaced
-// inline as a block at the bottom of the Bar page (modules/bar/settings/WidgetSettings.qml),
-// not as standalone top-level pages.
+// Bar widgets are intentionally NOT surfaced here — their schemas render
+// inline as a block at the bottom of the Bar page
+// (modules/bar/settings/WidgetSettings.qml), not as standalone pages.
 Item {
     id: root
 
-    // Populated SettingsSchema instances (have title/icon/key/fields).
-    property var schemas: []
+    // Discovers the launcher-plugin manifests. Object property — no layout cell.
+    readonly property LauncherRegistry registry: LauncherRegistry {}
 
-    function _rebuild(): void {
-        const out = [];
-        for (const fm of [fmLauncher]) {
-            const base = String(fm.folder);
-            for (let i = 0; i < fm.count; i++) {
-                const name = fm.get(i, "fileName");
-                if (!name)
-                    continue;
-                const url = `${base}/${name}`;
-                const c = Qt.createComponent(url);
-                if (c.status === Component.Ready) {
-                    const obj = c.createObject(root);
-                    if (obj && obj.key)
-                        out.push(obj);
-                    else if (obj)
-                        obj.destroy();
-                } else if (c.status === Component.Error) {
-                    console.warn("[SettingsDiscovery] failed:", url, c.errorString());
-                }
-            }
-        }
-        root.schemas = out;
-        _seedDefaults(out);
+    // Populated SettingsSchema instances (have title/icon/key/fields).
+    // Disabled plugins keep their pages hidden along with the module.
+    readonly property var schemas: {
+        const out = (registry.active ?? [])
+            .map(m => m.settingsSchema)
+            .filter(s => s && s.key);
+        out.sort((a, b) => String(a.title).localeCompare(String(b.title)));
+        return out;
     }
 
-    // Seed each discovered schema's defaults into Config.custom so a third-party
-    // widget reading Config.getCustom(key, field, …) has values even before the
+    onSchemasChanged: _seedDefaults(schemas)
+
+    // Seed each discovered schema's defaults into Config.custom so a module
+    // reading Config.getCustom(key, field, …) has values even before the
     // settings window is ever opened. One reassign so JsonAdapter persists.
     function _seedDefaults(schemas): void {
         const c = Object.assign({}, Config.custom);
@@ -65,14 +52,5 @@ Item {
         }
         if (changed)
             Config.custom = c;
-    }
-
-    FolderListModel {
-        id: fmLauncher
-        folder: Qt.resolvedUrl("../launcher/content/components")
-        nameFilters: ["*.settings.qml"]
-        showDirs: false
-        onStatusChanged: if (status === FolderListModel.Ready)
-            root._rebuild()
     }
 }

@@ -117,8 +117,8 @@ Item {
                         // }
 
                         StyledText {
-                            // Выводим moduleId, как договаривались
-                            text: root.moduleManager.activeModule?.moduleId ?? ""
+                            // Имя активного модуля из его манифеста
+                            text: root.moduleManager.activeManifest?.title ?? ""
                             font.pointSize: Appearance.font.size.normal
                             font.weight: Font.DemiBold
                             // color: searchContainer.isErr ? Colours.palette.error : Colours.palette.primary
