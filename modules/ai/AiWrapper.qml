@@ -142,12 +142,12 @@ Item {
         // 0 = auto-sized from the content's implicit size (dashboard-style).
         property int wrapperWidth: 0
         property int wrapperHeight: 0
-        property bool aLeft: true
-        property bool aRight: false
-        property bool aTop: false
-        property bool aBottom: false
-        property bool aHorizontalCenter: false
-        property bool aVerticalCenter: true
+        property bool aLeft: Config.ai.anchors.left ?? undefined
+        property bool aRight: Config.ai.anchors.right ?? undefined
+        property bool aTop: Config.ai.anchors.top ?? undefined
+        property bool aBottom: Config.ai.anchors.bottom ?? undefined
+        property bool aHorizontalCenter: Config.ai.anchors.horizontalCenter ?? undefined
+        property bool aVerticalCenter: Config.ai.anchors.verticalCenter ?? undefined
         property int mLeft: 0
         property int mRight: 0
         property int mTop: 0
