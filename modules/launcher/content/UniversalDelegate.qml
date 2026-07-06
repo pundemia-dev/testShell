@@ -24,20 +24,22 @@ StyledClippingRect {
     border.width: isCurrent && hasBackground ? 1.5 : 0
     border.color: Colours.alpha(Colours.palette.primary, 0.4)
 
-    Behavior on border.width { Anim {} }
+    Behavior on border.width {
+        Anim {}
+    }
 
     // --- ФУНКЦИИ ---
 
     function trigger() {
         if (root.modelData && typeof root.modelData.onClicked === "function")
-            root.modelData.onClicked(root.modelData, root.list)
+            root.modelData.onClicked(root.modelData, root.list);
     }
 
     function triggerAlt() {
         if (root.modelData && typeof root.modelData.onAltClicked === "function")
-            root.modelData.onAltClicked(root.modelData, root.list)
+            root.modelData.onAltClicked(root.modelData, root.list);
         else
-            trigger()
+            trigger();
     }
 
     // --- ФОН ПРИ НАВЕДЕНИИ (только без картинки) ---
@@ -48,7 +50,9 @@ StyledClippingRect {
         color: Colours.alpha(Colours.palette.surface_variant, 0.5)
         opacity: !root.hasBackground && stateLayer.containsMouse ? 1.0 : 0.0
 
-        Behavior on opacity { Anim {} }
+        Behavior on opacity {
+            Anim {}
+        }
     }
 
     // --- ВЫДЕЛЕНИЕ ПРИ НАВИГАЦИИ (только без картинки) ---
@@ -59,7 +63,9 @@ StyledClippingRect {
         color: Colours.palette.on_surface
         opacity: !root.hasBackground && root.isCurrent ? 0.08 : 0.0
 
-        Behavior on opacity { Anim {} }
+        Behavior on opacity {
+            Anim {}
+        }
     }
 
     // --- STATE LAYER ---
@@ -71,12 +77,13 @@ StyledClippingRect {
         z: 10
 
         function onClicked(): void {
-            root.trigger()
+            root.trigger();
         }
 
         onEntered: {
-            let lv = root.list?.listView
-            if (lv) lv.currentIndex = root.index
+            let lv = root.list?.listView;
+            if (lv)
+                lv.currentIndex = root.index;
         }
     }
 
@@ -94,7 +101,9 @@ StyledClippingRect {
             asynchronous: true
             opacity: root.isCurrent ? 1.0 : 0.88
 
-            Behavior on opacity { Anim {} }
+            Behavior on opacity {
+                Anim {}
+            }
         }
     }
 
@@ -106,8 +115,14 @@ StyledClippingRect {
 
         sourceComponent: Rectangle {
             gradient: Gradient {
-                GradientStop { position: 0.2; color: "transparent" }
-                GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.75) }
+                GradientStop {
+                    position: 0.2
+                    color: "transparent"
+                }
+                GradientStop {
+                    position: 1.0
+                    color: Qt.rgba(0, 0, 0, 0.75)
+                }
             }
         }
     }
@@ -135,9 +150,7 @@ StyledClippingRect {
             width: active ? height : 0
             height: parent.height * 0.8
 
-            sourceComponent: root.modelData?.swatchColor
-                ? swatchComp
-                : (root.modelData?.isLeftIconImage ? leftImageComp : leftFontComp)
+            sourceComponent: root.modelData?.swatchColor ? swatchComp : (root.modelData?.isLeftIconImage ? leftImageComp : leftFontComp)
 
             // Плашка сплошного цвета (буфер обмена: HEX/RGB/HSL-записи).
             Component {
@@ -158,9 +171,7 @@ StyledClippingRect {
                 id: leftImageComp
 
                 IconImage {
-                    source: root.modelData?.leftIcon
-                        ? Quickshell.iconPath(root.modelData.leftIcon, "image-missing")
-                        : ""
+                    source: root.modelData?.leftIcon ? Quickshell.iconPath(root.modelData.leftIcon, "image-missing") : ""
                     anchors.fill: parent
                 }
             }
@@ -168,13 +179,24 @@ StyledClippingRect {
             Component {
                 id: leftFontComp
 
-                StyledText {
-                    text: root.modelData?.leftIcon ?? ""
-                    font.pointSize: Appearance.font.size.large
-                    color: Colours.palette.on_surface
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
+                // Rounded square backing plate behind the glyph (only for the
+                // font-icon branch — image/swatch branches keep their own look).
+                // StyledIcon (not StyledText) so leftIcon glyphs render in the
+                // tabler family — the leftIcon slot is always an icon (clipboard,
+                // module picker, todo checkbox), matching how rightIcon works.
+                StyledRect {
                     anchors.fill: parent
+                    radius: Appearance.rounding.medium
+                    color: Colours.palette.secondary_container
+
+                    StyledIcon {
+                        anchors.centerIn: parent
+                        text: root.modelData?.leftIcon ?? ""
+                        font.pointSize: Appearance.font.size.large
+                        color: Colours.palette.on_secondary_container
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                    }
                 }
             }
         }
@@ -207,9 +229,7 @@ StyledClippingRect {
 
                 text: root.modelData?.text ?? ""
                 font.pointSize: Appearance.font.size.small
-                color: root.hasBackground
-                    ? Qt.rgba(1, 1, 1, 0.7)
-                    : Colours.alpha(Colours.palette.outline, true)
+                color: root.hasBackground ? Qt.rgba(1, 1, 1, 0.7) : Colours.alpha(Colours.palette.outline, true)
                 width: parent.width
                 elide: Text.ElideRight
                 anchors.top: headerText.bottom
@@ -234,15 +254,15 @@ StyledClippingRect {
                 visible: !root.modelData?.isRightIconImage && (root.modelData?.rightIcon ? true : false)
                 text: root.modelData?.rightIcon ?? ""
                 font.pointSize: Appearance.font.size.normal
-                color: root.hasBackground
-                    ? Qt.rgba(1, 1, 1, 0.8)
-                    : Colours.palette.on_surface_variant
+                color: root.hasBackground ? Qt.rgba(1, 1, 1, 0.8) : Colours.palette.on_surface_variant
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
 
                 opacity: (root.isCurrent || stateLayer.containsMouse) ? 1.0 : 0.0
 
-                Behavior on opacity { Anim {} }
+                Behavior on opacity {
+                    Anim {}
+                }
             }
 
             // Правая иконка-картинка (видна только при выделении/наведении)
@@ -250,16 +270,16 @@ StyledClippingRect {
                 id: rightIconImage
 
                 visible: (root.modelData?.isRightIconImage ?? false) && (root.modelData?.rightIcon ? true : false)
-                source: visible
-                    ? Quickshell.iconPath(root.modelData.rightIcon, "image-missing")
-                    : ""
+                source: visible ? Quickshell.iconPath(root.modelData.rightIcon, "image-missing") : ""
                 implicitSize: Appearance.font.size.normal * 2
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
 
                 opacity: (root.isCurrent || stateLayer.containsMouse) ? 1.0 : 0.0
 
-                Behavior on opacity { Anim {} }
+                Behavior on opacity {
+                    Anim {}
+                }
             }
 
             // Правый текст (снизу, прижат вправо)
@@ -268,9 +288,7 @@ StyledClippingRect {
 
                 text: root.modelData?.rightText ?? ""
                 font.pointSize: Appearance.font.size.small
-                color: root.hasBackground
-                    ? Qt.rgba(1, 1, 1, 0.5)
-                    : Colours.alpha(Colours.palette.outline, true)
+                color: root.hasBackground ? Qt.rgba(1, 1, 1, 0.5) : Colours.alpha(Colours.palette.outline, true)
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
             }

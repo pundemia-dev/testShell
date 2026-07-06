@@ -9,7 +9,7 @@ import qs.modules.launcher.content
 LauncherManifest {
     title: "Wallpaper Engine"
     description: "Manage backgrounds, themes, slideshows and history"
-    icon: ""
+    icon: "" // tabler wallpaper
     trigger: "wp"
     order: 20
 

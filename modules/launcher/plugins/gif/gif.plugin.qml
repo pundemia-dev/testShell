@@ -8,7 +8,7 @@ import qs.modules.launcher.content
 LauncherManifest {
     title: "GIF Search"
     description: "Search and copy GIFs from Giphy"
-    icon: "🎞️"
+    icon: "" // tabler gif
     trigger: "gif"
     order: 10
 

@@ -6,7 +6,7 @@ import qs.modules.launcher.content
 LauncherManifest {
     title: "Applications"
     description: "Search and launch applications"
-    icon: "💻"
+    icon: "" // tabler apps
     order: 0
 
     content: Component {
