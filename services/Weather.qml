@@ -3,6 +3,7 @@ pragma Singleton
 import qs.config
 import qs.services
 import Quickshell
+import Quickshell.Io
 import QtQuick
 
 // Weather via open-meteo (no API key). Location comes from
@@ -27,6 +28,10 @@ Singleton {
     property string sunrise: "--:--"
     property string sunset: "--:--"
 
+    // Location string that resolved `loc`; lets us skip geocode/IP lookup on
+    // subsequent launches when the configured location is unchanged.
+    property string _resolvedKey: ""
+
     function formatTemp(t: var): string {
         if (t === undefined || t === null)
             return "--°";
@@ -34,28 +39,60 @@ Singleton {
         return `${Math.round(f ? t * 9 / 5 + 32 : t)}°${f ? "F" : "C"}`;
     }
 
+    // Fetch via `curl -4` rather than Qt's XMLHttpRequest: open-meteo's
+    // geocoder advertises a real IPv6 address, and on an IPv4-only host Qt
+    // stalls ~40s on the IPv6 connect before falling back. curl with -4 forces
+    // IPv4 and never hits that stall. --max-time caps a dead request at 10s.
     function _get(url: string, cb: var): void {
-        const xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState !== XMLHttpRequest.DONE)
-                return;
-            if (xhr.status === 200) {
-                try {
-                    cb(JSON.parse(xhr.responseText));
-                } catch (e) {
-                    console.warn("[Weather] parse:", e);
+        fetchProc.createObject(root, { _url: url, _cb: cb });
+    }
+
+    Component {
+        id: fetchProc
+
+        Process {
+            id: proc
+
+            required property string _url
+            required property var _cb
+
+            command: ["curl", "-4", "-fsS", "--max-time", "10", _url]
+            running: true
+
+            stdout: StdioCollector {
+                // Read on stream finish (fires when stdout closes on exit) so the
+                // body is guaranteed collected. On an HTTP error `curl -fsS`
+                // writes nothing, so parse simply no-ops.
+                onStreamFinished: {
+                    if (text && text.trim().length) {
+                        try {
+                            proc._cb(JSON.parse(text));
+                        } catch (e) {
+                            console.warn("[Weather] parse:", e, proc._url);
+                        }
+                    }
+                    proc.destroy();
                 }
-            } else {
-                console.warn("[Weather] http", xhr.status, url);
             }
-        };
-        xhr.open("GET", url);
-        xhr.send();
+
+            onExited: code => {
+                if (code !== 0)
+                    console.warn("[Weather] curl exit", code, proc._url);
+            }
+        }
     }
 
     function reload(): void {
         const cfg = Config.dashboard.weatherLocation;
+        // Reuse the previously resolved coordinates when the configured
+        // location hasn't changed — a city name geocodes to the same lat/lon
+        // every time, so this drops the launch cost from 2 requests to 1.
+        if (root._resolvedKey === cfg && root.loc && root.loc.indexOf(",") !== -1) {
+            _fetch();
+            return;
+        }
         if (cfg && cfg.indexOf(",") !== -1 && !isNaN(parseFloat(cfg.split(",")[0]))) {
+            root._resolvedKey = cfg;
             loc = cfg;
         } else if (cfg) {
             _geocodeCity(cfg);
@@ -63,23 +100,53 @@ Singleton {
             _get("https://ipinfo.io/json", r => {
                 if (r.loc) {
                     city = r.city ?? "";
+                    root._resolvedKey = cfg;
                     loc = r.loc;
                 }
             });
         }
     }
 
+    // open-meteo's geocoder only matches a bare place name — "Russia Ufa"
+    // returns nothing. Try the whole string first, then each comma/space token
+    // in order, preferring a populated place (feature_code PPL*) so a bare
+    // country token like "Russia" doesn't win over the actual city.
     function _geocodeCity(name: string): void {
-        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
+        const queries = [name];
+        for (const tok of name.split(/[,\s]+/).filter(t => t.length > 1))
+            if (queries.indexOf(tok) === -1)
+                queries.push(tok);
+        _geocodeTry(name, queries, 0, null);
+    }
+
+    function _geocodeTry(key: string, queries: var, i: int, fallback: var): void {
+        if (i >= queries.length) {
+            if (fallback) {
+                city = fallback.name;
+                root._resolvedKey = key;
+                loc = `${fallback.latitude},${fallback.longitude}`;
+            } else {
+                console.warn("[Weather] could not geocode", key);
+            }
+            return;
+        }
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(queries[i])}&count=1&language=en&format=json`;
         _get(url, r => {
-            if (r.results && r.results.length > 0) {
-                city = r.results[0].name;
-                loc = `${r.results[0].latitude},${r.results[0].longitude}`;
+            const hit = r.results && r.results.length > 0 ? r.results[0] : null;
+            if (hit && String(hit.feature_code ?? "").startsWith("PPL")) {
+                city = hit.name;
+                root._resolvedKey = key;
+                loc = `${hit.latitude},${hit.longitude}`;
+            } else {
+                _geocodeTry(key, queries, i + 1, fallback ?? hit);
             }
         });
     }
 
-    onLocChanged: _fetch()
+    // Set while restoring from cache so seeding `loc` doesn't kick off a fetch
+    // that would duplicate the one reload() issues right after.
+    property bool _suppressFetch: false
+    onLocChanged: if (!_suppressFetch) _fetch()
 
     function _fetch(): void {
         if (!loc || loc.indexOf(",") === -1)
@@ -132,7 +199,24 @@ Singleton {
                 });
             }
             hourly = hl.slice(0, 24);
+            _persist();
         });
+    }
+
+    // Snapshot the resolved location + last weather so the next launch shows
+    // data instantly (before the network refresh lands) and skips re-resolving
+    // the coordinates.
+    function _persist(): void {
+        cacheFile.setText(JSON.stringify({
+            key: root._resolvedKey,
+            loc: root.loc,
+            city: root.city,
+            cc: root.cc,
+            forecast: root.forecast,
+            hourly: root.hourly,
+            sunrise: root.sunrise,
+            sunset: root.sunset
+        }));
     }
 
     function describe(code: var): string {
@@ -169,12 +253,41 @@ Singleton {
         return c[String(code)] ?? qsTr("Unknown");
     }
 
-    Component.onCompleted: reload()
+    // Load the persisted snapshot first (instant UI), then refresh from network.
+    FileView {
+        id: cacheFile
+
+        path: `${Paths.cache}/weather.json`
+        onLoaded: {
+            try {
+                const d = JSON.parse(text());
+                root._suppressFetch = true;
+                root._resolvedKey = d.key ?? "";
+                if (d.loc) root.loc = d.loc;
+                root._suppressFetch = false;
+                if (d.city) root.city = d.city;
+                if (d.cc) root.cc = d.cc;
+                if (d.forecast) root.forecast = d.forecast;
+                if (d.hourly) root.hourly = d.hourly;
+                if (d.sunrise) root.sunrise = d.sunrise;
+                if (d.sunset) root.sunset = d.sunset;
+            } catch (e) {
+                console.warn("[Weather] cache parse:", e);
+            }
+            root.reload();
+        }
+        onLoadFailed: err => {
+            if (err !== FileViewError.FileNotFound)
+                console.warn("[Weather] cache load:", err);
+            root.reload();
+        }
+    }
 
     Connections {
         target: Config.dashboard
         function onWeatherLocationChanged(): void {
             root.loc = "";
+            root._resolvedKey = "";
             root.reload();
         }
     }
