@@ -92,7 +92,9 @@ Item {
     }
 
     Component.onCompleted: {
-        VisibilitiesManager.addVisibility(root.screen, "ai", "ai", false, false, "Toggle AI");
+        // Shortcut пустой — таргет "ai" держит IpcManager (toggle/open/list).
+        VisibilitiesManager.addVisibility(root.screen, "ai", "", false, false, "Toggle AI");
+        IpcManager.register("ai", root.registry.active);
         _interactionRail = manager.determineRailIndex(content);
         if (_interactionRail >= 0) {
             InteractionManager.registerHover(_interactionRail, 0, "ai", () => {
@@ -111,6 +113,27 @@ Item {
         function onVisibilityChanged(screen: ShellScreen, name: string, state: bool) {
             if (screen === root.screen && name === "ai")
                 root.aiVisible = state;
+        }
+    }
+
+    // Держим список страниц в менеджере свежим (реестр грузится асинхронно).
+    Connections {
+        target: root.registry
+        function onActiveChanged() {
+            IpcManager.setManifests("ai", root.registry.active);
+        }
+    }
+
+    // IPC `open <id>` → выбрать вкладку на видимом (активном) экране.
+    Connections {
+        target: IpcManager
+        function onOpenRequested(name: string, id: string, query: string) {
+            if (name !== "ai" || !root.aiVisible || !id)
+                return;
+            const arr = root.registry.active ?? [];
+            const i = arr.findIndex(m => m.id === id);
+            if (i >= 0)
+                root.registry.currentTab = i;
         }
     }
 

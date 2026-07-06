@@ -48,9 +48,29 @@ Item {
         }
 
 
-    // Регистрация visibility через менеджер (с поддержкой pendingRequests)
+    // Регистрация visibility через менеджер (с поддержкой pendingRequests).
+    // Shortcut пустой — таргет "launcher" держит IpcManager (toggle/open/list),
+    // иначе был бы дубликат IPC-таргета с CustomShortcut.
     Component.onCompleted: {
-        VisibilitiesManager.addVisibility(root.screen, "launcher", "launcher", false, false, "Toggle Launcher");
+        VisibilitiesManager.addVisibility(root.screen, "launcher", "", false, false, "Toggle Launcher");
+        IpcManager.register("launcher", moduleManager.manifests);
+    }
+
+    // Держим список модулей в менеджере свежим (реестр грузится асинхронно).
+    Connections {
+        target: moduleManager
+        function onManifestsChanged() {
+            IpcManager.setManifests("launcher", moduleManager.manifests);
+        }
+    }
+
+    // IPC `open <id>` → активировать модуль на видимом (активном) экране.
+    Connections {
+        target: IpcManager
+        function onOpenRequested(name: string, id: string, query: string) {
+            if (name === "launcher" && root.launcherVisible && id)
+                moduleManager.activateModuleById(id, query);
+        }
     }
 
     // Слушаем изменения visibility от глобального менеджера

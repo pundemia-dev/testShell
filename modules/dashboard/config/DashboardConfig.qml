@@ -3,10 +3,6 @@ import Quickshell.Io
 JsonObject {
     property bool enabled: true
 
-    // IPC / shortcut target: bind in niri with
-    //   spawn "qs" "-c" "pShell" "ipc" "call" "dashboard" "activate"
-    property string shortcut: "dashboard"
-
     // Geometry / anchors (drives the wrapper's rails contract). Default: drops
     // from the top edge, horizontally centered — the caelestia dashboard look.
     property AnchorsData anchors: AnchorsData {
