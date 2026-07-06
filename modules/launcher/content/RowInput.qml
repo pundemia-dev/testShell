@@ -26,6 +26,15 @@ Item {
         inputField.text = ""
     }
 
+    // Программно записать текст в поле (без запуска onTextEdited/фильтрации) и
+    // сфокусироваться, курсор в конец. Зеркало clear() — используется модулем
+    // для входа в режим правки (см. LauncherModule.requestSetInput).
+    function setText(t) {
+        inputField.text = t
+        inputField.forceActiveFocus()
+        inputField.cursorPosition = inputField.text.length
+    }
+
     function forceInputFocus() {
         inputField.forceActiveFocus()
     }

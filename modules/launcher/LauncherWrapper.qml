@@ -212,6 +212,11 @@ Item {
                                 moduleManager.activateBySelectingIndex(leftPanel.listView.currentIndex)
                                 return
                             }
+                            // Модуль может перехватить Enter до триггера элемента списка
+                            if (moduleManager.activeModule
+                                && typeof moduleManager.activeModule.handleExecute === "function"
+                                && moduleManager.activeModule.handleExecute(query, isAlt))
+                                return
                             // Если есть левая панель — триггерим элемент списка
                             if (flexLayout.hasLeftPanel && leftPanel.listView.currentItem) {
                                 let item = leftPanel.listView.currentItem
@@ -250,6 +255,7 @@ Item {
                             target: moduleManager.activeModule ?? null
                             function onDefaultNavigateUp()   { leftPanel.listView.decrementCurrentIndex() }
                             function onDefaultNavigateDown() { leftPanel.listView.incrementCurrentIndex() }
+                            function onRequestSetInput(text) { rowInput.setText(text) }
                         }
                     }
                     RowLayout {
@@ -284,7 +290,16 @@ Item {
                                 // selecting ListModel doesn't — don't warn on it.
                                 ignoreUnknownSignals: true
                                 function onValuesChanged() {
-                                    Qt.callLater(() => leftPanel.listView.currentIndex = 0)
+                                    // Default: reset selection to the top. A module may
+                                    // request a specific landing index (pendingSelection)
+                                    // to keep the highlight on a moved/toggled row.
+                                    const mod = moduleManager.activeModule
+                                    const want = (mod && mod.pendingSelection >= 0) ? mod.pendingSelection : 0
+                                    Qt.callLater(() => {
+                                        leftPanel.listView.currentIndex = want
+                                        if (mod && mod.pendingSelection >= 0)
+                                            mod.pendingSelection = -1
+                                    })
                                 }
                             }
                             Connections {
