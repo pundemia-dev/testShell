@@ -5,7 +5,12 @@ import Quickshell
 import Quickshell.Widgets
 import QtQuick
 
-StyledClippingRect {
+// Корень — обычный Rectangle, НЕ ClippingRectangle: тот рендерит всех детей
+// через ShaderEffectSource-текстуру, и при гонке на создании делегата (нулевая
+// ширина до привязки parent) текстура может не подняться — строка занимает
+// место, но не рисуется. Клипгинг нужен только фоновой картинке — он живёт
+// в её Loader ниже.
+StyledRect {
     id: root
 
     required property var modelData
@@ -20,13 +25,6 @@ StyledClippingRect {
 
     radius: Appearance.rounding.large
     color: hasBackground ? Colours.tPalette.surface : "transparent"
-
-    border.width: isCurrent && hasBackground ? 1.5 : 0
-    border.color: Colours.alpha(Colours.palette.primary, 0.4)
-
-    Behavior on border.width {
-        Anim {}
-    }
 
     // --- ФУНКЦИИ ---
 
@@ -87,7 +85,7 @@ StyledClippingRect {
         }
     }
 
-    // --- ФОНОВОЕ ИЗОБРАЖЕНИЕ ---
+    // --- ФОНОВОЕ ИЗОБРАЖЕНИЕ + ГРАДИЕНТ (клип по скруглению только здесь) ---
 
     Loader {
         id: bgImageLoader
@@ -95,34 +93,50 @@ StyledClippingRect {
         active: root.hasBackground
         anchors.fill: parent
 
-        sourceComponent: Image {
-            source: root.modelData?.backgroundImage ?? ""
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            opacity: root.isCurrent ? 1.0 : 0.88
+        sourceComponent: StyledClippingRect {
+            radius: root.radius
 
-            Behavior on opacity {
-                Anim {}
+            Image {
+                anchors.fill: parent
+                source: root.modelData?.backgroundImage ?? ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                opacity: root.isCurrent ? 1.0 : 0.88
+
+                Behavior on opacity {
+                    Anim {}
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                gradient: Gradient {
+                    GradientStop {
+                        position: 0.2
+                        color: "transparent"
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: Qt.rgba(0, 0, 0, 0.75)
+                    }
+                }
             }
         }
     }
 
-    // --- ГРАДИЕНТ ПОВЕРХ КАРТИНКИ ---
+    // --- РАМКА ВЫДЕЛЕНИЯ (поверх картинки — у Rectangle-корня она бы скрылась) ---
 
     Loader {
         active: root.hasBackground
         anchors.fill: parent
 
-        sourceComponent: Rectangle {
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.2
-                    color: "transparent"
-                }
-                GradientStop {
-                    position: 1.0
-                    color: Qt.rgba(0, 0, 0, 0.75)
-                }
+        sourceComponent: StyledRect {
+            radius: root.radius
+            border.width: root.isCurrent ? 1.5 : 0
+            border.color: Colours.alpha(Colours.palette.primary, 0.4)
+
+            Behavior on border.width {
+                Anim {}
             }
         }
     }
