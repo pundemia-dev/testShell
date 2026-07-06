@@ -114,39 +114,56 @@ ColumnLayout {
             bottomLeftRadius:  Appearance.rounding.small
             bottomRightRadius: Appearance.rounding.small
             color: Colours.tPalette.surface_variant
-            implicitHeight: codeCol.implicitHeight
+            implicitHeight: codeArea.implicitHeight + 4
 
-            ColumnLayout {
-                id: codeCol
+            // Non-interactive Flickable so it never swallows the vertical wheel;
+            // a MouseArea routes horizontal (or Shift+) wheel to it and leaves
+            // vertical wheel unaccepted so it bubbles up to the chat scroll.
+            Flickable {
+                id: codeFlick
                 anchors.fill: parent
-                spacing: 0
+                interactive: false
+                clip: true
+                contentWidth: codeArea.width
+                contentHeight: codeArea.implicitHeight
+                ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded }
 
-                ScrollView {
-                    Layout.fillWidth: true
-                    implicitHeight: codeArea.implicitHeight + 4
-                    clip: true
-                    ScrollBar.vertical.policy:   ScrollBar.AlwaysOff
-                    ScrollBar.horizontal.policy: ScrollBar.AsNeeded
+                TextArea {
+                    id: codeArea
+                    width: Math.max(implicitWidth, codeFlick.width)
+                    readOnly:    true
+                    selectByMouse: true
+                    wrapMode:    TextEdit.NoWrap
+                    textFormat:  TextEdit.PlainText
+                    text:        root.segmentContent
+                    font:        Appearance.font.mono.small
+                    color:       root.thinking
+                                     ? Colours.palette.on_surface_variant
+                                     : Colours.palette.on_surface
+                    selectedTextColor:   Colours.palette.on_secondary_container
+                    selectionColor:      Colours.palette.secondary_container
+                    renderType:          Text.QtRendering
+                    topPadding:    Appearance.padding.small + 2
+                    bottomPadding: Appearance.padding.small
+                    leftPadding:   Appearance.padding.small
+                    rightPadding:  Appearance.padding.small
+                    background: Item {}
+                }
+            }
 
-                    TextArea {
-                        id: codeArea
-                        readOnly:    true
-                        selectByMouse: true
-                        wrapMode:    TextEdit.NoWrap
-                        textFormat:  TextEdit.PlainText
-                        text:        root.segmentContent
-                        font:        Appearance.font.mono.small
-                        color:       root.thinking
-                                         ? Colours.palette.on_surface_variant
-                                         : Colours.palette.on_surface
-                        selectedTextColor:   Colours.palette.on_secondary_container
-                        selectionColor:      Colours.palette.secondary_container
-                        renderType:          Text.QtRendering
-                        topPadding:    Appearance.padding.small + 2
-                        bottomPadding: Appearance.padding.small
-                        leftPadding:   Appearance.padding.small
-                        rightPadding:  Appearance.padding.small
-                        background: Item {}
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                onWheel: wheel => {
+                    let dx = wheel.angleDelta.x;
+                    if (dx === 0 && (wheel.modifiers & Qt.ShiftModifier))
+                        dx = wheel.angleDelta.y;
+                    const max = codeFlick.contentWidth - codeFlick.width;
+                    if (dx !== 0 && max > 0) {
+                        codeFlick.contentX = Math.max(0, Math.min(codeFlick.contentX - dx, max));
+                        wheel.accepted = true;
+                    } else {
+                        wheel.accepted = false;
                     }
                 }
             }
