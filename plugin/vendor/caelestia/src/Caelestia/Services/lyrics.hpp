@@ -56,6 +56,10 @@ public:
         const QString& artist, const QString& title, const QString& album = {}, qreal duration = 0.0);
     Q_INVOKABLE void clearTrack();
     Q_INVOKABLE void refresh();
+    // Populate lyricCandidates for the current track. Not run automatically on
+    // track change (that wastes two searches per track when no picker is open) —
+    // a candidate-picker UI should call this when it opens.
+    Q_INVOKABLE void loadCandidates();
 
 signals:
     void lyricsChanged();
@@ -81,10 +85,15 @@ private:
     void cancelInFlight();
     int newRequestId();
 
-    void tryLocal(int reqId);
+    bool tryLocal(int reqId);
     void tryLrclib(int reqId);
+    void tryLrclibSearch(int reqId);
     void tryNetEase(int reqId);
-    void chainNext(LyricsBackend::Backend just_failed, int reqId);
+    // First online backend to deliver parseable synced lyrics wins; claim()
+    // gates that (returns false for latecomers). backendExhausted() counts down
+    // the racing backends and stops the spinner once all have given up.
+    [[nodiscard]] bool claim(int reqId);
+    void backendExhausted(int reqId);
 
     void searchLrclibCandidates(int reqId);
     void searchNetEaseCandidates(int reqId);
@@ -136,6 +145,8 @@ private:
     qreal m_duration = 0.0;
 
     int m_currentRequestId = 0;
+    int m_committedRequestId = -1;
+    int m_pendingBackends = 0;
     QHash<int, QList<QPointer<QNetworkReply>>> m_pendingReplies;
 
     QJsonObject m_lyricsMap;
