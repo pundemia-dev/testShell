@@ -129,13 +129,30 @@ StyledClippingRect {
         Loader {
             id: leftIconLoader
 
-            active: !root.hasBackground && (root.modelData?.leftIcon ? true : false)
+            active: !root.hasBackground && ((root.modelData?.leftIcon ? true : false) || (root.modelData?.swatchColor ? true : false))
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             width: active ? height : 0
             height: parent.height * 0.8
 
-            sourceComponent: root.modelData?.isLeftIconImage ? leftImageComp : leftFontComp
+            sourceComponent: root.modelData?.swatchColor
+                ? swatchComp
+                : (root.modelData?.isLeftIconImage ? leftImageComp : leftFontComp)
+
+            // Плашка сплошного цвета (буфер обмена: HEX/RGB/HSL-записи).
+            Component {
+                id: swatchComp
+
+                StyledRect {
+                    anchors.centerIn: parent
+                    width: parent.width * 0.82
+                    height: width
+                    radius: Appearance.rounding.small
+                    color: root.modelData?.swatchColor ?? "transparent"
+                    border.width: 1
+                    border.color: Colours.alpha(Colours.palette.outline, 0.4)
+                }
+            }
 
             Component {
                 id: leftImageComp
