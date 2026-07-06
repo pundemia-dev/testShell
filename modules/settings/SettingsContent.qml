@@ -14,6 +14,7 @@ import "pages"
 import qs.modules.bar.settings
 import qs.modules.dashboard.settings
 import qs.modules.launcher.settings
+import qs.modules.ai.settings
 
 Item {
     id: root
@@ -104,6 +105,12 @@ Item {
             component: dashboardPage
         },
         {
+            name: qsTr("AI"),
+            icon: "\uf59f", // tabler brain
+            scope: "ai",
+            component: aiPage
+        },
+        {
             name: qsTr("About"),
             icon: "\ueac5", // tabler info-circle
             scope: "full",
@@ -143,6 +150,10 @@ Item {
     Component {
         id: dashboardPage
         DashboardSettingsPage {}
+    }
+    Component {
+        id: aiPage
+        AiPage {}
     }
     Component {
         id: aboutPage

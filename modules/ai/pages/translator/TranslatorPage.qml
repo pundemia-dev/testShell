@@ -10,6 +10,7 @@ import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
 import "../chat"
+import "languages.js" as Languages
 
 // Translator page. Two layouts driven by the panel's anchor contract:
 //   • horizontalCenter anchor (top/bottom edge or a free-floating centre) →
@@ -54,38 +55,8 @@ Item {
 
     readonly property string scriptsDir: (Quickshell.env("HOME") || "/home/user") + "/.config/quickshell/pShell/scripts"
 
-    // ── Language table ────────────────────────────────────────────────────
-    readonly property var languages: [
-        { code: "auto", name: "Auto" },
-        { code: "en", name: "English" },
-        { code: "ru", name: "Russian" },
-        { code: "es", name: "Spanish" },
-        { code: "fr", name: "French" },
-        { code: "de", name: "German" },
-        { code: "it", name: "Italian" },
-        { code: "pt", name: "Portuguese" },
-        { code: "nl", name: "Dutch" },
-        { code: "pl", name: "Polish" },
-        { code: "uk", name: "Ukrainian" },
-        { code: "tr", name: "Turkish" },
-        { code: "ar", name: "Arabic" },
-        { code: "he", name: "Hebrew" },
-        { code: "hi", name: "Hindi" },
-        { code: "ja", name: "Japanese" },
-        { code: "ko", name: "Korean" },
-        { code: "zh", name: "Chinese" },
-        { code: "vi", name: "Vietnamese" },
-        { code: "th", name: "Thai" },
-        { code: "id", name: "Indonesian" },
-        { code: "cs", name: "Czech" },
-        { code: "sv", name: "Swedish" },
-        { code: "fi", name: "Finnish" },
-        { code: "el", name: "Greek" },
-        { code: "ro", name: "Romanian" },
-        { code: "hu", name: "Hungarian" },
-        { code: "da", name: "Danish" },
-        { code: "nb", name: "Norwegian" }
-    ]
+    // ── Language table (shared with the AI settings page) ─────────────────
+    readonly property var languages: Languages.list
 
     readonly property var engines: [
         { id: "google", name: "Google", icon: "" },       // world
