@@ -206,6 +206,10 @@ Item {
                             if (moduleManager.activeModule && typeof moduleManager.activeModule.onModifierReleased === "function")
                                 moduleManager.activeModule.onModifierReleased(key)
                         }
+                        onTabNavigate: (backwards) => {
+                            if (moduleManager.activeModule && typeof moduleManager.activeModule.onTab === "function")
+                                moduleManager.activeModule.onTab(backwards)
+                        }
                         onExecute: (query, isAlt) => {
                             // В режиме выбора модуля — Enter активирует модуль из списка
                             if (moduleManager.currentState === moduleManager.stateSelecting) {

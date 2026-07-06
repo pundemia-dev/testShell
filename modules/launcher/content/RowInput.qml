@@ -19,6 +19,9 @@ Item {
     signal execute(string query, bool isAlt)
     signal modifierPressed(int key)
     signal modifierReleased(int key)
+    // Tab / Shift+Tab — routed to the active module's optional onTab(backwards)
+    // hook by the host (e.g. emoji uses it to cycle category tabs).
+    signal tabNavigate(bool backwards)
 
     implicitHeight: 50
 
@@ -252,6 +255,11 @@ Item {
                             root.moveRight()
                             event.accepted = true
                         }
+                        break
+                    case Qt.Key_Tab:
+                    case Qt.Key_Backtab:
+                        root.tabNavigate(event.key === Qt.Key_Backtab || (event.modifiers & Qt.ShiftModifier))
+                        event.accepted = true
                         break
                     case Qt.Key_Return:
                     case Qt.Key_Enter:
