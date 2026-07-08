@@ -180,6 +180,7 @@ their sub-config (`modules/<name>/config/`); chrome/global sub-configs stay in
 | `Config.bar` | `modules/bar/config/BarConfig.qml` | |
 | `Config.launcher` | `modules/launcher/config/LauncherConfig.qml` | plugin `order[]`/`disabled[]` |
 | `Config.notifs` | `modules/notifications/config/NotifsConfig.qml` | |
+| `Config.toasts` | `modules/toasts/config/ToastsConfig.qml` | shell/OS toasts — see `docs/development/toasts.md` |
 | `Config.backgrounds` | `backgroundsconfig/BackgroundsConfig.qml` | |
 | `Config.border` | `borderconfig/BorderConfig.qml` | visible chrome + 8 zonal `zoneRoundings` |
 | `Config.corners` | `cornersconfig/CornersConfig.qml` | |

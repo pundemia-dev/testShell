@@ -9,12 +9,14 @@ import QtQuick
 import QtQuick.Layouts
 
 // Config.toasts → modules/toasts/config/ToastsConfig.qml
-// Global toast behaviour + a DYNAMIC per-source mute tree built from
-// ToastRegistry.sources (no hardcoded categories). Each registered ToastSource
-// shows up as a section; a source nested under a module (parentId) renders as a
-// child block with its own master toggle. Within a source you can mute by
-// severity group (Errors / Other notifications) or per individual notification
-// (advanced). Everything writes into Config.toasts.overrides via Toaster.
+// Three tiers of muting, most-global first:
+//   1. Severity — global Info / Warning / Error switches (Config.toasts.severity).
+//   2. Per source — a master Enabled that kills everything from that source
+//      (or module node), plus a collapsible list of its individual
+//      notifications, ranked Error → Warning → Info and split by a divider.
+//   3. Each notification's own toggle (Config.toasts.overrides[src].ids[id]).
+// The source tree is built dynamically from ToastRegistry.sources — no
+// hardcoded categories.
 Flickable {
     id: root
 
@@ -54,8 +56,6 @@ Flickable {
 
         const out = [];
         const seenModule = ({});
-        // Module nodes (anything referenced as a parentId), synthesised if the
-        // module itself never registered a source.
         for (const s of srcs) {
             if (s.parentId && !seenModule[s.parentId]) {
                 seenModule[s.parentId] = true;
@@ -63,20 +63,19 @@ Flickable {
                 out.push({
                     id: s.parentId,
                     label: node?.label ?? s.parentId,
-                    icon: node?.icon ?? "",
+                    icon: node?.icon ?? "",
                     isModule: true,
                     self: null,
                     children: childrenOf[s.parentId] ?? []
                 });
             }
         }
-        // Standalone sources (no parent, and not themselves a module node).
         for (const s of srcs)
             if (!s.parentId && !seenModule[s.sourceId])
                 out.push({
                     id: s.sourceId,
                     label: s.label,
-                    icon: s.icon || "",
+                    icon: s.icon || "",
                     isModule: false,
                     self: s,
                     children: []
@@ -125,7 +124,8 @@ Flickable {
         }
     }
 
-    // Leaf controls for one source: master + severity groups + per-notification.
+    // Leaf controls for one source: master Enabled + a collapsible list of its
+    // individual notifications, grouped Error → Warning → Info with dividers.
     component SourceBlock: ColumnLayout {
         id: sb
         required property var src
@@ -134,8 +134,33 @@ Flickable {
         readonly property string sid: sb.src.sourceId
         readonly property bool selfEnabled: Toaster.flag(sb.sid, "enabled")
         readonly property var notifs: sb.src.notifications ?? []
-        readonly property bool hasErr: sb.notifs.some(n => n.severity === "error")
-        readonly property bool hasOther: sb.notifs.some(n => n.severity !== "error")
+
+        // Non-empty severity groups, ranked, each { key, label, items }.
+        readonly property var noteGroups: {
+            const buckets = ({
+                    error: [],
+                    warning: [],
+                    info: []
+                });
+            for (const n of sb.notifs) {
+                const s = n.severity === "error" ? "error" : n.severity === "warning" ? "warning" : "info";
+                buckets[s].push(n);
+            }
+            const labels = ({
+                    error: qsTr("Errors"),
+                    warning: qsTr("Warnings"),
+                    info: qsTr("Info")
+                });
+            const out = [];
+            for (const key of ["error", "warning", "info"])
+                if (buckets[key].length > 0)
+                    out.push({
+                        key: key,
+                        label: labels[key],
+                        items: buckets[key]
+                    });
+            return out;
+        }
 
         Layout.fillWidth: true
         spacing: Appearance.spacing.small
@@ -146,29 +171,49 @@ Flickable {
             enabled: sb.parentEnabled
             onToggled: c => Toaster.setOverride(sb.sid, "enabled", c)
         }
-        SwitchRow {
-            visible: sb.hasErr
-            label: qsTr("Errors")
-            checked: Toaster.flag(sb.sid, "errors")
-            enabled: sb.parentEnabled && sb.selfEnabled
-            onToggled: c => Toaster.setOverride(sb.sid, "errors", c)
-        }
-        SwitchRow {
-            visible: sb.hasOther
-            label: qsTr("Other notifications")
-            checked: Toaster.flag(sb.sid, "others")
-            enabled: sb.parentEnabled && sb.selfEnabled
-            onToggled: c => Toaster.setOverride(sb.sid, "others", c)
-        }
-        Repeater {
-            model: sb.notifs
-            delegate: SwitchRow {
-                required property var modelData
-                visible: Config.general.advanced
-                label: modelData.label ?? modelData.id
-                checked: Toaster.notifFlag(sb.sid, modelData.id)
-                enabled: sb.parentEnabled && sb.selfEnabled
-                onToggled: c => Toaster.setNotifOverride(sb.sid, modelData.id, c)
+
+        CollapsibleSection {
+            Layout.fillWidth: true
+            visible: sb.notifs.length > 0
+            title: qsTr("Notifications")
+
+            Repeater {
+                model: sb.noteGroups
+                delegate: ColumnLayout {
+                    id: grpCol
+                    required property var modelData
+                    required property int index
+                    Layout.fillWidth: true
+                    spacing: Appearance.spacing.small
+
+                    // Divider above every group except the first.
+                    StyledRect {
+                        visible: grpCol.index > 0
+                        Layout.fillWidth: true
+                        Layout.topMargin: Appearance.spacing.small
+                        implicitHeight: 1
+                        color: Colours.palette.outline_variant
+                    }
+
+                    StyledText {
+                        text: grpCol.modelData.label
+                        font: Appearance.font.label.small
+                        color: Colours.palette.on_surface_variant
+                        Layout.fillWidth: true
+                    }
+
+                    Repeater {
+                        model: grpCol.modelData.items
+                        delegate: SwitchRow {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            label: modelData.label ?? modelData.id
+                            checked: Toaster.notifFlag(sb.sid, modelData.id)
+                            enabled: sb.parentEnabled && sb.selfEnabled
+                            onToggled: c => Toaster.setNotifOverride(sb.sid, modelData.id, c)
+                        }
+                    }
+                }
             }
         }
     }
@@ -184,6 +229,29 @@ Flickable {
             font.weight: Font.DemiBold
             color: Colours.palette.on_surface
             Layout.fillWidth: true
+        }
+
+        // ── Severity (global) ───────────────────────────────────────────────
+        SettingSection {
+            title: qsTr("Severity")
+            icon: "\uea03" // tabler adjustments
+            description: qsTr("Globally mute every toast of a severity, regardless of source.")
+
+            SwitchRow {
+                label: qsTr("Info")
+                checked: Config.toasts.severity.info
+                onToggled: c => Config.toasts.severity.info = c
+            }
+            SwitchRow {
+                label: qsTr("Warning")
+                checked: Config.toasts.severity.warning
+                onToggled: c => Config.toasts.severity.warning = c
+            }
+            SwitchRow {
+                label: qsTr("Error")
+                checked: Config.toasts.severity.error
+                onToggled: c => Config.toasts.severity.error = c
+            }
         }
 
         // ── General ───────────────────────────────────────────────────────

@@ -37,13 +37,13 @@ Singleton {
         notifications: [
             {
                 id: "on",
-                label: qsTr("Enabled"),
+                label: qsTr("Turned on"),
                 severity: "info",
                 icon: "\uece9"
             },
             {
                 id: "off",
-                label: qsTr("Disabled"),
+                label: qsTr("Turned off"),
                 severity: "info",
                 icon: "\uea35"
             }

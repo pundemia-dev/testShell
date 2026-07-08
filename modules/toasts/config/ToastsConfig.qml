@@ -12,6 +12,11 @@ import Quickshell.Io
 JsonObject {
     property bool enabled: true
 
+    // ── Global severity switches ──────────────────────────────────────────
+    // Mute every toast of a given severity, regardless of source. The "info"
+    // bucket also covers Success-type toasts. Checked first in Toaster.
+    property SeverityData severity: SeverityData {}
+
     // ── Geometry / anchors (drives the wrapper's rails contract) ──────────
     // Default: top-right — the conventional toast corner.
     property AnchorsData anchors: AnchorsData {
@@ -50,6 +55,12 @@ JsonObject {
 
     // NOTE: keystroke / screenkey display (evdev listener + HUD) is deferred to
     // a separate session; its `keystrokes` sub-object lands then.
+
+    component SeverityData: JsonObject {
+        property bool info: true
+        property bool warning: true
+        property bool error: true
+    }
 
     component AnchorsData: JsonObject {
         property bool left: false

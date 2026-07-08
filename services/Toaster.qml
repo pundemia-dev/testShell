@@ -94,9 +94,24 @@ Singleton {
         });
     }
 
-    // Mute decision. Walks the source's ancestor chain for a disabled master
-    // toggle, then applies leaf-level severity-group and per-notification mutes.
+    // Map a toast type to a global-severity bucket. Success folds into "info"
+    // (the global switches + per-notification ranking are error/warning/info).
+    function severityOf(type): string {
+        if (type === Toaster.Error)
+            return "error";
+        if (type === Toaster.Warning)
+            return "warning";
+        return "info";
+    }
+
+    // Mute decision, most-global first:
+    //   1. global severity switch (Config.toasts.severity.<bucket>)
+    //   2. ancestor master toggles (module → plugin `enabled`)
+    //   3. the specific notification's own toggle
     function shouldShow(sourceId, notifId, type): bool {
+        if (Config.toasts.severity[root.severityOf(type)] === false)
+            return false;
+
         const ov = Config.toasts.overrides ?? ({});
 
         // Ancestor master toggles (module → plugin). Guard against cycles.
@@ -109,17 +124,9 @@ Singleton {
             node = ToastRegistry.parentOf(node);
         }
 
-        // Leaf-level: severity group + specific notification.
-        const o = ov[sourceId];
-        if (o) {
-            const isErr = type === Toaster.Error;
-            if (isErr && o.errors === false)
-                return false;
-            if (!isErr && o.others === false)
-                return false;
-            if (o.ids?.[notifId] === false)
-                return false;
-        }
+        // The specific notification.
+        if (ov[sourceId]?.ids?.[notifId] === false)
+            return false;
         return true;
     }
 
