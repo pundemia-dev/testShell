@@ -158,15 +158,16 @@ Item {
                         id: actionInner
 
                         anchors.centerIn: parent
-                        // Actions may carry an unresolvable icon name or an
-                        // empty label — fall through to a generic glyph so the
-                        // pill is never blank.
+                        // Actions may carry an unresolvable icon name or a
+                        // blank label (e.g. notify-send default actions send
+                        // a lone space) — fall through to a generic glyph so
+                        // the pill is never blank.
                         sourceComponent: {
                             if (action.modelData.isClose || action.modelData.isCopy)
                                 return iconBtn;
                             if (root.notif?.hasActionIcons && Quickshell.iconPath(action.modelData.identifier, true))
                                 return iconComp;
-                            if (action.modelData.text)
+                            if (action.modelData.text?.trim())
                                 return textComp;
                             return fallbackComp;
                         }
