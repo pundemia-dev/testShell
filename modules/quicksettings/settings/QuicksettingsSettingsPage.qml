@@ -60,7 +60,7 @@ Flickable {
 
         SettingSection {
             title: qsTr("General")
-            icon: "\ueb3f" // tabler toggle-right
+            icon: "" // tabler adjustments
 
             SettingRow {
                 label: qsTr("Enabled")
@@ -96,6 +96,17 @@ Flickable {
             }
 
             SettingRow {
+                label: qsTr("Rounding")
+                description: qsTr("Corner radius (-1 = follow backgrounds).")
+                CustomSpinBox {
+                    value: Config.quicksettings.rounding
+                    min: -1
+                    max: 80
+                    onValueModified: v => Config.quicksettings.rounding = v
+                }
+            }
+
+            SettingRow {
                 label: qsTr("Padding")
                 description: qsTr("Inner padding around the content, in pixels.")
                 advanced: true
@@ -124,68 +135,57 @@ Flickable {
 
         SettingSection {
             title: qsTr("Position")
-            icon: "\ueb3f"
+            icon: "" // tabler layout-sidebar-right
 
             SettingRow {
                 label: qsTr("Anchor edge")
                 description: qsTr("Which screen edge the panel drops from.")
+
+                OptionPills {
+                    current: root.currentEdge
+                    options: [
+                        { key: "top", label: qsTr("Top") },
+                        { key: "bottom", label: qsTr("Bottom") },
+                        { key: "left", label: qsTr("Left") },
+                        { key: "right", label: qsTr("Right") }
+                    ]
+                    onPicked: key => root.setEdge(key)
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Mode")
+                description: qsTr("Push displaces panels sharing the edge; overlay covers them.")
                 showSeparator: false
 
-                RowLayout {
-                    spacing: Appearance.spacing.small
-
-                    Repeater {
-                        model: [
-                            { key: "top", label: qsTr("Top") },
-                            { key: "bottom", label: qsTr("Bottom") },
-                            { key: "left", label: qsTr("Left") },
-                            { key: "right", label: qsTr("Right") }
-                        ]
-
-                        delegate: StyledRect {
-                            id: edgePill
-                            required property var modelData
-                            readonly property bool active: root.currentEdge === modelData.key
-
-                            implicitWidth: edgeLabel.implicitWidth + Appearance.padding.medium * 2
-                            implicitHeight: edgeLabel.implicitHeight + Appearance.padding.small * 2
-                            radius: Appearance.rounding.small
-                            color: active ? Colours.palette.secondary_container : Colours.palette.surface_container_high
-
-                            StyledText {
-                                id: edgeLabel
-                                anchors.centerIn: parent
-                                text: edgePill.modelData.label
-                                font.pointSize: Appearance.font.size.small
-                                color: edgePill.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.setEdge(edgePill.modelData.key)
-                            }
-                        }
-                    }
+                OptionPills {
+                    current: Config.quicksettings.mode
+                    options: [
+                        { key: "push", label: qsTr("Push") },
+                        { key: "overlay", label: qsTr("Overlay") }
+                    ]
+                    onPicked: key => Config.quicksettings.mode = key
                 }
             }
         }
 
         SettingSection {
             title: qsTr("Pages")
-            icon: "\ueb3f"
+            icon: "" // tabler layout-navbar
 
             StyledText {
                 Layout.fillWidth: true
-                text: qsTr("Toggle tab pages on/off.")
+                text: qsTr("Toggle tab pages on/off and drag the grip to reorder tabs.")
                 font.pointSize: Appearance.font.size.small
                 color: Colours.palette.on_surface_variant
                 wrapMode: Text.WordWrap
             }
 
-            UnitList {
+            ReorderList {
                 manifests: pageRegistry.all ?? []
-                disabled: Config.quicksettings.disabled ?? []
+                configOrder: Config.quicksettings.order ?? []
+                disabledIds: Config.quicksettings.disabled ?? []
+                onReordered: ids => Config.quicksettings.order = ids
                 onToggled: (id, on) => {
                     const d = (Config.quicksettings.disabled ?? []).slice();
                     const i = d.indexOf(id);
@@ -200,19 +200,21 @@ Flickable {
 
         SettingSection {
             title: qsTr("Cards")
-            icon: "\ueb3f"
+            icon: "" // tabler cards
 
             StyledText {
                 Layout.fillWidth: true
-                text: qsTr("Toggle the cards shown below the tabs.")
+                text: qsTr("Toggle the cards shown below the tabs and drag to reorder them.")
                 font.pointSize: Appearance.font.size.small
                 color: Colours.palette.on_surface_variant
                 wrapMode: Text.WordWrap
             }
 
-            UnitList {
+            ReorderList {
                 manifests: cardRegistry.all ?? []
-                disabled: Config.quicksettings.cardsDisabled ?? []
+                configOrder: Config.quicksettings.cardsOrder ?? []
+                disabledIds: Config.quicksettings.cardsDisabled ?? []
+                onReordered: ids => Config.quicksettings.cardsOrder = ids
                 onToggled: (id, on) => {
                     const d = (Config.quicksettings.cardsDisabled ?? []).slice();
                     const i = d.indexOf(id);
@@ -227,50 +229,34 @@ Flickable {
 
         SettingSection {
             title: qsTr("Quick toggles")
-            icon: "\ueb3f"
+            icon: "" // tabler toggle-right
 
-            SettingRow {
-                label: qsTr("Wi-Fi")
-                StyledSwitch {
-                    checked: Config.quicksettings.toggles.wifi
-                    onToggled: Config.quicksettings.toggles.wifi = checked
-                }
+            StyledText {
+                Layout.fillWidth: true
+                text: qsTr("Toggle buttons on/off and drag to reorder them.")
+                font.pointSize: Appearance.font.size.small
+                color: Colours.palette.on_surface_variant
+                wrapMode: Text.WordWrap
             }
-            SettingRow {
-                label: qsTr("Bluetooth")
-                StyledSwitch {
-                    checked: Config.quicksettings.toggles.bluetooth
-                    onToggled: Config.quicksettings.toggles.bluetooth = checked
-                }
-            }
-            SettingRow {
-                label: qsTr("Microphone")
-                StyledSwitch {
-                    checked: Config.quicksettings.toggles.mic
-                    onToggled: Config.quicksettings.toggles.mic = checked
-                }
-            }
-            SettingRow {
-                label: qsTr("Do not disturb")
-                StyledSwitch {
-                    checked: Config.quicksettings.toggles.dnd
-                    onToggled: Config.quicksettings.toggles.dnd = checked
-                }
-            }
-            SettingRow {
-                label: qsTr("Settings button")
-                description: qsTr("Shortcut to the pShell settings window.")
-                showSeparator: false
-                StyledSwitch {
-                    checked: Config.quicksettings.toggles.settings
-                    onToggled: Config.quicksettings.toggles.settings = checked
-                }
+
+            ReorderList {
+                manifests: [
+                    { id: "wifi", title: qsTr("Wi-Fi"), icon: "", order: 0 },
+                    { id: "bluetooth", title: qsTr("Bluetooth"), icon: "", order: 1 },
+                    { id: "mic", title: qsTr("Microphone"), icon: "", order: 2 },
+                    { id: "dnd", title: qsTr("Do not disturb"), icon: "", order: 3 },
+                    { id: "settings", title: qsTr("Settings button"), icon: "", order: 4 }
+                ]
+                configOrder: Config.quicksettings.togglesOrder ?? []
+                disabledIds: ["wifi", "bluetooth", "mic", "dnd", "settings"].filter(k => !Config.quicksettings.toggles[k])
+                onReordered: ids => Config.quicksettings.togglesOrder = ids
+                onToggled: (id, on) => Config.quicksettings.toggles[id] = on
             }
         }
 
         SettingSection {
             title: qsTr("News")
-            icon: "\ueafd" // tabler news
+            icon: "" // tabler news
 
             StyledText {
                 Layout.fillWidth: true
@@ -300,7 +286,7 @@ Flickable {
                     }
 
                     IconButton {
-                        icon: "\ueb41" // tabler trash
+                        icon: "" // tabler trash
                         isRound: true
                         type: IconButton.Text
                         onClicked: {
@@ -331,7 +317,7 @@ Flickable {
                 }
 
                 IconButton {
-                    icon: "\ueb0b" // tabler plus
+                    icon: "" // tabler plus
                     isRound: true
                     type: IconButton.Tonal
                     disabled: !newFeed.text.trim().length
@@ -360,7 +346,6 @@ Flickable {
             SettingRow {
                 label: qsTr("Article limit")
                 description: qsTr("Maximum articles kept across all feeds.")
-                showSeparator: false
                 advanced: true
                 CustomSpinBox {
                     value: Config.quicksettings.newsLimit
@@ -368,6 +353,19 @@ Flickable {
                     max: 200
                     step: 5
                     onValueModified: v => Config.quicksettings.newsLimit = v
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Preview articles")
+                description: qsTr("Articles shown per source while its group is collapsed.")
+                showSeparator: false
+                advanced: true
+                CustomSpinBox {
+                    value: Config.quicksettings.newsPreviewNum
+                    min: 1
+                    max: 10
+                    onValueModified: v => Config.quicksettings.newsPreviewNum = v
                 }
             }
         }
@@ -378,45 +376,203 @@ Flickable {
         }
     }
 
-    // Enable/disable rows for one registry's units (pages or cards).
-    component UnitList: ColumnLayout {
-        id: unitList
+    // Mutually exclusive pill picker (anchor edge, mode).
+    component OptionPills: RowLayout {
+        id: pills
 
-        property var manifests: []
-        property var disabled: []
+        property var options: []
+        property string current
 
-        signal toggled(string id, bool on)
+        signal picked(string key)
 
-        Layout.fillWidth: true
-        spacing: 0
+        spacing: Appearance.spacing.small
 
         Repeater {
-            model: [...(unitList.manifests ?? [])].sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
+            model: pills.options
 
-            delegate: RowLayout {
-                id: unitRow
-
+            delegate: StyledRect {
+                id: pill
                 required property var modelData
+                readonly property bool active: pills.current === modelData.key
 
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.medium
-
-                StyledText {
-                    text: unitRow.modelData.icon ?? ""
-                    font.family: Appearance.font.family.tabler
-                    font.pointSize: Appearance.font.size.large
-                    color: Colours.palette.on_surface
-                }
+                implicitWidth: pillLabel.implicitWidth + Appearance.padding.medium * 2
+                implicitHeight: pillLabel.implicitHeight + Appearance.padding.small * 2
+                radius: Appearance.rounding.small
+                color: active ? Colours.palette.secondary_container : Colours.palette.surface_container_high
 
                 StyledText {
-                    Layout.fillWidth: true
-                    text: unitRow.modelData.title
-                    elide: Text.ElideRight
+                    id: pillLabel
+                    anchors.centerIn: parent
+                    text: pill.modelData.label
+                    font.pointSize: Appearance.font.size.small
+                    color: pill.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
                 }
 
-                StyledSwitch {
-                    checked: !(unitList.disabled ?? []).includes(unitRow.modelData.id)
-                    onToggled: unitList.toggled(unitRow.modelData.id, checked)
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: pills.picked(pill.modelData.key)
+                }
+            }
+        }
+    }
+
+    // Enable/disable + drag-to-reorder rows for one registry's units (pages or
+    // cards). Same slot mechanics as DashboardSettingsPage: rows are positioned
+    // by their slot in `work`; the dragged row follows the cursor and array-moves
+    // through `work` so neighbours animate aside; release persists via reordered().
+    component ReorderList: Item {
+        id: list
+
+        property var manifests: []
+        property var configOrder: []
+        property var disabledIds: []
+
+        signal reordered(var ids)
+        signal toggled(string id, bool on)
+
+        // Map id → manifest (for title/icon in the rows).
+        readonly property var manifestById: {
+            const m = ({});
+            for (const p of manifests ?? [])
+                m[p.id] = p;
+            return m;
+        }
+
+        // All unit ids in effective display order (known-order first, unknown
+        // appended by manifest.order). Includes disabled units (settings shows all).
+        readonly property var orderedIds: {
+            const all = (manifests ?? []).slice().sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
+            const allIds = all.map(p => p.id);
+            const order = (configOrder ?? []).filter(id => allIds.includes(id));
+            return order.concat(allIds.filter(id => !order.includes(id)));
+        }
+
+        readonly property int rowH: 48
+        property var work: orderedIds
+        property bool dragging: false
+
+        // Stable identity list — one delegate per unit, created once. The
+        // Repeater must NOT model `work`: reassigning `work` mid-drag would
+        // rebuild every delegate and kill the active drag (the grip's MouseArea
+        // dies with its row, so release — and the config write — never happens).
+        // Reordering only moves rows through their `slot` binding.
+        readonly property var stableIds: (manifests ?? []).map(p => p.id).sort()
+
+        // Re-sync from config unless a drag is mid-flight.
+        onOrderedIdsChanged: {
+            if (!dragging)
+                work = orderedIds;
+        }
+
+        Layout.fillWidth: true
+        Layout.topMargin: Appearance.spacing.small
+        implicitHeight: work.length * rowH
+
+        Repeater {
+            model: list.stableIds
+
+            delegate: StyledRect {
+                id: row
+
+                required property string modelData
+                readonly property var manifest: list.manifestById[modelData] ?? null
+                readonly property int slot: list.work.indexOf(modelData)
+
+                property bool held: false
+
+                width: list.width
+                height: list.rowH - Appearance.spacing.small
+                z: held ? 2 : 1
+                radius: Appearance.rounding.large
+                color: held ? Colours.palette.surface_container_high
+                            : rowHover.containsMouse ? Colours.palette.surface_container
+                            : "transparent"
+
+                Component.onCompleted: y = Qt.binding(() => slot * list.rowH)
+
+                Behavior on y {
+                    enabled: !row.held
+                    NumberAnimation {
+                        duration: Appearance.anim.durations.small
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Appearance.anim.curves.standard
+                    }
+                }
+
+                onYChanged: {
+                    if (!held)
+                        return;
+                    const newSlot = Math.max(0, Math.min(list.work.length - 1, Math.round(y / list.rowH)));
+                    const cur = list.work.indexOf(modelData);
+                    if (newSlot !== cur) {
+                        const w = list.work.slice();
+                        w.splice(cur, 1);
+                        w.splice(newSlot, 0, modelData);
+                        list.work = w;
+                    }
+                }
+
+                MouseArea {
+                    id: rowHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Appearance.padding.small
+                    anchors.rightMargin: Appearance.padding.medium
+                    spacing: Appearance.spacing.medium
+
+                    // Grip handle — the only draggable region.
+                    StyledText {
+                        text: "" // tabler grip-vertical
+                        font.family: Appearance.font.family.tabler
+                        font.pointSize: Appearance.font.size.large
+                        color: Colours.palette.on_surface_variant
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -Appearance.padding.small
+                            cursorShape: Qt.SizeVerCursor
+                            drag.target: row
+                            drag.axis: Drag.YAxis
+                            drag.minimumY: 0
+                            drag.maximumY: (list.work.length - 1) * list.rowH
+                            onPressed: {
+                                row.held = true;
+                                list.dragging = true;
+                            }
+                            onReleased: {
+                                row.held = false;
+                                list.dragging = false;
+                                row.y = Qt.binding(() => row.slot * list.rowH);
+                                list.reordered(list.work.slice());
+                            }
+                        }
+                    }
+
+                    StyledText {
+                        text: row.manifest?.icon ?? ""
+                        font.family: Appearance.font.family.tabler
+                        font.pointSize: Appearance.font.size.large
+                        color: Colours.palette.on_surface
+                    }
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: row.manifest?.title ?? row.modelData
+                        font.pointSize: Appearance.font.size.normal
+                        color: Colours.palette.on_surface
+                        elide: Text.ElideRight
+                    }
+
+                    StyledSwitch {
+                        checked: !(list.disabledIds ?? []).includes(row.modelData)
+                        onToggled: list.toggled(row.modelData, checked)
+                    }
                 }
             }
         }

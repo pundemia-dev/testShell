@@ -10,10 +10,19 @@ import QtQuick
 import QtQuick.Layouts
 
 // The fixed bottom card: a row of round toggle buttons (caelestia's
-// Toggles card). Deliberately NOT a card plugin — the set is hardcoded and
-// individual buttons are switched via Config.quicksettings.toggles.
+// Toggles card). Deliberately NOT a card plugin — the set is hardcoded;
+// individual buttons are switched via Config.quicksettings.toggles and
+// ordered via Config.quicksettings.togglesOrder.
 QsCard {
     id: root
+
+    readonly property list<string> defaultOrder: ["wifi", "bluetooth", "mic", "dnd", "settings"]
+
+    // Known keys in user order, keys missing from config appended by default.
+    readonly property var orderedKeys: {
+        const o = (Config.quicksettings.togglesOrder ?? []).filter(k => defaultOrder.includes(k));
+        return o.concat(defaultOrder.filter(k => !o.includes(k)));
+    }
 
     implicitHeight: layout.implicitHeight + Appearance.padding.large * 2
 
@@ -33,46 +42,63 @@ QsCard {
             Layout.fillWidth: true
             spacing: Appearance.spacing.small
 
-            Toggle {
-                visible: Config.quicksettings.toggles.wifi
-                icon: "\ueb52" // tabler wifi
-                checked: Nmcli.wifiEnabled
-                onClicked: Nmcli.toggleWifi(null)
-            }
+            Repeater {
+                model: root.orderedKeys
 
-            Toggle {
-                visible: Config.quicksettings.toggles.bluetooth
-                icon: "\uea37" // tabler bluetooth
-                checked: Bluetooth.defaultAdapter?.enabled ?? false
-                onClicked: {
-                    const adapter = Bluetooth.defaultAdapter;
-                    if (adapter)
-                        adapter.enabled = !adapter.enabled;
-                }
-            }
+                delegate: Toggle {
+                    id: button
 
-            Toggle {
-                visible: Config.quicksettings.toggles.mic
-                icon: "\ueaf0" // tabler microphone
-                checked: !Audio.sourceMuted
-                onClicked: Audio.toggleSourceMute()
-            }
+                    required property string modelData
 
-            Toggle {
-                visible: Config.quicksettings.toggles.dnd
-                icon: "\uece9" // tabler bell-off
-                checked: Notifs.dnd
-                onClicked: Notifs.dnd = !Notifs.dnd
-            }
+                    visible: Config.quicksettings.toggles[modelData] ?? false
+                    toggle: modelData !== "settings"
+                    inactiveOnColour: Colours.palette.on_surface_variant
+                    icon: ({
+                        wifi: "",       // tabler wifi
+                        bluetooth: "",  // tabler bluetooth
+                        mic: "",        // tabler microphone
+                        dnd: "",        // tabler bell-off
+                        settings: ""    // tabler settings
+                    })[modelData] ?? ""
 
-            Toggle {
-                visible: Config.quicksettings.toggles.settings
-                toggle: false
-                icon: "\ueb20" // tabler settings
-                inactiveOnColour: Colours.palette.on_surface_variant
-                onClicked: {
-                    IpcManager.show("quicksettings", false);
-                    Quickshell.execDetached(["qs", "-c", "pShell", "ipc", "call", "settings", "activate"]);
+                    checked: {
+                        switch (button.modelData) {
+                        case "wifi":
+                            return Nmcli.wifiEnabled;
+                        case "bluetooth":
+                            return Bluetooth.defaultAdapter?.enabled ?? false;
+                        case "mic":
+                            return !Audio.sourceMuted;
+                        case "dnd":
+                            return Notifs.dnd;
+                        default:
+                            return false;
+                        }
+                    }
+
+                    onClicked: {
+                        switch (modelData) {
+                        case "wifi":
+                            Nmcli.toggleWifi(null);
+                            break;
+                        case "bluetooth": {
+                            const adapter = Bluetooth.defaultAdapter;
+                            if (adapter)
+                                adapter.enabled = !adapter.enabled;
+                            break;
+                        }
+                        case "mic":
+                            Audio.toggleSourceMute();
+                            break;
+                        case "dnd":
+                            Notifs.dnd = !Notifs.dnd;
+                            break;
+                        case "settings":
+                            IpcManager.show("quicksettings", false);
+                            Quickshell.execDetached(["qs", "-c", "pShell", "ipc", "call", "settings", "activate"]);
+                            break;
+                        }
+                    }
                 }
             }
         }

@@ -49,6 +49,10 @@ JsonObject {
     // ── Quick toggles (the fixed bottom card) ──────────────────────────
     property Toggles toggles: Toggles {}
 
+    // Display order of the quick-toggle buttons (keys of Toggles); keys
+    // missing here are appended in the default order.
+    property list<string> togglesOrder: []
+
     component Toggles: JsonObject {
         property bool wifi: true
         property bool bluetooth: true
