@@ -18,6 +18,7 @@ import qs.modules.stash
 import qs.modules.dashboard
 import qs.modules.capture
 import qs.modules.ai
+import qs.modules.osd
 import qs.modules.quicksettings
 
 import qs.config
@@ -238,6 +239,10 @@ Variants {
                     screen: scope.modelData
                 }
                 AiWrapper {
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
+                }
+                OsdWrapper {
                     manager: scope.backgroundsManager
                     screen: scope.modelData
                 }

@@ -23,24 +23,6 @@ Item {
     anchors.rightMargin: right_area
     anchors.bottomMargin: bottom_area
 
-
-    // Osd.Wrapper {
-    //     id:
-
-    //     visibilities:
-
-    //     anchors.left: Config.osd.anchors.left ? parent.left : undefined
-    //     anchors.top: Config.osd.anchors.top ? parent.top : undefined
-    //     anchors.right: Config.osd.anchors.right ? parent.right : undefined
-    //     anchors.bottom: Config.osd.anchors.bottom ? parent.bottom : undefined
-    //     anchors.verticalCenter: Config.osd.anchors.verticalCenter ? parent.verticalCenter : undefined
-    //     anchors.horizontalCenter: Config.osd.anchors.horizontalCenter ? parent.horizontalCenter : undefined
-
-    //     anchors.marginsLeft: Config.osd.margins.vertical
-    //     anchors.marginsTop: Config.osd.margins.horizontal
-    //     anchors.marginsRight: Config.osd.margins.vertical
-    //     anchors.marginsBottom: Config.osd.margins.horizontal
-    //     anchors.verticalCenterOffset: min(wrapper.centerOffset+-wrapper.length/2, parent.verticalOffset)
-    //     anchors.horizontalCenterOffset: wrapper.centerOffset
-    // }
+    // The OSD now lives as a proper module (modules/osd/OsdWrapper.qml),
+    // instanced in drawers/Drawers.qml via the rails contract.
 }

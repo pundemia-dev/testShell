@@ -19,6 +19,7 @@ import "popoutsconfig"
 import qs.modules.dashboard.config
 import "generalconfig"
 import qs.modules.ai.config
+import qs.modules.osd.config
 import qs.modules.quicksettings.config
 
 Singleton {
@@ -36,6 +37,7 @@ Singleton {
     property alias dashboard: adapter.dashboard
     property alias general: adapter.general
     property alias ai: adapter.ai
+    property alias osd: adapter.osd
     property alias quicksettings: adapter.quicksettings
     // Open map for third-party module settings, keyed by SettingsSchema.key.
     // Official modules use their typed sub-configs above; custom modules read
@@ -101,6 +103,7 @@ Singleton {
             property DashboardConfig dashboard: DashboardConfig {}
             property GeneralConfig general: GeneralConfig {}
             property AiConfig ai: AiConfig {}
+            property OsdConfig osd: OsdConfig {}
             property QuicksettingsConfig quicksettings: QuicksettingsConfig {}
             property var custom: ({})
         }

@@ -15,6 +15,7 @@ import qs.modules.bar.settings
 import qs.modules.dashboard.settings
 import qs.modules.launcher.settings
 import qs.modules.ai.settings
+import qs.modules.osd.settings
 import qs.modules.quicksettings.settings
 
 Item {
@@ -112,6 +113,12 @@ Item {
             component: aiPage
         },
         {
+            name: qsTr("OSD"),
+            icon: "\ueb51", // tabler volume
+            scope: "osd",
+            component: osdPage
+        },
+        {
             name: qsTr("Quicksettings"),
             icon: "\ueb3f", // tabler toggle-right
             scope: "quicksettings",
@@ -161,6 +168,10 @@ Item {
     Component {
         id: aiPage
         AiPage {}
+    }
+    Component {
+        id: osdPage
+        OsdPage {}
     }
     Component {
         id: quicksettingsPage

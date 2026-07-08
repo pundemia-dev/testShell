@@ -16,15 +16,13 @@ LauncherManifest {
         title: "Todo"
         icon: "" // tabler checklist
         key: "todo"
-        fields: [
-            ({
+        fields: [({
                     key: "autoSort",
                     type: "bool",
                     label: "Move completed to bottom",
                     description: "Keep unfinished tasks on top and finished ones at the bottom. Reordering is then limited to within each group (undone among undone, done among done).",
                     "default": true
-                }),
-            ({
+                }), ({
                     key: "clickDelay2",
                     type: "int",
                     label: "Second-click window (ms)",
@@ -32,9 +30,8 @@ LauncherManifest {
                     advanced: true,
                     min: 120,
                     max: 600,
-                    "default": 220
-                }),
-            ({
+                    "default": 350
+                }), ({
                     key: "clickDelay3",
                     type: "int",
                     label: "Third-click window (ms)",
@@ -42,9 +39,8 @@ LauncherManifest {
                     advanced: true,
                     min: 120,
                     max: 600,
-                    "default": 220
-                })
-        ]
+                    "default": 350
+                })]
     }
 
     content: Component {
