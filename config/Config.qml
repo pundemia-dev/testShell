@@ -3,6 +3,7 @@ pragma Singleton
 import qs.services
 import Quickshell
 import Quickshell.Io
+import qs.components.misc
 
 import qs.modules.bar.config
 import qs.modules.launcher.config
@@ -21,6 +22,7 @@ import "generalconfig"
 import qs.modules.ai.config
 import qs.modules.osd.config
 import qs.modules.quicksettings.config
+import qs.modules.toasts.config
 
 Singleton {
     id: root
@@ -39,6 +41,7 @@ Singleton {
     property alias ai: adapter.ai
     property alias osd: adapter.osd
     property alias quicksettings: adapter.quicksettings
+    property alias toasts: adapter.toasts
     // Open map for third-party module settings, keyed by SettingsSchema.key.
     // Official modules use their typed sub-configs above; custom modules read
     // their values as Config.custom["<key>"]?.field ?? default. See
@@ -69,6 +72,21 @@ Singleton {
     // [[config-startup-write-race]].
     property bool ready: false
 
+    ToastSource {
+        id: configToasts
+        sourceId: "config"
+        label: qsTr("Config")
+        icon: "\uea06" // tabler alert-triangle
+        notifications: [
+            {
+                id: "parse-error",
+                label: qsTr("Parse error"),
+                severity: "error",
+                icon: "\uea06"
+            }
+        ]
+    }
+
     FileView {
         id: fileview
         // path: `${Paths.stringify(Paths.config)}/shell.json`
@@ -85,6 +103,8 @@ Singleton {
                 // First run: no file yet — create it from defaults, then allow writes.
                 root.ready = true;
                 writeAdapter();
+            } else {
+                configToasts.notify("parse-error", qsTr("Config error"), qsTr("Failed to parse shell.json — keeping the previous config"));
             }
         }
 
@@ -105,6 +125,7 @@ Singleton {
             property AiConfig ai: AiConfig {}
             property OsdConfig osd: OsdConfig {}
             property QuicksettingsConfig quicksettings: QuicksettingsConfig {}
+            property ToastsConfig toasts: ToastsConfig {}
             property var custom: ({})
         }
     }

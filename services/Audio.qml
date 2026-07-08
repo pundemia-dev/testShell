@@ -27,6 +27,40 @@ Singleton {
     readonly property bool sourceMuted: !!source?.audio?.muted
     readonly property real sourceVolume: source?.audio?.volume ?? 0
 
+    // ── Toasts: default device changes ────────────────────────────────────
+    // Skip the initial binding fire at startup so we only toast genuine swaps.
+    property bool _toastArmed: false
+    Timer {
+        interval: 1500
+        running: true
+        onTriggered: root._toastArmed = true
+    }
+    onSinkChanged: if (_toastArmed && sink)
+        audioToasts.notify("sink", qsTr("Output device changed"), root.deviceName(sink))
+    onSourceChanged: if (_toastArmed && source)
+        audioToasts.notify("source", qsTr("Input device changed"), root.deviceName(source))
+
+    ToastSource {
+        id: audioToasts
+        sourceId: "audio"
+        label: qsTr("Audio")
+        icon: "" // tabler speaker
+        notifications: [
+            {
+                id: "sink",
+                label: qsTr("Output device changed"),
+                severity: "info",
+                icon: ""
+            },
+            {
+                id: "source",
+                label: qsTr("Input device changed"),
+                severity: "info",
+                icon: ""
+            }
+        ]
+    }
+
     readonly property alias cava: cava
     readonly property alias beatTracker: beatTracker
 

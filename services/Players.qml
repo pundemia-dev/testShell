@@ -3,6 +3,8 @@ pragma Singleton
 import QtQml
 import Quickshell
 import Quickshell.Services.Mpris
+import qs.components.misc
+import qs.services
 
 // Simplified MPRIS aggregator (port of caelestia Players without toasts /
 // aliases / global config). Exposes the list of players and the "active" one
@@ -14,6 +16,33 @@ Singleton {
     readonly property list<MprisPlayer> list: Mpris.players.values
     property MprisPlayer manualActive: null
     readonly property MprisPlayer active: manualActive ?? list[0] ?? null
+
+    // ── Toasts: now playing (fires on track change) ──
+    readonly property string _trackKey: active ? `${active.trackTitle}::${active.trackArtist}` : ""
+    property bool _toastArmed: false
+    Timer {
+        interval: 2000
+        running: true
+        onTriggered: root._toastArmed = true
+    }
+    on_TrackKeyChanged: {
+        if (_toastArmed && active && active.trackTitle)
+            mediaToasts.notify("track", qsTr("Now Playing"), `${active.trackTitle} — ${active.trackArtist}`);
+    }
+    ToastSource {
+        id: mediaToasts
+        sourceId: "media"
+        label: qsTr("Media")
+        icon: "\ueafc" // tabler music
+        notifications: [
+            {
+                id: "track",
+                label: qsTr("Now playing"),
+                severity: "info",
+                icon: "\ueafc"
+            }
+        ]
+    }
 
     // Reactive cover-art URL for the active player. Declared as a property so
     // QML tracks trackArtUrl and metadata as dependencies — a plain function

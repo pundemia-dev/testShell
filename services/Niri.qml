@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.components.misc
 
 Singleton {
     id: root
@@ -24,6 +25,21 @@ Singleton {
     property bool numLock: false
     property var keyboardLayoutNames: []
     property int keyboardLayoutIndex: 0
+
+    ToastSource {
+        id: kbToasts
+        sourceId: "keyboard"
+        label: qsTr("Keyboard")
+        icon: "\uebd6" // tabler keyboard
+        notifications: [
+            {
+                id: "layout",
+                label: qsTr("Layout switched"),
+                severity: "info",
+                icon: "\uebd6"
+            }
+        ]
+    }
     readonly property string kbLayoutFull: keyboardLayoutNames[keyboardLayoutIndex] ?? "Unknown"
     readonly property string kbLayout: {
         const name = kbLayoutFull;
@@ -169,6 +185,7 @@ Singleton {
                         root.keyboardLayoutIndex = ev.KeyboardLayoutsChanged.keyboard_layouts.current_idx;
                     } else if (ev.KeyboardLayoutSwitched) {
                         root.keyboardLayoutIndex = ev.KeyboardLayoutSwitched.idx;
+                        kbToasts.notify("layout", qsTr("Keyboard layout"), root.kbLayoutFull);
                     } else if (ev.ConfigLoaded) {
                         root.configReloaded();
                     }

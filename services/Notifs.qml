@@ -17,6 +17,39 @@ Singleton {
     readonly property list<Notif> popups: list.filter(n => n.popup)
     property bool dnd: false
 
+    // ── Toasts: DND toggled ──
+    property bool _toastArmed: false
+    Timer {
+        interval: 1500
+        running: true
+        onTriggered: root._toastArmed = true
+    }
+    onDndChanged: {
+        if (!_toastArmed)
+            return;
+        dndToasts.notify(dnd ? "on" : "off", dnd ? qsTr("Do Not Disturb enabled") : qsTr("Do Not Disturb disabled"), dnd ? qsTr("Popup notifications are hidden") : qsTr("Popup notifications restored"));
+    }
+    ToastSource {
+        id: dndToasts
+        sourceId: "dnd"
+        label: qsTr("Do Not Disturb")
+        icon: "\uece9" // tabler bell-off
+        notifications: [
+            {
+                id: "on",
+                label: qsTr("Enabled"),
+                severity: "info",
+                icon: "\uece9"
+            },
+            {
+                id: "off",
+                label: qsTr("Disabled"),
+                severity: "info",
+                icon: "\uea35"
+            }
+        ]
+    }
+
     onListChanged: {
         if (loaded)
             saveTimer.restart();

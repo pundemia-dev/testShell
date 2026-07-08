@@ -17,6 +17,7 @@ import qs.modules.launcher.settings
 import qs.modules.ai.settings
 import qs.modules.osd.settings
 import qs.modules.quicksettings.settings
+import qs.modules.toasts.settings
 
 Item {
     id: root
@@ -125,6 +126,12 @@ Item {
             component: quicksettingsPage
         },
         {
+            name: qsTr("Toasts"),
+            icon: "\uea35", // tabler bell
+            scope: "toasts",
+            component: toastsPage
+        },
+        {
             name: qsTr("About"),
             icon: "\ueac5", // tabler info-circle
             scope: "full",
@@ -176,6 +183,10 @@ Item {
     Component {
         id: quicksettingsPage
         QuicksettingsSettingsPage {}
+    }
+    Component {
+        id: toastsPage
+        ToastsPage {}
     }
     Component {
         id: aboutPage

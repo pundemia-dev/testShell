@@ -20,6 +20,7 @@ import qs.modules.capture
 import qs.modules.ai
 import qs.modules.osd
 import qs.modules.quicksettings
+import qs.modules.toasts
 
 import qs.config
 import qs.components
@@ -250,6 +251,10 @@ Variants {
                     manager: scope.backgroundsManager
                     screen: scope.modelData
                     anchors.fill: parent
+                }
+                ToastsWrapper {
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
                 }
 
                 // Popout coordinator (bar/dock widget popouts). Non-visual:
