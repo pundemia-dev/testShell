@@ -105,4 +105,13 @@ Singleton {
         function openQuery(id: string, query: string): void { root.open("ai", id, query); }
         function list(): string { return root.listJson("ai"); }
     }
+
+    IpcHandler {
+        target: "quicksettings"
+        function activate(): void { root.toggle("quicksettings"); }
+        function toggle(): void { root.toggle("quicksettings"); }
+        function open(id: string): void { root.open("quicksettings", id, ""); }
+        function openQuery(id: string, query: string): void { root.open("quicksettings", id, query); }
+        function list(): string { return root.listJson("quicksettings"); }
+    }
 }

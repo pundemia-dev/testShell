@@ -15,6 +15,7 @@ import qs.modules.bar.settings
 import qs.modules.dashboard.settings
 import qs.modules.launcher.settings
 import qs.modules.ai.settings
+import qs.modules.quicksettings.settings
 
 Item {
     id: root
@@ -111,6 +112,12 @@ Item {
             component: aiPage
         },
         {
+            name: qsTr("Quicksettings"),
+            icon: "\ueb3f", // tabler toggle-right
+            scope: "quicksettings",
+            component: quicksettingsPage
+        },
+        {
             name: qsTr("About"),
             icon: "\ueac5", // tabler info-circle
             scope: "full",
@@ -154,6 +161,10 @@ Item {
     Component {
         id: aiPage
         AiPage {}
+    }
+    Component {
+        id: quicksettingsPage
+        QuicksettingsSettingsPage {}
     }
     Component {
         id: aboutPage

@@ -18,6 +18,7 @@ import qs.modules.stash
 import qs.modules.dashboard
 import qs.modules.capture
 import qs.modules.ai
+import qs.modules.quicksettings
 
 import qs.config
 import qs.components
@@ -239,6 +240,11 @@ Variants {
                 AiWrapper {
                     manager: scope.backgroundsManager
                     screen: scope.modelData
+                }
+                QuicksettingsWrapper {
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
+                    anchors.fill: parent
                 }
 
                 // Popout coordinator (bar/dock widget popouts). Non-visual:
