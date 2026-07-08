@@ -68,6 +68,8 @@ JsonObject {
     ]
     property int newsLimit: 40
     property int newsRefreshMinutes: 60
+    // Collapsed source groups on the news page show this many articles.
+    property int newsPreviewNum: 3
 
     component AnchorsData: JsonObject {
         property bool left: false

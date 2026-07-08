@@ -13,6 +13,8 @@ JsonObject {
     property int historyLimit: 100
     property real clearThreshold: 0.3
     property int expandThreshold: 20
+    // Collapsed app groups in the history page show this many notifications.
+    property int groupPreviewNum: 3
     property bool actionOnClick: false
     property bool openExpanded: false
     property Sizes sizes: Sizes {}

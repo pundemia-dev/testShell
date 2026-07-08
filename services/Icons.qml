@@ -256,6 +256,31 @@ Singleton {
         return "\uecea";//"bluetooth";
     }
 
+    // ── OSD glyphs (tabler codepoints verified against the installed cmap) ──
+    function getVolumeIcon(value: real, muted: bool): string {
+        if (muted)
+            return "\uf1c3";//"volume-off";
+        if (value <= 0)
+            return "\ueb50";//"volume-3" (speaker, no waves)
+        if (value < 0.5)
+            return "\ueb4f";//"volume-2" (one wave)
+        return "\ueb51";//"volume" (full)
+    }
+
+    function getMicVolumeIcon(value: real, muted: bool): string {
+        if (muted)
+            return "\ued16";//"microphone-off";
+        return "\ueaf0";//"microphone";
+    }
+
+    function getBrightnessIcon(value: real): string {
+        if (value < 0.34)
+            return "\uf237";//"sun-low";
+        if (value < 0.67)
+            return "\ueb30";//"sun";
+        return "\uf236";//"sun-high";
+    }
+
     function getWeatherIcon(code: string): string {
         if (weatherIcons.hasOwnProperty(code))
             return weatherIcons[code];
@@ -299,32 +324,34 @@ Singleton {
         return wmoIcons.hasOwnProperty(k) ? wmoIcons[k] : "\uea76";
     }
 
+    // Tabler codepoints (all consumers render through StyledIcon) — verified
+    // against the installed tabler-icons.ttf cmap.
     function getNotifIcon(summary: string, urgency: int): string {
         if (summary.includes("reboot"))
-            return "restart_alt";
+            return "\uebb5"; // rotate-clockwise-2
         if (summary.includes("recording"))
-            return "screen_record";
+            return "\ued22"; // video
         if (summary.includes("battery"))
-            return "power";
+            return "\uea34"; // battery
         if (summary.includes("screenshot"))
-            return "screenshot_monitor";
+            return "\uea54"; // camera
         if (summary.includes("welcome"))
-            return "waving_hand";
+            return "\uec2e"; // hand-stop
         if (summary.includes("time") || summary.includes("a break"))
-            return "schedule";
+            return "\uea70"; // clock
         if (summary.includes("installed"))
-            return "download";
+            return "\uea96"; // download
         if (summary.includes("update"))
-            return "update";
+            return "\ued57"; // refresh-alert
         if (summary.includes("unable to"))
-            return "deployed_code_alert";
+            return "\uea05"; // alert-circle
         if (summary.includes("profile"))
-            return "person";
+            return "\ueb4d"; // user
         if (summary.includes("file"))
-            return "folder_copy";
+            return "\uedef"; // files
         if (urgency === NotificationUrgency.Critical)
-            return "release_alert";
-        return "chat";
+            return "\uea06"; // alert-triangle
+        return "\ueaef"; // message
     }
 
     FileView {

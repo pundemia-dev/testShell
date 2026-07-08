@@ -9,10 +9,22 @@ import Quickshell
 import QtQuick
 import QtQuick.Layouts
 
-// RSS news list fed by the News service (feeds in
-// Config.quicksettings.newsFeeds). Rows open in the browser.
+// RSS news fed by the News service (feeds in Config.quicksettings.newsFeeds),
+// grouped by source in the same card style as the notifications page. Rows
+// open in the browser.
 Item {
     id: root
+
+    // Feed sources whose groups are currently expanded. Reassigned (not
+    // mutated in place) so the NewsGroup `expanded` bindings re-evaluate.
+    property list<string> expandedSources: []
+
+    function setSourceExpanded(source: string, expand: bool): void {
+        if (expand && !expandedSources.includes(source))
+            expandedSources = [...expandedSources, source];
+        else if (!expand && expandedSources.includes(source))
+            expandedSources = expandedSources.filter(s => s !== source);
+    }
 
     function timeAgo(epochS: real): string {
         if (!epochS)
@@ -58,8 +70,8 @@ Item {
         }
     }
 
-    StyledListView {
-        id: list
+    StyledFlickable {
+        id: view
 
         anchors.left: parent.left
         anchors.right: parent.right
@@ -68,72 +80,39 @@ Item {
         anchors.topMargin: Appearance.spacing.medium
 
         clip: true
-        spacing: Appearance.spacing.small
-        model: News.articles
+        flickableDirection: Flickable.VerticalFlick
+        contentWidth: width
+        contentHeight: groupList.implicitHeight
 
-        delegate: StyledRect {
-            id: row
+        Column {
+            id: groupList
 
-            required property var modelData
+            anchors.left: parent.left
+            anchors.right: parent.right
+            spacing: Appearance.spacing.small
 
-            width: list.width
-            implicitHeight: rowCol.implicitHeight + Appearance.padding.medium * 2
-            radius: Appearance.rounding.medium
-            color: Colours.tPalette.surface_container
-
-            StateLayer {
-                radius: row.radius
-                function onClicked(): void {
-                    if (row.modelData.link)
-                        Quickshell.execDetached(["xdg-open", row.modelData.link]);
-                }
-            }
-
-            ColumnLayout {
-                id: rowCol
-
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Appearance.padding.medium
-                spacing: Appearance.spacing.extraSmall
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Appearance.spacing.small
-
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: row.modelData.source
-                        color: Colours.palette.primary
-                        font: Appearance.font.label.small
-                        elide: Text.ElideRight
-                        maximumLineCount: 1
-                    }
-
-                    StyledText {
-                        text: root.timeAgo(row.modelData.published)
-                        color: Colours.palette.on_surface_variant
-                        font: Appearance.font.label.small
+            Repeater {
+                model: ScriptModel {
+                    values: {
+                        const map = new Map();
+                        for (const a of News.articles)
+                            map.set(a.source, null);
+                        return [...map.keys()];
                     }
                 }
 
-                StyledText {
-                    Layout.fillWidth: true
-                    text: row.modelData.title
-                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                    elide: Text.ElideRight
-                    maximumLineCount: 3
+                delegate: NewsGroup {
+                    page: root
                 }
             }
         }
     }
 
     StyledScrollBar {
-        flickable: list
+        flickable: view
         anchors.right: parent.right
-        anchors.top: list.top
-        anchors.bottom: list.bottom
+        anchors.top: view.top
+        anchors.bottom: view.bottom
     }
 
     // Empty state.
