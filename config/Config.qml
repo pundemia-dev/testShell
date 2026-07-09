@@ -23,6 +23,7 @@ import qs.modules.ai.config
 import qs.modules.osd.config
 import qs.modules.quicksettings.config
 import qs.modules.toasts.config
+import qs.modules.lock.config
 
 Singleton {
     id: root
@@ -42,6 +43,7 @@ Singleton {
     property alias osd: adapter.osd
     property alias quicksettings: adapter.quicksettings
     property alias toasts: adapter.toasts
+    property alias lock: adapter.lock
     // Open map for third-party module settings, keyed by SettingsSchema.key.
     // Official modules use their typed sub-configs above; custom modules read
     // their values as Config.custom["<key>"]?.field ?? default. See
@@ -126,6 +128,7 @@ Singleton {
             property OsdConfig osd: OsdConfig {}
             property QuicksettingsConfig quicksettings: QuicksettingsConfig {}
             property ToastsConfig toasts: ToastsConfig {}
+            property LockConfig lock: LockConfig {}
             property var custom: ({})
         }
     }

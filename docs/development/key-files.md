@@ -25,3 +25,6 @@
 | Dashboard | `modules/dashboard/{DashboardWrapper,content/*}.qml`, `modules/dashboard/pages/<id>/`, `components/misc/PluginManifest.qml`, `modules/dashboard/config/DashboardConfig.qml`, `modules/dashboard/settings/DashboardSettingsPage.qml` |
 | Dashboard rich progress | `components/controls/{DashProgress,StyledProgressBar}.qml` |
 | Dashboard backing services | `services/{Players,SystemUsage,Weather,NetworkUsage,Audio,SysInfo}.qml`, `services/Icons.qml` |
+| Lock screen (core: PAM, lifecycle, IPC, preview) | `docs/development/lock.md`, `modules/lock/{LockWrapper,Pam,LockSurface}.qml`, `modules/lock/content/{SkinRegistry,LockPreview}.qml`, `assets/pam.d/*` |
+| Lock screen skins (ALL lock visuals) | `modules/lock/skins/<id>/`, `modules/lock/config/LockConfig.qml`, `modules/lock/settings/LockPage.qml` |
+| Wallpaper path (awww) | `services/WallpaperState.qml` (`awwwPath`/`refreshAwww`), `services/Colours.qml` (`wallpaperPath`) |

@@ -95,6 +95,7 @@ Wrapper owns the contract object(s) and lifecycle; content is a `Component`.
 | `modules/stash` | File tray + LocalSend; hover-trigger; two-zone drag chooser |
 | `modules/settings` | Settings UI (normal Window). See [settings.md](./settings.md). |
 | `modules/dashboard` | Hover dashboard; modular self-discovering pages |
+| `modules/lock` | Session lock (ext-session-lock + PAM); visuals are swappable skin plugins. See [lock.md](./lock.md). |
 
 New module file layout (feature-sliced — the module owns everything in its
 domain; the root holds only the entry point(s)):

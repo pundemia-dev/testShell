@@ -253,6 +253,14 @@ Tile dimensions swap with orientation via `Config.stash.dropZoneX` / `dropZoneY`
 
 `scripts/localsend_discover.py` emits one line per device, tab-separated: `alias\tip\tdeviceType\tdeviceModel`. The `deviceType` is one of LocalSend's `mobile|laptop|desktop|tablet|headless`; `DeviceUnit.qml` maps it to a Tabler glyph and falls back to a CLI icon for anything unrecognised. `deviceModel` is shown verbatim as the OS/model badge (LocalSend doesn't have a separate OS field — the value comes through as-is).
 
+### Lock screen (skins own ALL visuals)
+
+Full guide: [`docs/development/lock.md`](docs/development/lock.md). Hard rules when touching `modules/lock`:
+- Locking logic (WlSessionLock lifecycle, PAM, IPC) stays in the module core; **every visual lives in a skin** under `modules/lock/skins/<id>/`. Never add visuals to `LockSurface`/`LockWrapper`.
+- Unlock is a handshake: `beginUnlock()` → skin exit anim → `finishUnlock()`; a 3s fallback force-unlocks. Don't set `locked = false` directly.
+- Never focus anything from outside the skin (steals key focus → dead keyboard), never use ScreencopyView on the lock (niri refuses capture while locked — blur `Colours.wallpaperPath` instead), keep the surface opaque, and don't read `screen` before `LockSurface` creates the skin (assigned late by the compositor).
+- Debug visuals with `qs -c pShell ipc call lock preview` (skin in a normal window + real PAM), not by locking the session.
+
 ### Commit style
 
 Imperative present tense, short subject line (≤72 chars), body explains *why*. Co-author with `Claude Opus 4.8 <noreply@anthropic.com>` only when the user explicitly asks for a commit. Never commit without being asked. When committing, stage only the files for the task at hand — the working tree often carries unrelated in-progress changes (plugin edits, `tmp/`), so `git add` explicit paths, never `git add -A`.

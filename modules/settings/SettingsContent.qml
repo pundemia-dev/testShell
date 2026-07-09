@@ -18,6 +18,7 @@ import qs.modules.ai.settings
 import qs.modules.osd.settings
 import qs.modules.quicksettings.settings
 import qs.modules.toasts.settings
+import qs.modules.lock.settings
 
 Item {
     id: root
@@ -132,6 +133,12 @@ Item {
             component: toastsPage
         },
         {
+            name: qsTr("Lock"),
+            icon: "\ueae2", // tabler lock
+            scope: "lock",
+            component: lockPage
+        },
+        {
             name: qsTr("About"),
             icon: "\ueac5", // tabler info-circle
             scope: "full",
@@ -187,6 +194,10 @@ Item {
     Component {
         id: toastsPage
         ToastsPage {}
+    }
+    Component {
+        id: lockPage
+        LockPage {}
     }
     Component {
         id: aboutPage
