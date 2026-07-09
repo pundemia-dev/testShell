@@ -19,6 +19,7 @@ import qs.modules.osd.settings
 import qs.modules.quicksettings.settings
 import qs.modules.toasts.settings
 import qs.modules.lock.settings
+import qs.modules.session.settings
 
 Item {
     id: root
@@ -139,6 +140,12 @@ Item {
             component: lockPage
         },
         {
+            name: qsTr("Session"),
+            icon: "\ueb0d", // tabler power
+            scope: "session",
+            component: sessionPage
+        },
+        {
             name: qsTr("About"),
             icon: "\ueac5", // tabler info-circle
             scope: "full",
@@ -198,6 +205,10 @@ Item {
     Component {
         id: lockPage
         LockPage {}
+    }
+    Component {
+        id: sessionPage
+        SessionPage {}
     }
     Component {
         id: aboutPage

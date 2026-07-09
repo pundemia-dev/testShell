@@ -21,6 +21,7 @@ import qs.modules.ai
 import qs.modules.osd
 import qs.modules.quicksettings
 import qs.modules.toasts
+import qs.modules.session
 
 import qs.config
 import qs.components
@@ -36,6 +37,18 @@ Variants {
         required property ShellScreen modelData
 
         property var backgroundsManager: BackgroundsManager {}
+
+        // Tracks the session menu's visibility so the darkening scrim below can
+        // react (PerMonitorVisibilities keeps state in a map, not as named
+        // properties, so bind through the manager signal instead).
+        property bool sessionVisible: false
+        Connections {
+            target: VisibilitiesManager
+            function onVisibilityChanged(screen: ShellScreen, name: string, state: bool) {
+                if (screen === scope.modelData && name === "session")
+                    scope.sessionVisible = state;
+            }
+        }
 
         // InteractionManager is a global singleton, but its stack-reset
         // connection needs to know which BackgroundsManager to watch. Last
@@ -150,7 +163,7 @@ Variants {
             // Darker overlay
             StyledRect {
                 anchors.fill: parent
-                opacity: visibilities.session ? 0.5 : 0
+                opacity: scope.sessionVisible ? 0.5 : 0
                 color: Colours.palette.scrim
 
                 Behavior on opacity {
@@ -248,6 +261,11 @@ Variants {
                     screen: scope.modelData
                 }
                 QuicksettingsWrapper {
+                    manager: scope.backgroundsManager
+                    screen: scope.modelData
+                    anchors.fill: parent
+                }
+                SessionWrapper {
                     manager: scope.backgroundsManager
                     screen: scope.modelData
                     anchors.fill: parent

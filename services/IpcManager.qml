@@ -114,4 +114,13 @@ Singleton {
         function openQuery(id: string, query: string): void { root.open("quicksettings", id, query); }
         function list(): string { return root.listJson("quicksettings"); }
     }
+
+    IpcHandler {
+        target: "session"
+        function activate(): void { root.toggle("session"); }
+        function toggle(): void { root.toggle("session"); }
+        // `open <id>` runs the action button directly (no selection UI).
+        function open(id: string): void { root.open("session", id, ""); }
+        function list(): string { return root.listJson("session"); }
+    }
 }
