@@ -30,22 +30,23 @@ Singleton {
     // Pick a representative wallpaper image path from WallpaperState (global
     // singleton, so prefer the fallback entry, else any monitor). Video
     // entries are skipped — QImage can't decode them and the last good
-    // luminance is kept.
+    // luminance is kept. When the walltool state file is absent (wallpaper set
+    // via awww directly), falls back to the awww-reported path.
     readonly property string wallpaperPath: {
         const d = WallpaperState.stateData;
-        if (!d)
-            return "";
         const pick = e => e && e.path && (e.media_type ?? "image") !== "video" ? e.path : "";
-        let p = pick(d.fallback);
-        if (p)
-            return p;
-        if (d.monitors)
-            for (const k in d.monitors) {
-                p = pick(d.monitors[k]);
-                if (p)
-                    return p;
-            }
-        return "";
+        if (d) {
+            let p = pick(d.fallback);
+            if (p)
+                return p;
+            if (d.monitors)
+                for (const k in d.monitors) {
+                    p = pick(d.monitors[k]);
+                    if (p)
+                        return p;
+                }
+        }
+        return WallpaperState.awwwPath;
     }
 
     function alpha(c: color, layer: bool): color {

@@ -20,6 +20,32 @@ Singleton {
     // Fires whenever stateData is replaced (monitors can connect to this)
     signal stateUpdated()
 
+    // Current wallpaper image path as reported by awww (`awww query`). awww is
+    // the actual wallpaper setter on this setup; the walltool state file above
+    // may be absent. awww emits no change signal, so consumers that need
+    // freshness call refreshAwww() (Backgrounds polls it while shaderBlur is
+    // on; the lock module refreshes on lock). Seeded once at startup.
+    property string awwwPath: ""
+
+    function refreshAwww(): void {
+        awwwQuery.running = true;
+    }
+
+    Process {
+        id: awwwQuery
+
+        command: ["sh", "-c", "awww query | sed -n 's/.*image: //p' | head -1"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const p = text.trim();
+                if (p)
+                    root.awwwPath = p;
+            }
+        }
+    }
+
+    Component.onCompleted: refreshAwww()
+
     FileView {
         id: stateFile
         path: root.stateFilePath

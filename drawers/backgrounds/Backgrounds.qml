@@ -49,32 +49,21 @@ Item {
         wallpaperTint: Config.general.transparency.blurTint ?? 0.3
         wallpaperBlur: Config.general.transparency.blurAmount ?? 0.6
         screenSize: Qt.size(root.width, root.height)
-        wallpaperPath: root._wpPath
+        wallpaperPath: WallpaperState.awwwPath
     }
 
-    // Current wallpaper path (eDP-style single output) from awww, fed to the
-    // BlobGroup for the frost texture. Re-queried whenever frost turns on.
-    // awww (swww fork) emits no wallpaper-change signal, so poll `awww query`
-    // while frost is on. setWallpaperPath ignores an unchanged path, so the
-    // texture only rebuilds when the wallpaper actually changes.
-    property string _wpPath: ""
+    // Current wallpaper path (eDP-style single output) from awww, tracked
+    // centrally in WallpaperState.awwwPath (shared with Colours.wallpaperPath
+    // and the lock skins). awww (swww fork) emits no wallpaper-change signal,
+    // so poll a refresh while frost is on. setWallpaperPath ignores an
+    // unchanged path, so the texture only rebuilds when the wallpaper actually
+    // changes.
     Timer {
         running: Config.general.transparency.shaderBlur ?? false
         interval: 2000
         repeat: true
         triggeredOnStart: true
-        onTriggered: wpQuery.running = true
-    }
-    Process {
-        id: wpQuery
-        command: ["sh", "-c", "awww query | sed -n 's/.*image: //p' | head -1"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const p = text.trim();
-                if (p)
-                    root._wpPath = p;
-            }
-        }
+        onTriggered: WallpaperState.refreshAwww()
     }
 
     // Screen-edge SDF frame. Its outer edge sits OUTSIDE the viewport
