@@ -12,6 +12,10 @@ JsonObject {
     // into a chamfered one. Never applies at rest (magnet-driven unequal radii
     // don't trigger it). Requires liquidRounding.
     property bool liquidContentWarp: false
+    // Squeeze direction. false — edges deform, centre rigid (corner dents,
+    // reads convex toward the viewer). true — centre deforms, edges pinned
+    // (radial pinch, reads concave away from the viewer).
+    property bool liquidContentWarpInvert: false
     property bool invertBaseRounding: false
     // Guard band (px) around the border-rounding arcs where присасывание is
     // muted, so sinking bgs never reshape the arcs. -1 = auto (rounding +

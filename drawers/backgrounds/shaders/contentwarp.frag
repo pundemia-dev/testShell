@@ -12,6 +12,7 @@ layout(std140, binding = 0) uniform buf {
     vec2 contentSize;
     float radiusPx;
     float amount;
+    float invertMode;
 };
 
 layout(binding = 1) uniform sampler2D source;

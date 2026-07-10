@@ -1697,6 +1697,7 @@ Item {
                     return base + (maxR - base) * root._warpMix;
                 }
                 property real amount: root._warpMix
+                property real invertMode: (Config.backgrounds.liquidContentWarpInvert ?? false) ? 1.0 : 0.0
             }
 
             Item {

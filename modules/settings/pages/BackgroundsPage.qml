@@ -62,6 +62,16 @@ Flickable {
             }
 
             SettingRow {
+                label: qsTr("Inverted squeeze")
+                description: qsTr("Deform the centre instead of the edges — a radial pinch that reads concave, dipping away from you.")
+                enabled: Config.backgrounds.liquidRounding && Config.backgrounds.liquidContentWarp
+                StyledSwitch {
+                    checked: Config.backgrounds.liquidContentWarpInvert
+                    onToggled: Config.backgrounds.liquidContentWarpInvert = checked
+                }
+            }
+
+            SettingRow {
                 label: qsTr("Capsule neck")
                 description: qsTr("Fatness of the join when panels stick together (1 = thin).")
                 hintText: qsTr("Multiplier on the SDF smoothing radius between two sticking panels. >1 widens the join into a capsule neck.")
