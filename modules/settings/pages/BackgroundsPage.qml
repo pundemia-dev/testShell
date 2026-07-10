@@ -62,12 +62,64 @@ Flickable {
             }
 
             SettingRow {
+                label: qsTr("Corner press")
+                description: qsTr("How hard the content is pressed into the rounded contour (1× = exact fit).")
+                visible: Config.backgrounds.liquidRounding && Config.backgrounds.liquidContentWarp
+
+                RowLayout {
+                    spacing: Appearance.spacing.medium
+
+                    StyledText {
+                        text: edgeSlider.value.toFixed(2) + "×"
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: edgeSlider
+                        Layout.preferredWidth: 180
+                        from: 0
+                        to: 2
+                        stepSize: 0.05
+                        value: Config.backgrounds.liquidContentWarpEdge
+                        onInteraction: v => Config.backgrounds.liquidContentWarpEdge = v
+                    }
+                }
+            }
+
+            SettingRow {
                 label: qsTr("Inverted squeeze")
                 description: qsTr("Deform the centre instead of the edges — a radial pinch that reads concave, dipping away from you.")
                 enabled: Config.backgrounds.liquidRounding && Config.backgrounds.liquidContentWarp
                 StyledSwitch {
                     checked: Config.backgrounds.liquidContentWarpInvert
                     onToggled: Config.backgrounds.liquidContentWarpInvert = checked
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Centre dip")
+                description: qsTr("How deep the centre is pressed in the inverted squeeze.")
+                visible: Config.backgrounds.liquidRounding && Config.backgrounds.liquidContentWarp && Config.backgrounds.liquidContentWarpInvert
+
+                RowLayout {
+                    spacing: Appearance.spacing.medium
+
+                    StyledText {
+                        text: pinchSlider.value.toFixed(2)
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: pinchSlider
+                        Layout.preferredWidth: 180
+                        from: 0
+                        to: 2.5
+                        stepSize: 0.05
+                        value: Config.backgrounds.liquidContentWarpPinch
+                        onInteraction: v => Config.backgrounds.liquidContentWarpPinch = v
+                    }
                 }
             }
 

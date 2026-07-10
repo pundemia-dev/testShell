@@ -16,6 +16,13 @@ JsonObject {
     // reads convex toward the viewer). true — centre deforms, edges pinned
     // (radial pinch, reads concave away from the viewer).
     property bool liquidContentWarpInvert: false
+    // Corner-press strength: multiplier on the corner-fit displacement.
+    // 1 = exact geometric fit into the rounded contour, <1 lets content
+    // poke slightly past it, >1 over-presses.
+    property real liquidContentWarpEdge: 1.0
+    // Central dip depth for the inverted squeeze, relative to the animated
+    // radius (0 = flat centre).
+    property real liquidContentWarpPinch: 0.6
     property bool invertBaseRounding: false
     // Guard band (px) around the border-rounding arcs where присасывание is
     // muted, so sinking bgs never reshape the arcs. -1 = auto (rounding +

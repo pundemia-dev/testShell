@@ -25,6 +25,11 @@ layout(std140, binding = 0) uniform buf {
     float radiusPx;
     float amount;
     float invertMode;
+    // Strength dials. edgeStrength multiplies the corner-fit displacement
+    // (1 = exact geometric fit into the rounded contour, >1 over-pressed).
+    // pinchStrength scales the central dip depth relative to R/minHalf.
+    float edgeStrength;
+    float pinchStrength;
 };
 
 void main() {
@@ -42,14 +47,15 @@ void main() {
     float ix = (dy < R) ? (R - sqrt(max(R * R - (R - dy) * (R - dy), 0.0))) : 0.0;
     float iy = (dx < R) ? (R - sqrt(max(R * R - (R - dx) * (R - dx), 0.0))) : 0.0;
     vec2 avail = c - vec2(ix, iy);
-    vec2 warped = c + (q - c) * (avail / max(c, vec2(1.0)));
+    vec2 fit = c + (q - c) * (avail / max(c, vec2(1.0)));
+    vec2 warped = q + (fit - q) * edgeStrength;
     if (invertMode > 0.5) {
         // Radial pinch on top: depth ties to the same animated rounding, so
         // the central dip grows exactly as the corners bloom.
         vec2 n = (warped - c) / max(c, vec2(1.0));
         float rn = clamp(length(n), 0.0, 1.0);
         float w = (1.0 - rn) * (1.0 - rn);
-        float depth = 0.6 * R / max(min(c.x, c.y), 1.0);
+        float depth = pinchStrength * R / max(min(c.x, c.y), 1.0);
         warped = c + (warped - c) * (1.0 - depth * w);
     }
     gl_Position = qt_Matrix * vec4(p + (warped - q) * amount, qt_Vertex.zw);

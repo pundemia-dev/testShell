@@ -1698,6 +1698,8 @@ Item {
                 }
                 property real amount: root._warpMix
                 property real invertMode: (Config.backgrounds.liquidContentWarpInvert ?? false) ? 1.0 : 0.0
+                property real edgeStrength: Config.backgrounds.liquidContentWarpEdge ?? 1.0
+                property real pinchStrength: Config.backgrounds.liquidContentWarpPinch ?? 0.6
             }
 
             Item {

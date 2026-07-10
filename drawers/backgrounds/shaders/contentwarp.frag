@@ -13,6 +13,8 @@ layout(std140, binding = 0) uniform buf {
     float radiusPx;
     float amount;
     float invertMode;
+    float edgeStrength;
+    float pinchStrength;
 };
 
 layout(binding = 1) uniform sampler2D source;
