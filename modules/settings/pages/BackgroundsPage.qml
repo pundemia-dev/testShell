@@ -54,7 +54,7 @@ Flickable {
             SettingRow {
                 label: qsTr("Liquid content squeeze")
                 description: qsTr("Press the content into the rounded contour while panels move or open/close — concave dents at the corners.")
-                enabled: Config.backgrounds.liquidRounding
+                visible: Config.backgrounds.liquidRounding
                 StyledSwitch {
                     checked: Config.backgrounds.liquidContentWarp
                     onToggled: Config.backgrounds.liquidContentWarp = checked
@@ -90,7 +90,7 @@ Flickable {
             SettingRow {
                 label: qsTr("Inverted squeeze")
                 description: qsTr("Deform the centre instead of the edges — a radial pinch that reads concave, dipping away from you.")
-                enabled: Config.backgrounds.liquidRounding && Config.backgrounds.liquidContentWarp
+                visible: Config.backgrounds.liquidRounding && Config.backgrounds.liquidContentWarp
                 StyledSwitch {
                     checked: Config.backgrounds.liquidContentWarpInvert
                     onToggled: Config.backgrounds.liquidContentWarpInvert = checked
@@ -154,6 +154,58 @@ Flickable {
                         stepSize: 1
                         value: Config.backgrounds.liquidContentBlurMax
                         onInteraction: v => Config.backgrounds.liquidContentBlurMax = v
+                    }
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Blur spread")
+                description: qsTr("How wide the blur samples reach relative to the radius.")
+                visible: Config.backgrounds.liquidContentBlur
+
+                RowLayout {
+                    spacing: Appearance.spacing.medium
+
+                    StyledText {
+                        text: spreadSlider.value.toFixed(2) + "×"
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: spreadSlider
+                        Layout.preferredWidth: 180
+                        from: 0.2
+                        to: 2
+                        stepSize: 0.05
+                        value: Config.backgrounds.liquidContentBlurSpread
+                        onInteraction: v => Config.backgrounds.liquidContentBlurSpread = v
+                    }
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Blur softness")
+                description: qsTr("Prefilter strength that smooths out blur grain (0 = raw samples).")
+                visible: Config.backgrounds.liquidContentBlur
+
+                RowLayout {
+                    spacing: Appearance.spacing.medium
+
+                    StyledText {
+                        text: softnessSlider.value.toFixed(2)
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: softnessSlider
+                        Layout.preferredWidth: 180
+                        from: 0
+                        to: 1.5
+                        stepSize: 0.05
+                        value: Config.backgrounds.liquidContentBlurSoftness
+                        onInteraction: v => Config.backgrounds.liquidContentBlurSoftness = v
                     }
                 }
             }
