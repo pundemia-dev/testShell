@@ -52,6 +52,16 @@ Flickable {
             }
 
             SettingRow {
+                label: qsTr("Liquid content squeeze")
+                description: qsTr("Press the content into the rounded contour while panels move or open/close — concave dents at the corners.")
+                enabled: Config.backgrounds.liquidRounding
+                StyledSwitch {
+                    checked: Config.backgrounds.liquidContentWarp
+                    onToggled: Config.backgrounds.liquidContentWarp = checked
+                }
+            }
+
+            SettingRow {
                 label: qsTr("Capsule neck")
                 description: qsTr("Fatness of the join when panels stick together (1 = thin).")
                 hintText: qsTr("Multiplier on the SDF smoothing radius between two sticking panels. >1 widens the join into a capsule neck.")

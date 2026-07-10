@@ -139,6 +139,14 @@ Item {
         easing.bezierCurve: Appearance.anim.curves.emphasizedDecel
     }
 
+    // ── Liquid content squeeze (Config.backgrounds.liquidContentWarp) ──
+    // The ANIMATED part of the rounding only: open/close morph (_roundMix)
+    // OR motion boost (bgRect.roundBoost). Both are zero at rest, so a
+    // settled panel with magnet-shrunk (unequal) corners never squeezes its
+    // content. Feeds the GridMesh warp on scalingRoot below.
+    readonly property real _warpMix: (Config.backgrounds.liquidContentWarp ?? false) && liquidRounding
+        ? Math.max(_roundMix, bgRect.roundBoost) : 0
+
     // Size follow: one brisk spring per axis, both sharing Liquid's params. The
     // visible "liquid glass" squash/stretch is NOT produced here — it's the SDF
     // deform engine on the BlobRect below, driven by the centre velocity this
@@ -1664,6 +1672,31 @@ Item {
                 yScale: root.lastTargetHeight > 0 ? root.paintedHeight / root.lastTargetHeight : 0
                 origin.x: scalingRoot.width / 2
                 origin.y: scalingRoot.height / 2
+            }
+
+            // Liquid content squeeze: press the content grid into the animated
+            // rounded contour (vertex warp over a GridMesh). Applied HERE — in
+            // pre-Scale/pre-deform space — so the size-fit Scale and the SDF
+            // deform (which also shapes the blob contour) compose on top and
+            // content + contour stay in step. Layer only exists while warping.
+            layer.enabled: root._warpMix > 0.01
+            layer.smooth: true
+            layer.effect: ShaderEffect {
+                mesh: GridMesh {
+                    resolution: Qt.size(24, 24)
+                }
+                vertexShader: `file://${Quickshell.shellDir}/drawers/backgrounds/shaders/contentwarp.vert.qsb`
+                fragmentShader: `file://${Quickshell.shellDir}/drawers/backgrounds/shaders/contentwarp.frag.qsb`
+                property variant source
+                property vector2d contentSize: Qt.vector2d(scalingRoot.width, scalingRoot.height)
+                // Same lerp the rounding rides: base → capsule by the animated
+                // mix, in scalingRoot (pre-Scale) units.
+                property real radiusPx: {
+                    const maxR = Math.min(scalingRoot.width, scalingRoot.height) / 2;
+                    const base = Math.min(root.windowRounding, maxR);
+                    return base + (maxR - base) * root._warpMix;
+                }
+                property real amount: root._warpMix
             }
 
             Item {

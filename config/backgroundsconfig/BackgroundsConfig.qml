@@ -6,6 +6,12 @@ JsonObject {
     // rides toward the maximum (capsule) and relaxes to `rounding` — appear
     // starts as a droplet, collapse blooms back into one.
     property bool liquidRounding: false
+    // Liquid content squeeze: while the ANIMATED rounding is raised (appear/
+    // collapse morph or motion boost), the content grid is pressed into the
+    // rounded contour — concave dents at the corners, like a rectangle forced
+    // into a chamfered one. Never applies at rest (magnet-driven unequal radii
+    // don't trigger it). Requires liquidRounding.
+    property bool liquidContentWarp: false
     property bool invertBaseRounding: false
     // Guard band (px) around the border-rounding arcs where присасывание is
     // muted, so sinking bgs never reshape the arcs. -1 = auto (rounding +

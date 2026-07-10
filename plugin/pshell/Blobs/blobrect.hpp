@@ -24,6 +24,10 @@ class BlobRect : public BlobShape {
     // 0 disables. The speed bell of any easing/spring motion yields the
     // "rounder mid-path, settled at the ends" profile automatically.
     Q_PROPERTY(qreal speedRounding READ speedRounding WRITE setSpeedRounding NOTIFY speedRoundingChanged)
+    // Live speed-keyed rounding mix (0..1), read-only. Lets QML drive effects
+    // that must track the motion-driven part of the rounding (e.g. the content
+    // squeeze) — zero at rest, so magnet-driven unequal radii never trigger them.
+    Q_PROPERTY(qreal roundBoost READ roundBoost NOTIFY roundBoostChanged)
     Q_PROPERTY(QQmlListProperty<BlobRect> exclude READ exclude NOTIFY excludeChanged)
     Q_PROPERTY(qreal topLeftRadius READ topLeftRadius WRITE setTopLeftRadius NOTIFY topLeftRadiusChanged)
     Q_PROPERTY(qreal topRightRadius READ topRightRadius WRITE setTopRightRadius NOTIFY topRightRadiusChanged)
@@ -84,6 +88,8 @@ public:
         }
     }
 
+    qreal roundBoost() const { return m_roundBoost; }
+
     QQmlListProperty<BlobRect> exclude();
 
     bool isExcluded(const BlobShape* other) const override;
@@ -119,6 +125,7 @@ signals:
     void deformScaleChanged();
     void deformAttenChanged();
     void speedRoundingChanged();
+    void roundBoostChanged();
     void excludeChanged();
     void topLeftRadiusChanged();
     void topRightRadiusChanged();

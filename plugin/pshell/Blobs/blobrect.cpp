@@ -26,7 +26,10 @@ void BlobRect::updatePolish() {
             m_dm01 = 0.0f;
             m_dm11 = 1.0f;
             m_dmVel00 = m_dmVel01 = m_dmVel11 = 0.0f;
-            m_roundBoost = 0.0f;
+            if (m_roundBoost != 0.0f) {
+                m_roundBoost = 0.0f;
+                emit roundBoostChanged();
+            }
             m_deformMatrix = QMatrix4x4();
             emit rawDeformMatrixChanged();
             updateCenteredDeformMatrix();
@@ -78,6 +81,7 @@ void BlobRect::updatePhysics() {
     // in cornerRadii. Asymmetric lowpass — fast attack so the bloom shows early
     // in the move, slower release so the corners settle back gently as the
     // panel decelerates into place.
+    const float prevBoost = m_roundBoost;
     if (m_speedRounding > 0.0) {
         const float target = std::min(1.0f, speed * static_cast<float>(m_speedRounding));
         const float tau = target > m_roundBoost ? 0.04f : 0.12f;
@@ -88,6 +92,8 @@ void BlobRect::updatePhysics() {
     } else {
         m_roundBoost = 0.0f;
     }
+    if (m_roundBoost != prevBoost)
+        emit roundBoostChanged();
 
     // Compute target deformation matrix from velocity
     // R(θ) * diag(stretch, compress) * R(θ)^T
@@ -296,7 +302,10 @@ void BlobRect::checkAtRest(float speed) {
         m_dmVel00 = 0.0f;
         m_dmVel01 = 0.0f;
         m_dmVel11 = 0.0f;
-        m_roundBoost = 0.0f;
+        if (m_roundBoost != 0.0f) {
+            m_roundBoost = 0.0f;
+            emit roundBoostChanged();
+        }
         m_deformMatrix = QMatrix4x4(); // identity
         emit rawDeformMatrixChanged();
         updateCenteredDeformMatrix();
