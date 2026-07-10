@@ -188,88 +188,93 @@ Item {
     anchors.rightMargin: Config.bar.orientation ? Config.bar.shortSideMargin : Config.bar.longSideMargin
     anchors.bottomMargin: Config.bar.orientation ? Config.bar.longSideMargin : Config.bar.shortSideMargin
 
-    // Whether backgrounds are currently registered, and under which mode they
-    // were registered. Tracked so a later `separated` change (e.g. once the
-    // async JSON config finishes loading) can tear down the old set with the
-    // mode it was actually created in before requesting the new one.
-    property bool _bgsActive: false
-    property bool _bgsSeparated: false
+    // Slots currently registered with the rails manager. Reconciled against
+    // the desired set on every input change (separated mode, a segment's
+    // layout emptying/filling, edit mode, loader lifecycle) — a segment with
+    // no widgets keeps no background unless the layout editor needs it as a
+    // drop target.
+    property var _activeSlots: []
 
-    function _requestBgs(): void {
+    function _desiredSlots(): var {
+        const editing = BarEditManager.editing;
         if (Config.bar.separated) {
-            root.manager.requestBackground(root.begin);
-            root.manager.requestBackground(root.center);
-            root.manager.requestBackground(root.end);
-        } else {
-            root.manager.requestBackground(root.position);
+            const out = [];
+            if (editing || (Config.bar.beginLayout || []).length > 0)
+                out.push(root.begin);
+            if (editing || (Config.bar.centerLayout || []).length > 0)
+                out.push(root.center);
+            if (editing || (Config.bar.endLayout || []).length > 0)
+                out.push(root.end);
+            return out;
         }
+        const any = (Config.bar.beginLayout || []).length > 0 || (Config.bar.centerLayout || []).length > 0 || (Config.bar.endLayout || []).length > 0;
+        return editing || any ? [root.position] : [];
     }
 
-    function _removeBgs(separated: bool): void {
-        if (separated) {
-            root.manager.removeBackground(root.begin);
-            root.manager.removeBackground(root.center);
-            root.manager.removeBackground(root.end);
-        } else {
-            root.manager.removeBackground(root.position);
-        }
-    }
-
-    // (Re)register backgrounds for the current `separated` mode, tearing down
-    // any previously-registered set first. Safe to call on initial load and on
-    // every later `separated` flip.
-    function _applyBgs(): void {
+    function _syncBgs(): void {
         if (!barLoader.active)
-            return;
-        if (root._bgsActive)
-            root._removeBgs(root._bgsSeparated);
-        root._requestBgs();
-        root._bgsActive = true;
-        root._bgsSeparated = Config.bar.separated;
+            return; // teardown runs via _clearBgs from the loader item's destruction
+        const desired = root._desiredSlots();
+        for (const s of root._activeSlots)
+            if (desired.indexOf(s) < 0)
+                root.manager.removeBackground(s);
+        for (const s of desired)
+            if (root._activeSlots.indexOf(s) < 0)
+                root.manager.requestBackground(s);
+        root._activeSlots = desired;
     }
 
     function _clearBgs(): void {
-        if (!root._bgsActive)
-            return;
-        root._removeBgs(root._bgsSeparated);
-        root._bgsActive = false;
+        for (const s of root._activeSlots)
+            root.manager.removeBackground(s);
+        root._activeSlots = [];
     }
 
-    // Edge flip (orientation/position): the wrapper set is unchanged, only the
+    // Edge flip (orientation/position): the slot set is unchanged, only the
     // rail each one belongs to. Relocate in place — no teardown, no dying ghost.
     function _relocateBgs(): void {
-        if (!root._bgsActive)
-            return;
-        if (root._bgsSeparated) {
-            root.manager.relocateBackground(root.begin);
-            root.manager.relocateBackground(root.center);
-            root.manager.relocateBackground(root.end);
-        } else {
-            root.manager.relocateBackground(root.position);
-        }
+        for (const s of root._activeSlots)
+            root.manager.relocateBackground(s);
     }
 
-    // `separated` arrives late from the async JSON config and may be toggled at
-    // runtime — re-apply instead of latching the value once in onCompleted.
+    // `separated` and the layouts arrive late from the async JSON config and
+    // may change at runtime — reconcile instead of latching once in onCompleted.
     //
     // `orientation`/`position` choose the rail, and a slot's rail is fixed at
     // requestBackground time — it doesn't move when the bare bool flips, so the
     // bar stays on its old edge until something re-registers it. (Editing
     // shell.json masked this: FileView.reload() re-runs the adapter and
-    // incidentally fires onSeparatedChanged → _applyBgs.) Relocate the slots in
+    // incidentally fires onSeparatedChanged → _syncBgs.) Relocate the slots in
     // place instead — atomic, no dying ghost. Route through Qt.callLater so the
     // two writes setEdge makes (orientation then position) collapse into ONE
     // relocate on the next tick, with both bools already final.
     Connections {
         target: Config.bar
         function onSeparatedChanged(): void {
-            root._applyBgs();
+            root._syncBgs();
+        }
+        function onBeginLayoutChanged(): void {
+            root._syncBgs();
+        }
+        function onCenterLayoutChanged(): void {
+            root._syncBgs();
+        }
+        function onEndLayoutChanged(): void {
+            root._syncBgs();
         }
         function onOrientationChanged(): void {
             Qt.callLater(root._relocateBgs);
         }
         function onPositionChanged(): void {
             Qt.callLater(root._relocateBgs);
+        }
+    }
+
+    // Edit mode needs every slot present as a drop target, even empty ones.
+    Connections {
+        target: BarEditManager
+        function onEditingChanged(): void {
+            root._syncBgs();
         }
     }
 
@@ -281,7 +286,7 @@ Item {
         sourceComponent: Item {
             anchors.fill: parent
 
-            Component.onCompleted: root._applyBgs()
+            Component.onCompleted: root._syncBgs()
             Component.onDestruction: root._clearBgs()
         }
     }

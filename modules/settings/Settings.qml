@@ -29,6 +29,13 @@ Scope {
         minimumWidth: 700
         minimumHeight: 450
 
+        // The bar layout editor is driven from this window — leaving it in
+        // edit mode with no settings open strands the jiggle/badges on screen.
+        onVisibleChanged: {
+            if (!visible)
+                BarEditManager.editing = false;
+        }
+
         SettingsContent {
             anchors.fill: parent
             focus: true

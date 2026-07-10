@@ -27,6 +27,10 @@ FlexboxLayout {
             screen: root.screen
         }
     }
+
+    EmptySegment {
+        seg: "end"
+    }
 }
 
 // import QtQuick

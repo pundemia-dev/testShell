@@ -28,4 +28,8 @@ FlexboxLayout {
             screen: root.screen
         }
     }
+
+    EmptySegment {
+        seg: "begin"
+    }
 }

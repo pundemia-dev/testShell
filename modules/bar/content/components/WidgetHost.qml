@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import qs.config
 import qs.services
 import qs.components
+import qs.components.effects
 import Quickshell
 
 Item {
@@ -439,26 +440,17 @@ Item {
         }
     }
 
-    // Group-with highlight: ring around this widget when a dragged widget is
-    // hovering its centre (it will fold into a new group on drop).
-    StyledRect {
+    // Group-with highlight: dashed ring around this widget when a dragged
+    // widget is hovering its centre (it will fold into a new group on drop).
+    DashedRect {
         visible: host._groupFocus && BarEditManager.dropOntoReady
         x: host._contentX - 3
         y: host._contentY - 3
         width: host._contentW + 6
         height: host._contentH + 6
-        radius: Appearance.rounding.large
-        color: Colours.palette.primary
-        opacity: 0.18
+        cornerRadius: Config.bar.group.rounding
+        strokeColor: Colours.palette.primary
         z: 5
-
-        StyledRect {
-            anchors.fill: parent
-            radius: parent.radius
-            color: "transparent"
-            border.width: 2
-            border.color: Colours.palette.primary
-        }
     }
 
     // 3. Delete badge for the top-level entry (widget or whole group).
