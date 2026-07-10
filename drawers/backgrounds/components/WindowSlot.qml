@@ -112,6 +112,33 @@ Item {
         easing.type: Easing.OutQuad
     }
 
+    // ── Liquid rounding morph (Config.backgrounds.liquidRounding) ───────
+    // Time-based corner morph parallel to appear/collapse, like _blurAmt:
+    // 0 = configured windowRounding, 1 = full capsule (half the painted short
+    // side). Appear starts as a droplet and relaxes into the configured
+    // radius; collapse blooms back toward a droplet as the panel shrinks.
+    // The appear morph runs slower than the size spring (~150ms) on purpose —
+    // the visible phase is the full-size panel's corners settling.
+    property real _roundMix: 0
+    NumberAnimation {
+        id: appearRoundAnim
+        target: root; property: "_roundMix"
+        from: 1.0; to: 0.0
+        duration: Appearance.anim.durations.normal
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Appearance.anim.curves.emphasized
+    }
+    NumberAnimation {
+        id: collapseRoundAnim
+        target: root; property: "_roundMix"
+        to: 1.0
+        // The collapse spring reaches ~0 in ±150ms — bloom fast (decel curve)
+        // so the capsule reads while the panel is still big enough to see.
+        duration: Appearance.anim.durations.expressiveFastEffects
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Appearance.anim.curves.emphasizedDecel
+    }
+
     // Size follow: one brisk spring per axis, both sharing Liquid's params. The
     // visible "liquid glass" squash/stretch is NOT produced here — it's the SDF
     // deform engine on the BlobRect below, driven by the centre velocity this
@@ -181,6 +208,11 @@ Item {
             appearBlurAnim.stop();
             collapseBlurAnim.restart();
         }
+        // Bloom the corners back toward a droplet.
+        if (root.liquidRounding) {
+            appearRoundAnim.stop();
+            collapseRoundAnim.restart();
+        }
         finalizeTimer.restart();
     }
 
@@ -198,6 +230,12 @@ Item {
             appearBlurAnim.restart();
         else
             root._blurAmt = 0;
+        // Re-open rounding (relax the droplet back to the configured radius).
+        collapseRoundAnim.stop();
+        if (!root.isPinned && root.liquidRounding)
+            appearRoundAnim.restart();
+        else
+            root._roundMix = 0;
     }
 
     function _maybeFinalize() {
@@ -252,7 +290,14 @@ Item {
     readonly property int pRight: wrapper?.pRight ?? Config.backgrounds.paddings.right ?? 0
     readonly property int pBottom: wrapper?.pBottom ?? Config.backgrounds.paddings.bottom ?? 0
     readonly property int windowRounding: wrapper?.windowRounding ?? Config.backgrounds.rounding ?? 0
-    readonly property int effectiveRounding: Math.min(windowRounding, paintedWidth / 2, paintedHeight / 2)
+    readonly property bool liquidRounding: Config.backgrounds.liquidRounding ?? false
+    readonly property real _maxRounding: Math.min(paintedWidth, paintedHeight) / 2
+    readonly property int effectiveRounding: {
+        const base = Math.min(windowRounding, _maxRounding);
+        if (!liquidRounding || _roundMix <= 0)
+            return base;
+        return Math.round(base + (_maxRounding - base) * Math.min(1, _roundMix));
+    }
     readonly property string mode: wrapper?.mode ?? "push"
     // Whether this bg присасывается (merges with neighbours + frame). false →
     // clean floating contour. Default true preserves legacy merge behaviour.
@@ -1687,12 +1732,17 @@ Item {
         BlurManager.addRegion(blurNeckRight);
         // Delegate (re)created already dying — the dying flag flip regenerated
         // the Repeater, so onDyingChanged won't fire. Kick off the collapse here.
-        if (root.dying)
+        if (root.dying) {
             root._startCollapse();
-        else if (!root.isPinned && Liquid.appearBlurMax > 0)
-            // Real open → materialise blur. Pinned panels (bar) are skipped: they
-            // re-instantiate on any sibling rail change and must not blur-flash.
-            appearBlurAnim.start();
+        } else if (!root.isPinned) {
+            // Real open → materialise blur + droplet rounding. Pinned panels
+            // (bar) are skipped: they re-instantiate on any sibling rail change
+            // and must not flash.
+            if (Liquid.appearBlurMax > 0)
+                appearBlurAnim.start();
+            if (root.liquidRounding)
+                appearRoundAnim.start();
+        }
     }
     Component.onDestruction: {
         InputManager.removeRegion(inputRegion);

@@ -2,6 +2,10 @@ import Quickshell.Io
 
 JsonObject {
     property int rounding: 30
+    // Liquid rounding morph: while a bg appears/collapses, its corner radius
+    // rides toward the maximum (capsule) and relaxes to `rounding` — appear
+    // starts as a droplet, collapse blooms back into one.
+    property bool liquidRounding: false
     property bool invertBaseRounding: false
     // Guard band (px) around the border-rounding arcs where присасывание is
     // muted, so sinking bgs never reshape the arcs. -1 = auto (rounding +

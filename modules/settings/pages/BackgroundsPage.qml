@@ -43,6 +43,15 @@ Flickable {
             }
 
             SettingRow {
+                label: qsTr("Liquid rounding")
+                description: qsTr("Panels open and close as droplets: corners start fully round and relax to the set radius, and bloom back on close.")
+                StyledSwitch {
+                    checked: Config.backgrounds.liquidRounding
+                    onToggled: Config.backgrounds.liquidRounding = checked
+                }
+            }
+
+            SettingRow {
                 label: qsTr("Capsule neck")
                 description: qsTr("Fatness of the join when panels stick together (1 = thin).")
                 hintText: qsTr("Multiplier on the SDF smoothing radius between two sticking panels. >1 widens the join into a capsule neck.")
