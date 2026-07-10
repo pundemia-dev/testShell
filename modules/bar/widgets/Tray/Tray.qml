@@ -14,7 +14,9 @@ Item {
     readonly property alias expandIcon: expandIcon
 
     readonly property int padding: Config.getCustom("tray", "background", false) ? Appearance.padding.medium : Appearance.padding.small
-    readonly property int itemSpacing: parent.parent.gap
+    // No ancestor actually exposes `gap` (EditJiggle/palette preview don't) —
+    // fall back to 0 instead of assigning undefined to an int.
+    readonly property int itemSpacing: parent?.parent?.gap ?? 0
     readonly property int itemSize: Appearance.font.size.small * 2
     readonly property bool isHorizontal: Config.bar.orientation
 

@@ -50,6 +50,9 @@ Singleton {
         id: stateFile
         path: root.stateFilePath
         watchChanges: true
+        // onLoadFailed already logs everything except FileNotFound — silence
+        // FileView's own duplicate WARN (walltool may not have run yet).
+        printErrors: false
         onLoaded: root._parse(text())
         onFileChanged: reload()
         onLoadFailed: err => {

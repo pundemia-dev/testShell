@@ -234,10 +234,24 @@ ColumnLayout {
                     color: Colours.palette.surface_container_lowest
 
                     readonly property real _avail: tile.width - tile.pad * 2 - tile.sp * 2
-                    readonly property real _scale: (previewLoader.item && previewLoader.implicitWidth > 0) ? Math.min(1, _avail / previewLoader.implicitWidth) : 1
+
+                    // The loaded widget's implicit size is mirrored into plain
+                    // properties instead of read inline: widget roots like
+                    // Workspaces derive implicit size from a layout's
+                    // childrenRect, and an inline read from this binding forces
+                    // its recompute mid-evaluation, re-dirtying implicitHeight
+                    // (binding loop warning).
+                    property real _loadedW: 0
+                    property real _loadedH: 0
+                    function _syncLoadedSize(): void {
+                        _loadedW = previewLoader.item ? previewLoader.implicitWidth : 0;
+                        _loadedH = previewLoader.item ? previewLoader.implicitHeight : 0;
+                    }
+
+                    readonly property real _scale: _loadedW > 0 ? Math.min(1, _avail / _loadedW) : 1
 
                     width: tile.width - tile.pad * 2
-                    implicitHeight: (previewLoader.item ? previewLoader.implicitHeight * _scale : 24) + tile.sp * 2
+                    implicitHeight: (previewLoader.item ? _loadedH * _scale : 24) + tile.sp * 2
                     height: implicitHeight
                     x: tile.pad
                     y: tile.pad + tile.headerH + tile.sp
@@ -252,6 +266,9 @@ ColumnLayout {
                         source: active ? `file://${Quickshell.shellDir}/modules/bar/widgets/${tile.modelData.id}/${tile.modelData.id}.qml` : ""
                         onLoaded: if (item && item.hasOwnProperty("screen"))
                             item.screen = QsWindow.window ? QsWindow.window.screen : null
+                        onItemChanged: previewBox._syncLoadedSize()
+                        onImplicitWidthChanged: previewBox._syncLoadedSize()
+                        onImplicitHeightChanged: previewBox._syncLoadedSize()
                     }
                 }
 

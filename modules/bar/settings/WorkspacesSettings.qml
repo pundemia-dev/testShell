@@ -200,7 +200,9 @@ ColumnLayout {
             visible: block.withTrail
             label: qsTr("Trail")
             StyledSwitch {
-                checked: block.cfg.trail
+                // Only ActiveWsConfig has `trail` — the other state blocks
+                // still evaluate this binding even while the row is hidden.
+                checked: block.cfg.trail ?? false
                 onToggled: block.cfg.trail = checked
             }
         }

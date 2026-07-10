@@ -378,9 +378,20 @@ Item {
                         Drag.onDragFinished: dropAction => BarEditManager.finishDrag(dropAction === Qt.MoveAction)
                     }
 
-                    // Per-child delete badge (revealed on child hover)
+                    // Per-child delete badge (revealed on child hover).
+                    // Same delayed-visible dance as the top-level badge — see
+                    // entryBadge below.
                     EditBadge {
-                        visible: host.editing && childHover.hovered
+                        id: childBadge
+
+                        readonly property bool shouldShow: host.editing && childHover.hovered
+
+                        visible: false
+                        Binding on visible {
+                            value: childBadge.shouldShow
+                            delayed: true
+                        }
+
                         anchors.horizontalCenter: childJiggle.right
                         anchors.verticalCenter: childJiggle.top
                         z: 10
@@ -454,7 +465,21 @@ Item {
     //    For a group it only shows while hovering the group but not a child,
     //    so it never collides with the per-child badges.
     EditBadge {
-        visible: host.editing && hostHover.hovered && (host.isWidget || (host.isGroup && bgRect.hoveredChild === -1))
+        id: entryBadge
+
+        // Written via a delayed Binding: showing/hiding the badge re-runs
+        // hover picking under the cursor synchronously, which can flip the
+        // hover state while the `visible` binding is still evaluating — Qt
+        // flags that as a binding loop. The delayed write coalesces to the
+        // settled hover state instead.
+        readonly property bool shouldShow: host.editing && hostHover.hovered && (host.isWidget || (host.isGroup && bgRect.hoveredChild === -1))
+
+        visible: false
+        Binding on visible {
+            value: entryBadge.shouldShow
+            delayed: true
+        }
+
         anchors.horizontalCenter: host.isWidget ? widgetJiggle.right : bgRect.right
         anchors.verticalCenter: host.isWidget ? widgetJiggle.top : bgRect.top
         z: 20
