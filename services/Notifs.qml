@@ -124,6 +124,15 @@ Singleton {
             data.sort((a, b) => b.time - a.time);
             const limit = Config.notifs.historyLimit;
             const kept = limit > 0 ? data.slice(0, limit) : data;
+            for (const n of kept) {
+                // image://qsimage/* entries are session-local provider URLs —
+                // dead after a restart (keepOnReload: false). They land in the
+                // file when a notification is saved before dummyImageLoader
+                // finishes caching it to a PNG. Drop them so the group falls
+                // back to the app icon/glyph instead of warning every frame.
+                if (n.image?.startsWith("image://"))
+                    n.image = "";
+            }
             root.list = kept.map(notif => notifComp.createObject(root, notif));
             root.loaded = true;
         }

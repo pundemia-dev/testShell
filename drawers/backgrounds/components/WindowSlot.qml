@@ -1685,8 +1685,38 @@ Item {
                 Loader {
                     id: loader
                     sourceComponent: root.content
-                    x: (parent.width - (item ? (item.childrenRect.width || item.implicitWidth) : 0)) / 2
-                    y: (parent.height - (item ? (item.childrenRect.height || item.implicitHeight) : 0)) / 2
+
+                    // Content size is mirrored into plain properties instead of
+                    // read inline: the x/y bindings also depend on parent size,
+                    // which itself derives from the same childrenRect (via
+                    // targetWrapper* → lastTarget* → scalingRoot), so an inline
+                    // read re-fires childrenRectChanged mid-evaluation and Qt
+                    // flags a binding loop on y.
+                    property real contentW: 0
+                    property real contentH: 0
+                    x: (parent.width - contentW) / 2
+                    y: (parent.height - contentH) / 2
+
+                    function updateContentSize(): void {
+                        contentW = item ? (item.childrenRect.width || item.implicitWidth) : 0;
+                        contentH = item ? (item.childrenRect.height || item.implicitHeight) : 0;
+                    }
+
+                    onItemChanged: updateContentSize()
+                    Connections {
+                        target: loader.item
+
+                        function onChildrenRectChanged(): void {
+                            loader.updateContentSize();
+                        }
+                        function onImplicitWidthChanged(): void {
+                            loader.updateContentSize();
+                        }
+                        function onImplicitHeightChanged(): void {
+                            loader.updateContentSize();
+                        }
+                    }
+
                     Component.onCompleted: root.contentLoader = loader
                 }
             }
