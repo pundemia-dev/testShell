@@ -125,6 +125,15 @@ Item {
     }
 
     // ── QtObject contract for the rails system ─────────────────────
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     property QtObject content: QtObject {
         property int wrapperWidth: 0
         property int wrapperHeight: 0
@@ -136,23 +145,24 @@ Item {
         property bool aHorizontalCenter: Config.quicksettings.anchors.horizontalCenter ?? undefined
         property bool aVerticalCenter: Config.quicksettings.anchors.verticalCenter ?? undefined
         // Margins
-        property int mLeft: Config.quicksettings.mLeft
-        property int mRight: Config.quicksettings.mRight
-        property int mTop: Config.quicksettings.mTop
-        property int mBottom: Config.quicksettings.mBottom
-        property int vCenterOffset: 0
-        property int hCenterOffset: 0
+        property var mLeft: root._edge(Config.quicksettings.margins, "left")
+        property var mRight: root._edge(Config.quicksettings.margins, "right")
+        property var mTop: root._edge(Config.quicksettings.margins, "top")
+        property var mBottom: root._edge(Config.quicksettings.margins, "bottom")
+        property int vCenterOffset: Config.quicksettings.vCenterOffset
+        property int hCenterOffset: Config.quicksettings.hCenterOffset
         // Padding
-        property int pLeft: Config.quicksettings.padding
-        property int pRight: Config.quicksettings.padding
-        property int pTop: Config.quicksettings.padding
-        property int pBottom: Config.quicksettings.padding
+        property var pLeft: root._edge(Config.quicksettings.paddings, "left")
+        property var pRight: root._edge(Config.quicksettings.paddings, "right")
+        property var pTop: root._edge(Config.quicksettings.paddings, "top")
+        property var pBottom: root._edge(Config.quicksettings.paddings, "bottom")
         // Rails semantics
         property string mode: Config.quicksettings.mode
+        property bool sticks: Config.quicksettings.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
-        property int windowRounding: Config.quicksettings.rounding >= 0 ? Config.quicksettings.rounding : (Config.backgrounds.rounding ?? 0)
+        property int layer: Config.quicksettings.layer
+        property var windowRounding: Config.quicksettings.rounding
         // Content
         property Component content: QuicksettingsContent {
             registry: root.registry

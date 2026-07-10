@@ -137,6 +137,15 @@ Item {
         }
     }
 
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     // ── Rails contract ────────────────────────────────────────────────
     property QtObject content: QtObject {
         // 0 = auto-sized from the content's implicit size (dashboard-style).
@@ -148,21 +157,22 @@ Item {
         property bool aBottom: Config.ai.anchors.bottom ?? undefined
         property bool aHorizontalCenter: Config.ai.anchors.horizontalCenter ?? undefined
         property bool aVerticalCenter: Config.ai.anchors.verticalCenter ?? undefined
-        property int mLeft: 0
-        property int mRight: 0
-        property int mTop: 0
-        property int mBottom: 0
-        property int vCenterOffset: 0
-        property int hCenterOffset: 0
-        property int pLeft: Appearance.padding.medium
-        property int pRight: Appearance.padding.medium
-        property int pTop: Appearance.padding.medium
-        property int pBottom: Appearance.padding.medium
-        property string mode: "push"
+        property var mLeft: root._edge(Config.ai.margins, "left")
+        property var mRight: root._edge(Config.ai.margins, "right")
+        property var mTop: root._edge(Config.ai.margins, "top")
+        property var mBottom: root._edge(Config.ai.margins, "bottom")
+        property int vCenterOffset: Config.ai.vCenterOffset
+        property int hCenterOffset: Config.ai.hCenterOffset
+        property var pLeft: root._edge(Config.ai.paddings, "left")
+        property var pRight: root._edge(Config.ai.paddings, "right")
+        property var pTop: root._edge(Config.ai.paddings, "top")
+        property var pBottom: root._edge(Config.ai.paddings, "bottom")
+        property string mode: Config.ai.mode
+        property bool sticks: Config.ai.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
-        // property int windowRounding: Appearance.rounding.extraLarge
+        property int layer: Config.ai.layer
+        property var windowRounding: Config.ai.rounding
 
         property Component content: AiContent {
             registry: root.registry

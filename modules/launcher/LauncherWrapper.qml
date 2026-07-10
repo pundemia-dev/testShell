@@ -103,6 +103,15 @@ Item {
         sourceComponent: moduleManager.activeModule?.shortcutsComponent ?? null
     }
 
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     property QtObject content: QtObject {
         // Content size
         property int wrapperWidth: 0
@@ -115,23 +124,24 @@ Item {
         property bool aHorizontalCenter: Config.launcher.anchors.horizontalCenter ?? undefined
         property bool aVerticalCenter: Config.launcher.anchors.verticalCenter ?? undefined
         // Margins & offsets
-        property var mLeft: Config.launcher.offsets.left ?? Config.launcher.offsets.all
-        property var mRight: Config.launcher.offsets.right ?? Config.launcher.offsets.all
-        property var mTop: Config.launcher.offsets.top ?? Config.launcher.offsets.all
-        property var mBottom: Config.launcher.offsets.bottom ?? Config.launcher.offsets.all
-        property var mHorizontalCenter: Config.launcher.offsets.horizontalCenter ?? Config.launcher.offsets.all
-        property var mVerticalCenter: Config.launcher.offsets.verticalCenter ?? Config.launcher.offsets.all
+        property var mLeft: root._edge(Config.launcher.margins, "left")
+        property var mRight: root._edge(Config.launcher.margins, "right")
+        property var mTop: root._edge(Config.launcher.margins, "top")
+        property var mBottom: root._edge(Config.launcher.margins, "bottom")
+        property int vCenterOffset: Config.launcher.vCenterOffset
+        property int hCenterOffset: Config.launcher.hCenterOffset
         // Paddings
-        property var pLeft: Config.launcher.paddings.left ?? Config.launcher.paddings.all
-        property var pRight: Config.launcher.paddings.right ?? Config.launcher.paddings.all// ?? 0
-        property var pTop: Config.launcher.paddings.top ?? Config.launcher.paddings.all// ?? 0
-        property var pBottom: Config.launcher.paddings.bottom ?? Config.launcher.paddings.all// ?? 0
+        property var pLeft: root._edge(Config.launcher.paddings, "left")
+        property var pRight: root._edge(Config.launcher.paddings, "right")
+        property var pTop: root._edge(Config.launcher.paddings, "top")
+        property var pBottom: root._edge(Config.launcher.paddings, "bottom")
         // Rails contract
-        property string mode: "push"
+        property string mode: Config.launcher.mode
+        property bool sticks: Config.launcher.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
-        property int windowRounding: Config.launcher.rounding ?? Config.backgrounds.rounding ?? 0
+        property int layer: Config.launcher.layer
+        property var windowRounding: Config.launcher.rounding
 
         property Component content: FlexboxLayout {
                     id: flexLayout

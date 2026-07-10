@@ -23,6 +23,25 @@ JsonObject {
         verticalCenter: true
     }
 
+    // Overlay = covers underlying window; push = displaces siblings on rail.
+    property string mode: "push"
+    property bool sticks: true
+
+    // ── Background geometry (edited via BackgroundCard) ───────────────
+    // Margins / paddings: each side is a number, "all" (inherit the group's
+    // `all`), or null ("global" → the rails contract default). Centre offsets
+    // shift the panel along the centred axis and may be negative.
+    property EdgesData margins: EdgesData {}
+    property EdgesData paddings: EdgesData {}
+    property int hCenterOffset: 0
+    property int vCenterOffset: 0
+
+    // Stacking depth on the anchor rail.
+    property int layer: 0
+
+    // Rounding: a number, or null to follow Config.backgrounds.rounding.
+    property var rounding: null
+
     component AnchorsData: JsonObject {
         property bool left: false
         property bool right: false
@@ -30,6 +49,14 @@ JsonObject {
         property bool bottom: false
         property bool horizontalCenter: false
         property bool verticalCenter: false
+    }
+
+    component EdgesData: JsonObject {
+        property var all: null
+        property var left: "all"
+        property var right: "all"
+        property var top: "all"
+        property var bottom: "all"
     }
 
     // ── Translator page ───────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import qs.services
 import qs.components
 import qs.components.controls
 import qs.components.containers
+import qs.modules.settings.components
 import qs.modules.quicksettings.content as Qs
 import QtQuick
 import QtQuick.Layouts
@@ -25,24 +26,6 @@ Flickable {
     }
     Qs.QsCardRegistry {
         id: cardRegistry
-    }
-
-    readonly property string currentEdge: {
-        const a = Config.quicksettings.anchors;
-        if (a.top) return "top";
-        if (a.bottom) return "bottom";
-        if (a.left) return "left";
-        if (a.right) return "right";
-        return "right";
-    }
-    function setEdge(edge: string): void {
-        const a = Config.quicksettings.anchors;
-        a.top = edge === "top";
-        a.bottom = edge === "bottom";
-        a.left = edge === "left";
-        a.right = edge === "right";
-        a.horizontalCenter = edge === "top" || edge === "bottom";
-        a.verticalCenter = edge === "left" || edge === "right";
     }
 
     ColumnLayout {
@@ -96,29 +79,6 @@ Flickable {
             }
 
             SettingRow {
-                label: qsTr("Rounding")
-                description: qsTr("Corner radius (-1 = follow backgrounds).")
-                CustomSpinBox {
-                    value: Config.quicksettings.rounding
-                    min: -1
-                    max: 80
-                    onValueModified: v => Config.quicksettings.rounding = v
-                }
-            }
-
-            SettingRow {
-                label: qsTr("Padding")
-                description: qsTr("Inner padding around the content, in pixels.")
-                advanced: true
-                CustomSpinBox {
-                    value: Config.quicksettings.padding
-                    min: 0
-                    max: 60
-                    onValueModified: v => Config.quicksettings.padding = v
-                }
-            }
-
-            SettingRow {
                 label: qsTr("Auto-hide delay")
                 description: qsTr("Milliseconds before the panel closes after the cursor leaves.")
                 showSeparator: false
@@ -133,40 +93,8 @@ Flickable {
             }
         }
 
-        SettingSection {
-            title: qsTr("Position")
-            icon: "" // tabler layout-sidebar-right
-
-            SettingRow {
-                label: qsTr("Anchor edge")
-                description: qsTr("Which screen edge the panel drops from.")
-
-                OptionPills {
-                    current: root.currentEdge
-                    options: [
-                        { key: "top", label: qsTr("Top") },
-                        { key: "bottom", label: qsTr("Bottom") },
-                        { key: "left", label: qsTr("Left") },
-                        { key: "right", label: qsTr("Right") }
-                    ]
-                    onPicked: key => root.setEdge(key)
-                }
-            }
-
-            SettingRow {
-                label: qsTr("Mode")
-                description: qsTr("Push displaces panels sharing the edge; overlay covers them.")
-                showSeparator: false
-
-                OptionPills {
-                    current: Config.quicksettings.mode
-                    options: [
-                        { key: "push", label: qsTr("Push") },
-                        { key: "overlay", label: qsTr("Overlay") }
-                    ]
-                    onPicked: key => Config.quicksettings.mode = key
-                }
-            }
+        BackgroundCard {
+            cfg: Config.quicksettings
         }
 
         SettingSection {

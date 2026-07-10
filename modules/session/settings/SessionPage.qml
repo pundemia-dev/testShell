@@ -5,6 +5,7 @@ import qs.services
 import qs.components
 import qs.components.controls
 import qs.modules.session.content as Session
+import qs.modules.settings.components
 import QtQuick
 import QtQuick.Layouts
 import qs.components.containers
@@ -54,25 +55,6 @@ Flickable {
         else if (!on && i < 0)
             d.push(id);
         Config.session.disabled = d;
-    }
-
-    // ── Anchor helpers ─────────────────────────────────────────────
-    readonly property string currentEdge: {
-        const a = Config.session.anchors;
-        if (a.left) return "left";
-        if (a.right) return "right";
-        if (a.top) return "top";
-        if (a.bottom) return "bottom";
-        return "right";
-    }
-    function setEdge(edge: string): void {
-        const a = Config.session.anchors;
-        a.left = edge === "left";
-        a.right = edge === "right";
-        a.top = edge === "top";
-        a.bottom = edge === "bottom";
-        a.horizontalCenter = edge === "top" || edge === "bottom";
-        a.verticalCenter = edge === "left" || edge === "right";
     }
 
     ColumnLayout {
@@ -125,28 +107,6 @@ Flickable {
             }
 
             SettingRow {
-                label: qsTr("Padding")
-                description: qsTr("Inner padding around the buttons, in pixels.")
-                CustomSpinBox {
-                    value: Config.session.padding
-                    min: 0
-                    max: 60
-                    onValueModified: v => Config.session.padding = v
-                }
-            }
-
-            SettingRow {
-                label: qsTr("Rounding")
-                description: qsTr("Corner radius (-1 = follow backgrounds).")
-                CustomSpinBox {
-                    value: Config.session.rounding
-                    min: -1
-                    max: 80
-                    onValueModified: v => Config.session.rounding = v
-                }
-            }
-
-            SettingRow {
                 label: qsTr("Vim keybinds")
                 description: qsTr("Ctrl+J/K (or N/P) to move between buttons.")
                 showSeparator: false
@@ -158,52 +118,13 @@ Flickable {
             }
         }
 
+        BackgroundCard {
+            cfg: Config.session
+        }
+
         SettingSection {
-            title: qsTr("Position")
+            title: qsTr("Layout")
             icon: "\ueb0d" // tabler power
-
-            SettingRow {
-                label: qsTr("Anchor edge")
-                description: qsTr("Which screen edge the menu pushes in from.")
-
-                RowLayout {
-                    spacing: Appearance.spacing.small
-
-                    Repeater {
-                        model: [
-                            { key: "right", label: qsTr("Right") },
-                            { key: "left", label: qsTr("Left") },
-                            { key: "top", label: qsTr("Top") },
-                            { key: "bottom", label: qsTr("Bottom") }
-                        ]
-
-                        delegate: StyledRect {
-                            id: edgePill
-                            required property var modelData
-                            readonly property bool active: root.currentEdge === modelData.key
-
-                            implicitWidth: edgeLabel.implicitWidth + Appearance.padding.medium * 2
-                            implicitHeight: edgeLabel.implicitHeight + Appearance.padding.small * 2
-                            radius: Appearance.rounding.small
-                            color: active ? Colours.palette.secondary_container : Colours.palette.surface_container_high
-
-                            StyledText {
-                                id: edgeLabel
-                                anchors.centerIn: parent
-                                text: edgePill.modelData.label
-                                font.pointSize: Appearance.font.size.small
-                                color: edgePill.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.setEdge(edgePill.modelData.key)
-                            }
-                        }
-                    }
-                }
-            }
 
             // Orientation override. "Auto" derives the stack direction from the
             // anchor edge (horizontal on top/bottom or dead-centre, else

@@ -82,18 +82,22 @@ JsonObject {
 
     // Overlay = covers underlying window; push = displaces siblings on rail.
     property string mode: "overlay"
+    property bool sticks: true
 
-    // Margins (relative to screen edge for layer 1, see plan).
-    property int mTop: 0
-    property int mBottom: 0
-    property int mLeft: 0
-    property int mRight: 0
+    // ── Background geometry (edited via BackgroundCard) ───────────────
+    // Margins / paddings: each side is a number, "all" (inherit the group's
+    // `all`), or null ("global" → the rails contract default). Centre offsets
+    // shift the panel along the centred axis and may be negative.
+    property EdgesData margins: EdgesData {}
+    property EdgesData paddings: EdgesData {}
+    property int hCenterOffset: 0
+    property int vCenterOffset: 0
 
-    // Padding around content inside the bg.
-    property int padding: 12
+    // Stacking depth on the anchor rail.
+    property int layer: 0
 
-    // Rounding (falls back to backgrounds.rounding if -1).
-    property int rounding: -1
+    // Rounding: a number, or null to follow Config.backgrounds.rounding.
+    property var rounding: null
 
     component AnchorsData: JsonObject {
         property bool left: false
@@ -102,5 +106,13 @@ JsonObject {
         property bool bottom: false
         property bool horizontalCenter: false
         property bool verticalCenter: false
+    }
+
+    component EdgesData: JsonObject {
+        property var all: null
+        property var left: "all"
+        property var right: "all"
+        property var top: "all"
+        property var bottom: "all"
     }
 }

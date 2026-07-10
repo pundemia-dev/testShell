@@ -163,7 +163,9 @@ RowLayout {
         Layout.preferredWidth: shown ? implicitWidth : 0
         opacity: shown ? 1 : 0
 
-        value: root._isUnset(root.value) ? root.fallback : root.value
+        // The stored value may be a non-numeric sentinel ("all"/"global") that
+        // the spinbox can't display — fall back to the seed in that case.
+        value: (typeof root.value === "number") ? root.value : root.fallback
         min: root.min
         max: root.max
         step: root.step

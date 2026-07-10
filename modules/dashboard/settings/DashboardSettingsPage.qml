@@ -4,6 +4,7 @@ import qs.config
 import qs.services
 import qs.components
 import qs.components.controls
+import qs.modules.settings.components
 import qs.modules.dashboard.content as Dash
 import QtQuick
 import QtQuick.Layouts
@@ -55,25 +56,6 @@ Flickable {
         Config.dashboard.disabled = d;
     }
 
-    // ── Anchor helpers ─────────────────────────────────────────────
-    readonly property string currentEdge: {
-        const a = Config.dashboard.anchors;
-        if (a.top) return "top";
-        if (a.bottom) return "bottom";
-        if (a.left) return "left";
-        if (a.right) return "right";
-        return "top";
-    }
-    function setEdge(edge: string): void {
-        const a = Config.dashboard.anchors;
-        a.top = edge === "top";
-        a.bottom = edge === "bottom";
-        a.left = edge === "left";
-        a.right = edge === "right";
-        a.horizontalCenter = edge === "top" || edge === "bottom";
-        a.verticalCenter = edge === "left" || edge === "right";
-    }
-
     ColumnLayout {
         id: col
         width: parent.width
@@ -101,28 +83,6 @@ Flickable {
             }
 
             SettingRow {
-                label: qsTr("Padding")
-                description: qsTr("Inner padding around the content, in pixels.")
-                CustomSpinBox {
-                    value: Config.dashboard.padding
-                    min: 0
-                    max: 60
-                    onValueModified: v => Config.dashboard.padding = v
-                }
-            }
-
-            SettingRow {
-                label: qsTr("Rounding")
-                description: qsTr("Corner radius (-1 = follow backgrounds).")
-                CustomSpinBox {
-                    value: Config.dashboard.rounding
-                    min: -1
-                    max: 80
-                    onValueModified: v => Config.dashboard.rounding = v
-                }
-            }
-
-            SettingRow {
                 label: qsTr("Auto-hide delay")
                 description: qsTr("Milliseconds before the panel closes after the cursor leaves.")
                 showSeparator: false
@@ -137,53 +97,8 @@ Flickable {
             }
         }
 
-        SettingSection {
-            title: qsTr("Position")
-            icon: "\uea87"
-
-            SettingRow {
-                label: qsTr("Anchor edge")
-                description: qsTr("Which screen edge the dashboard drops from.")
-                showSeparator: false
-
-                RowLayout {
-                    spacing: Appearance.spacing.small
-
-                    Repeater {
-                        model: [
-                            { key: "top", label: qsTr("Top") },
-                            { key: "bottom", label: qsTr("Bottom") },
-                            { key: "left", label: qsTr("Left") },
-                            { key: "right", label: qsTr("Right") }
-                        ]
-
-                        delegate: StyledRect {
-                            id: edgePill
-                            required property var modelData
-                            readonly property bool active: root.currentEdge === modelData.key
-
-                            implicitWidth: edgeLabel.implicitWidth + Appearance.padding.medium * 2
-                            implicitHeight: edgeLabel.implicitHeight + Appearance.padding.small * 2
-                            radius: Appearance.rounding.small
-                            color: active ? Colours.palette.secondary_container : Colours.palette.surface_container_high
-
-                            StyledText {
-                                id: edgeLabel
-                                anchors.centerIn: parent
-                                text: edgePill.modelData.label
-                                font.pointSize: Appearance.font.size.small
-                                color: edgePill.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.setEdge(edgePill.modelData.key)
-                            }
-                        }
-                    }
-                }
-            }
+        BackgroundCard {
+            cfg: Config.dashboard
         }
 
         // ── Pages: enable/disable + drag to reorder ────────────────

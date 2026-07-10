@@ -245,6 +245,15 @@ Item {
     }
 
     // ── QtObject contract for the rails system ─────────────────────
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     property QtObject content: QtObject {
         // Size (auto from content)
         property int wrapperWidth: 0
@@ -257,23 +266,24 @@ Item {
         property bool aHorizontalCenter: Config.stash.anchors.horizontalCenter ?? undefined
         property bool aVerticalCenter: Config.stash.anchors.verticalCenter ?? undefined
         // Margins
-        property int mLeft: Config.stash.mLeft
-        property int mRight: Config.stash.mRight
-        property int mTop: Config.stash.mTop
-        property int mBottom: Config.stash.mBottom
-        property int vCenterOffset: 0
-        property int hCenterOffset: 0
+        property var mLeft: root._edge(Config.stash.margins, "left")
+        property var mRight: root._edge(Config.stash.margins, "right")
+        property var mTop: root._edge(Config.stash.margins, "top")
+        property var mBottom: root._edge(Config.stash.margins, "bottom")
+        property int vCenterOffset: Config.stash.vCenterOffset
+        property int hCenterOffset: Config.stash.hCenterOffset
         // Padding
-        property int pLeft: Config.stash.padding
-        property int pRight: Config.stash.padding
-        property int pTop: Config.stash.padding
-        property int pBottom: Config.stash.padding
+        property var pLeft: root._edge(Config.stash.paddings, "left")
+        property var pRight: root._edge(Config.stash.paddings, "right")
+        property var pTop: root._edge(Config.stash.paddings, "top")
+        property var pBottom: root._edge(Config.stash.paddings, "bottom")
         // Rails contract
         property string mode: Config.stash.mode
+        property bool sticks: Config.stash.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
-        property int windowRounding: Config.stash.rounding >= 0 ? Config.stash.rounding : (Config.backgrounds.rounding ?? 0)
+        property int layer: Config.stash.layer
+        property var windowRounding: Config.stash.rounding
         // Content
         property Component content: StashContent {
             stash: root

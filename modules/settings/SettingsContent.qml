@@ -18,6 +18,8 @@ import qs.modules.ai.settings
 import qs.modules.osd.settings
 import qs.modules.quicksettings.settings
 import qs.modules.toasts.settings
+import qs.modules.notifications.settings
+import qs.modules.stash.settings
 import qs.modules.lock.settings
 import qs.modules.session.settings
 
@@ -134,6 +136,18 @@ Item {
             component: toastsPage
         },
         {
+            name: qsTr("Notifications"),
+            icon: "\uea35", // tabler bell
+            scope: "notifs",
+            component: notificationsPage
+        },
+        {
+            name: qsTr("Stash"),
+            icon: "\uec3d", // tabler inbox
+            scope: "stash",
+            component: stashPage
+        },
+        {
             name: qsTr("Lock"),
             icon: "\ueae2", // tabler lock
             scope: "lock",
@@ -201,6 +215,14 @@ Item {
     Component {
         id: toastsPage
         ToastsPage {}
+    }
+    Component {
+        id: notificationsPage
+        NotificationsPage {}
+    }
+    Component {
+        id: stashPage
+        StashPage {}
     }
     Component {
         id: lockPage

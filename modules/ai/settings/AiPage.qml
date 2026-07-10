@@ -5,6 +5,7 @@ import qs.services
 import qs.components
 import qs.components.controls
 import qs.components.containers
+import qs.modules.settings.components
 import QtQuick
 import QtQuick.Layouts
 import "../pages/translator/languages.js" as Languages
@@ -27,28 +28,6 @@ Flickable {
         { id: "deepl", name: qsTr("DeepL") },
         { id: "duckduckgo", name: qsTr("DuckDuckGo") }
     ]
-
-    // ── Anchor helpers ─────────────────────────────────────────────────────
-    // Left/Right → the translator lays out vertically; Top/Bottom/Center (a
-    // free-floating panel) → horizontally, tracked by horizontalCenter.
-    readonly property string currentEdge: {
-        const a = Config.ai.anchors;
-        if (a.top) return "top";
-        if (a.bottom) return "bottom";
-        if (a.left) return "left";
-        if (a.right) return "right";
-        if (a.horizontalCenter && a.verticalCenter) return "center";
-        return "left";
-    }
-    function setEdge(edge: string): void {
-        const a = Config.ai.anchors;
-        a.left = edge === "left";
-        a.right = edge === "right";
-        a.top = edge === "top";
-        a.bottom = edge === "bottom";
-        a.horizontalCenter = edge === "top" || edge === "bottom" || edge === "center";
-        a.verticalCenter = edge === "left" || edge === "right" || edge === "center";
-    }
 
     // ── A compact multi-line text field bound to a config string ────────────
     component MultilineField: StyledRect {
@@ -200,28 +179,8 @@ Flickable {
             }
         }
 
-        // ── Position ─────────────────────────────────────────────────────────
-        SettingSection {
-            title: qsTr("Position")
-            icon: "" // tabler settings
-
-            SettingRow {
-                label: qsTr("Anchor")
-                description: qsTr("Left/Right lay the translator out vertically; Top/Bottom/Center lay it out horizontally.")
-                showSeparator: false
-
-                PillRow {
-                    model: [
-                        { key: "left", label: qsTr("Left") },
-                        { key: "right", label: qsTr("Right") },
-                        { key: "top", label: qsTr("Top") },
-                        { key: "bottom", label: qsTr("Bottom") },
-                        { key: "center", label: qsTr("Center") }
-                    ]
-                    current: root.currentEdge
-                    onPicked: key => root.setEdge(key)
-                }
-            }
+        BackgroundCard {
+            cfg: Config.ai
         }
 
         // ── Translator ───────────────────────────────────────────────────────

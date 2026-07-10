@@ -5,6 +5,7 @@ import qs.services
 import qs.components
 import qs.components.controls
 import qs.components.containers
+import qs.modules.settings.components
 import QtQuick
 import QtQuick.Layouts
 
@@ -17,65 +18,6 @@ Flickable {
     contentHeight: col.implicitHeight
     clip: true
     boundsBehavior: Flickable.StopAtBounds
-
-    // ── Anchor helpers (same contract as the translator) ────────────────────
-    readonly property string currentEdge: {
-        const a = Config.osd.anchors;
-        if (a.top) return "top";
-        if (a.bottom) return "bottom";
-        if (a.left) return "left";
-        if (a.right) return "right";
-        if (a.horizontalCenter && a.verticalCenter) return "center";
-        return "right";
-    }
-    function setEdge(edge: string): void {
-        const a = Config.osd.anchors;
-        a.left = edge === "left";
-        a.right = edge === "right";
-        a.top = edge === "top";
-        a.bottom = edge === "bottom";
-        a.horizontalCenter = edge === "top" || edge === "bottom" || edge === "center";
-        a.verticalCenter = edge === "left" || edge === "right" || edge === "center";
-    }
-
-    component PillRow: Flow {
-        id: pillRow
-        property var model: []
-        property string current: ""
-        signal picked(string key)
-
-        Layout.fillWidth: true
-        spacing: Appearance.spacing.small
-
-        Repeater {
-            model: pillRow.model
-
-            delegate: StyledRect {
-                id: pill
-                required property var modelData
-                readonly property bool active: pillRow.current === modelData.key
-
-                implicitWidth: pillLabel.implicitWidth + Appearance.padding.medium * 2
-                implicitHeight: pillLabel.implicitHeight + Appearance.padding.small * 2
-                radius: Appearance.rounding.small
-                color: active ? Colours.palette.secondary_container : Colours.palette.surface_container_high
-
-                StyledText {
-                    id: pillLabel
-                    anchors.centerIn: parent
-                    text: pill.modelData.label
-                    font.pointSize: Appearance.font.size.small
-                    color: pill.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: pillRow.picked(pill.modelData.key)
-                }
-            }
-        }
-    }
 
     ColumnLayout {
         id: col
@@ -141,28 +83,8 @@ Flickable {
             }
         }
 
-        // ── Position ─────────────────────────────────────────────────────────
-        SettingSection {
-            title: qsTr("Position")
-            icon: "\uea03" // adjustments
-
-            SettingRow {
-                label: qsTr("Anchor")
-                description: qsTr("Left/Right stack the sliders vertically; Top/Bottom/Center lay them out horizontally.")
-                showSeparator: false
-
-                PillRow {
-                    model: [
-                        { key: "left", label: qsTr("Left") },
-                        { key: "right", label: qsTr("Right") },
-                        { key: "top", label: qsTr("Top") },
-                        { key: "bottom", label: qsTr("Bottom") },
-                        { key: "center", label: qsTr("Center") }
-                    ]
-                    current: root.currentEdge
-                    onPicked: key => root.setEdge(key)
-                }
-            }
+        BackgroundCard {
+            cfg: Config.osd
         }
 
         // ── Audio ─────────────────────────────────────────────────────────────

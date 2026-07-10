@@ -15,6 +15,15 @@ Item {
 
     property bool notificationsVisible: Notifs.popups.length > 0
 
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     property QtObject content: QtObject {
         // Content size
         property int wrapperWidth: 0
@@ -27,23 +36,24 @@ Item {
         property bool aHorizontalCenter: Config.notifs.anchors.horizontalCenter ?? false
         property bool aVerticalCenter: Config.notifs.anchors.verticalCenter ?? false
         // Margins & offsets
-        property var mLeft: Config.notifs.offsets.left ?? Config.notifs.offsets.all
-        property var mRight: Config.notifs.offsets.right ?? Config.notifs.offsets.all
-        property var mTop: Config.notifs.offsets.top ?? Config.notifs.offsets.all
-        property var mBottom: Config.notifs.offsets.bottom ?? Config.notifs.offsets.all
-        property var mHorizontalCenter: Config.notifs.offsets.horizontalCenter ?? Config.notifs.offsets.all
-        property var mVerticalCenter: Config.notifs.offsets.verticalCenter ?? Config.notifs.offsets.all
+        property var mLeft: root._edge(Config.notifs.margins, "left")
+        property var mRight: root._edge(Config.notifs.margins, "right")
+        property var mTop: root._edge(Config.notifs.margins, "top")
+        property var mBottom: root._edge(Config.notifs.margins, "bottom")
+        property int vCenterOffset: Config.notifs.vCenterOffset
+        property int hCenterOffset: Config.notifs.hCenterOffset
         // Paddings
-        property var pLeft: Config.notifs.paddings.left ?? Config.notifs.paddings.all
-        property var pRight: Config.notifs.paddings.right ?? Config.notifs.paddings.all
-        property var pTop: Config.notifs.paddings.top ?? Config.notifs.paddings.all
-        property var pBottom: Config.notifs.paddings.bottom ?? Config.notifs.paddings.all
+        property var pLeft: root._edge(Config.notifs.paddings, "left")
+        property var pRight: root._edge(Config.notifs.paddings, "right")
+        property var pTop: root._edge(Config.notifs.paddings, "top")
+        property var pBottom: root._edge(Config.notifs.paddings, "bottom")
         // Rails contract
-        property string mode: "push"
+        property string mode: Config.notifs.mode
+        property bool sticks: Config.notifs.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
-        property int windowRounding: Config.notifs.rounding >= 0 ? Config.notifs.rounding : (Config.backgrounds.rounding ?? 0)
+        property int layer: Config.notifs.layer
+        property var windowRounding: Config.notifs.rounding
 
         property Component content: NotificationList {}
     }

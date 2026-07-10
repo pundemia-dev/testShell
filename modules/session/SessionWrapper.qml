@@ -74,6 +74,15 @@ Item {
     }
 
     // ── QtObject contract for the rails system ─────────────────────
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     property QtObject content: QtObject {
         property int wrapperWidth: 0
         property int wrapperHeight: 0
@@ -85,23 +94,24 @@ Item {
         property bool aHorizontalCenter: Config.session.anchors.horizontalCenter ?? undefined
         property bool aVerticalCenter: Config.session.anchors.verticalCenter ?? undefined
         // Margins
-        property int mLeft: Config.session.mLeft
-        property int mRight: Config.session.mRight
-        property int mTop: Config.session.mTop
-        property int mBottom: Config.session.mBottom
-        property int vCenterOffset: 0
-        property int hCenterOffset: 0
+        property var mLeft: root._edge(Config.session.margins, "left")
+        property var mRight: root._edge(Config.session.margins, "right")
+        property var mTop: root._edge(Config.session.margins, "top")
+        property var mBottom: root._edge(Config.session.margins, "bottom")
+        property int vCenterOffset: Config.session.vCenterOffset
+        property int hCenterOffset: Config.session.hCenterOffset
         // Padding
-        property int pLeft: Config.session.padding
-        property int pRight: Config.session.padding
-        property int pTop: Config.session.padding
-        property int pBottom: Config.session.padding
+        property var pLeft: root._edge(Config.session.paddings, "left")
+        property var pRight: root._edge(Config.session.paddings, "right")
+        property var pTop: root._edge(Config.session.paddings, "top")
+        property var pBottom: root._edge(Config.session.paddings, "bottom")
         // Rails semantics
         property string mode: Config.session.mode
+        property bool sticks: Config.session.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
-        property int windowRounding: Config.session.rounding >= 0 ? Config.session.rounding : (Config.backgrounds.rounding ?? 0)
+        property int layer: Config.session.layer
+        property var windowRounding: Config.session.rounding
         // Content
         property Component content: SessionContent {
             registry: root.registry

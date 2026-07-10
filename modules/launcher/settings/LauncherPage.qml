@@ -2,6 +2,7 @@ import qs.config
 import qs.services
 import qs.components
 import qs.components.controls
+import qs.modules.settings.components
 import QtQuick
 import QtQuick.Layouts
 import qs.components.containers
@@ -76,6 +77,10 @@ Flickable {
                     }
                 }
             }
+        }
+
+        BackgroundCard {
+            cfg: Config.launcher
         }
 
         // Per-module settings (GIF Search, Wallpaper Engine, …) live on each

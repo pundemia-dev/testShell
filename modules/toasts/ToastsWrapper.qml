@@ -20,6 +20,15 @@ Item {
 
     readonly property bool toastsVisible: Toaster.toasts.length > 0
 
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     property QtObject content: QtObject {
         property int wrapperWidth: 0
         property int wrapperHeight: 0
@@ -31,23 +40,24 @@ Item {
         property bool aHorizontalCenter: Config.toasts.anchors.horizontalCenter ?? false
         property bool aVerticalCenter: Config.toasts.anchors.verticalCenter ?? false
 
-        property int mLeft: Config.toasts.mLeft
-        property int mRight: Config.toasts.mRight
-        property int mTop: Config.toasts.mTop
-        property int mBottom: Config.toasts.mBottom
-        property int vCenterOffset: 0
-        property int hCenterOffset: 0
+        property var mLeft: root._edge(Config.toasts.margins, "left")
+        property var mRight: root._edge(Config.toasts.margins, "right")
+        property var mTop: root._edge(Config.toasts.margins, "top")
+        property var mBottom: root._edge(Config.toasts.margins, "bottom")
+        property int vCenterOffset: Config.toasts.vCenterOffset
+        property int hCenterOffset: Config.toasts.hCenterOffset
 
-        property int pLeft: Config.toasts.padding
-        property int pRight: Config.toasts.padding
-        property int pTop: Config.toasts.padding
-        property int pBottom: Config.toasts.padding
+        property var pLeft: root._edge(Config.toasts.paddings, "left")
+        property var pRight: root._edge(Config.toasts.paddings, "right")
+        property var pTop: root._edge(Config.toasts.paddings, "top")
+        property var pBottom: root._edge(Config.toasts.paddings, "bottom")
 
         property string mode: Config.toasts.mode
+        property bool sticks: Config.toasts.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
-        property int windowRounding: Config.toasts.rounding >= 0 ? Config.toasts.rounding : (Config.backgrounds.rounding ?? 0)
+        property int layer: Config.toasts.layer
+        property var windowRounding: Config.toasts.rounding
 
         property Component content: ToastsContent {}
     }

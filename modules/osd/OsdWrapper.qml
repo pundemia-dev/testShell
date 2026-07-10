@@ -90,6 +90,15 @@ Item {
     }
 
     // ── Rails contract ────────────────────────────────────────────────
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     property QtObject content: QtObject {
         property int wrapperWidth: 0
         property int wrapperHeight: 0
@@ -99,20 +108,22 @@ Item {
         property bool aBottom: Config.osd.anchors.bottom ?? undefined
         property bool aHorizontalCenter: Config.osd.anchors.horizontalCenter ?? undefined
         property bool aVerticalCenter: Config.osd.anchors.verticalCenter ?? undefined
-        property int mLeft: Config.osd.mLeft
-        property int mRight: Config.osd.mRight
-        property int mTop: Config.osd.mTop
-        property int mBottom: Config.osd.mBottom
-        property int vCenterOffset: 0
-        property int hCenterOffset: 0
-        property int pLeft: Config.osd.padding
-        property int pRight: Config.osd.padding
-        property int pTop: Config.osd.padding
-        property int pBottom: Config.osd.padding
+        property var mLeft: root._edge(Config.osd.margins, "left")
+        property var mRight: root._edge(Config.osd.margins, "right")
+        property var mTop: root._edge(Config.osd.margins, "top")
+        property var mBottom: root._edge(Config.osd.margins, "bottom")
+        property int vCenterOffset: Config.osd.vCenterOffset
+        property int hCenterOffset: Config.osd.hCenterOffset
+        property var pLeft: root._edge(Config.osd.paddings, "left")
+        property var pRight: root._edge(Config.osd.paddings, "right")
+        property var pTop: root._edge(Config.osd.paddings, "top")
+        property var pBottom: root._edge(Config.osd.paddings, "bottom")
         property string mode: Config.osd.mode
+        property bool sticks: Config.osd.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
+        property int layer: Config.osd.layer
+        property var windowRounding: Config.osd.rounding
 
         property Component content: OsdContent {
             monitor: root.monitor

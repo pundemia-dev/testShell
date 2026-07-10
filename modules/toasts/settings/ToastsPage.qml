@@ -5,6 +5,7 @@ import qs.services
 import qs.components
 import qs.components.controls
 import qs.components.containers
+import qs.modules.settings.components
 import QtQuick
 import QtQuick.Layouts
 
@@ -23,28 +24,6 @@ Flickable {
     contentHeight: col.implicitHeight
     clip: true
     boundsBehavior: Flickable.StopAtBounds
-
-    // ── Position helpers (corner presets → rails anchor booleans) ───────────
-    readonly property string currentPos: {
-        const a = Config.toasts.anchors;
-        const v = a.bottom ? "bottom" : "top";
-        if (a.horizontalCenter)
-            return v + "-center";
-        const h = a.left ? "left" : "right";
-        return v + "-" + h;
-    }
-    function setPos(pos: string): void {
-        const a = Config.toasts.anchors;
-        const parts = pos.split("-");
-        const v = parts[0];
-        const h = parts[1];
-        a.top = v === "top";
-        a.bottom = v === "bottom";
-        a.left = h === "left";
-        a.right = h === "right";
-        a.horizontalCenter = h === "center";
-        a.verticalCenter = false;
-    }
 
     // ── Source tree (module nodes + standalone sources) ─────────────────────
     readonly property var groups: {
@@ -83,45 +62,6 @@ Flickable {
 
         out.sort((a, b) => String(a.label).localeCompare(String(b.label)));
         return out;
-    }
-
-    // Position preset pills (reused from the OsdPage pattern).
-    component PillRow: Flow {
-        id: pillRow
-        property var model: []
-        property string current: ""
-        signal picked(string key)
-
-        Layout.fillWidth: true
-        spacing: Appearance.spacing.small
-
-        Repeater {
-            model: pillRow.model
-            delegate: StyledRect {
-                id: pill
-                required property var modelData
-                readonly property bool active: pillRow.current === modelData.key
-
-                implicitWidth: pillLabel.implicitWidth + Appearance.padding.medium * 2
-                implicitHeight: pillLabel.implicitHeight + Appearance.padding.small * 2
-                radius: Appearance.rounding.small
-                color: active ? Colours.palette.secondary_container : Colours.palette.surface_container_high
-
-                StyledText {
-                    id: pillLabel
-                    anchors.centerIn: parent
-                    text: pill.modelData.label
-                    font.pointSize: Appearance.font.size.small
-                    color: pill.active ? Colours.palette.on_secondary_container : Colours.palette.on_surface_variant
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: pillRow.picked(pill.modelData.key)
-                }
-            }
-        }
     }
 
     // Leaf controls for one source: master Enabled + a collapsible list of its
@@ -265,24 +205,6 @@ Flickable {
                 onToggled: c => Config.toasts.enabled = c
             }
 
-            SettingRow {
-                label: qsTr("Position")
-                showSeparator: false
-
-                PillRow {
-                    model: [
-                        { key: "top-left", label: qsTr("Top left") },
-                        { key: "top-center", label: qsTr("Top center") },
-                        { key: "top-right", label: qsTr("Top right") },
-                        { key: "bottom-left", label: qsTr("Bottom left") },
-                        { key: "bottom-center", label: qsTr("Bottom center") },
-                        { key: "bottom-right", label: qsTr("Bottom right") }
-                    ]
-                    current: root.currentPos
-                    onPicked: key => root.setPos(key)
-                }
-            }
-
             SpinBoxRow {
                 label: qsTr("Default timeout (ms)")
                 value: Config.toasts.defaultTimeout
@@ -310,6 +232,10 @@ Flickable {
                 visible: Config.general.advanced
                 onValueModified: v => Config.toasts.toastWidth = v
             }
+        }
+
+        BackgroundCard {
+            cfg: Config.toasts
         }
 
         // ── Sources (dynamic) ───────────────────────────────────────────────

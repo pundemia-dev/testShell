@@ -129,6 +129,15 @@ Item {
         }
     }
 
+    // Resolve one side of an EdgesData group for the rails contract: "all"
+    // inherits the group's `all`; a number is literal; null falls through so
+    // WindowSlot applies its automatic default (0 for margins, the global
+    // Config.backgrounds.paddings for paddings).
+    function _edge(g, side) {
+        const v = g[side];
+        return v === "all" ? g.all : v;
+    }
+
     // ── QtObject contract for the rails system ─────────────────────
     property QtObject content: QtObject {
         property int wrapperWidth: 0
@@ -141,23 +150,24 @@ Item {
         property bool aHorizontalCenter: Config.dashboard.anchors.horizontalCenter ?? undefined
         property bool aVerticalCenter: Config.dashboard.anchors.verticalCenter ?? undefined
         // Margins
-        property int mLeft: Config.dashboard.mLeft
-        property int mRight: Config.dashboard.mRight
-        property int mTop: Config.dashboard.mTop
-        property int mBottom: Config.dashboard.mBottom
-        property int vCenterOffset: 0
-        property int hCenterOffset: 0
+        property var mLeft: root._edge(Config.dashboard.margins, "left")
+        property var mRight: root._edge(Config.dashboard.margins, "right")
+        property var mTop: root._edge(Config.dashboard.margins, "top")
+        property var mBottom: root._edge(Config.dashboard.margins, "bottom")
+        property int vCenterOffset: Config.dashboard.vCenterOffset
+        property int hCenterOffset: Config.dashboard.hCenterOffset
         // Padding
-        property int pLeft: Config.dashboard.padding
-        property int pRight: Config.dashboard.padding
-        property int pTop: Config.dashboard.padding
-        property int pBottom: Config.dashboard.padding
+        property var pLeft: root._edge(Config.dashboard.paddings, "left")
+        property var pRight: root._edge(Config.dashboard.paddings, "right")
+        property var pTop: root._edge(Config.dashboard.paddings, "top")
+        property var pBottom: root._edge(Config.dashboard.paddings, "bottom")
         // Rails semantics
         property string mode: Config.dashboard.mode
+        property bool sticks: Config.dashboard.sticks
         property bool pinned: false
         property bool reservesSpace: false
-        readonly property int layer: 0
-        property int windowRounding: Config.dashboard.rounding >= 0 ? Config.dashboard.rounding : (Config.backgrounds.rounding ?? 0)
+        property int layer: Config.dashboard.layer
+        property var windowRounding: Config.dashboard.rounding
         // Content
         property Component content: DashboardContent {
             registry: root.registry

@@ -18,26 +18,42 @@ JsonObject {
     property bool actionOnClick: false
     property bool openExpanded: false
     property Sizes sizes: Sizes {}
-    property int rounding: -1
     property bool excludeBarArea: true
     property AnchorsData anchors: AnchorsData {
         right: true
         top: true
     }
-    property OffsetsData offsets: OffsetsData {
-        top: 10
-        right: 10
-    }
-    property PaddingsData paddings: PaddingsData {
-        left: 10
-        right: 10
-        top: 10
-        bottom: 10
-    }
+
+    // Overlay = covers underlying window; push = displaces siblings on rail.
+    property string mode: "push"
+    property bool sticks: true
+
+    // ── Background geometry (edited via BackgroundCard) ───────────────
+    // Margins / paddings: each side is a number, "all" (inherit the group's
+    // `all`), or null ("global" → the rails contract default). Centre offsets
+    // shift the panel along the centred axis and may be negative.
+    property EdgesData margins: EdgesData {}
+    property EdgesData paddings: EdgesData {}
+    property int hCenterOffset: 0
+    property int vCenterOffset: 0
+
+    // Stacking depth on the anchor rail.
+    property int layer: 0
+
+    // Rounding: a number, or null to follow Config.backgrounds.rounding.
+    property var rounding: null
 
     component Sizes: JsonObject {
         property int width: 400
         property int image: 41
         property int badge: 20
+    }
+
+    component EdgesData: JsonObject {
+        property var all: null
+        property var left: "all"
+        property var right: "all"
+        property var top: "all"
+        property var bottom: "all"
     }
 }
