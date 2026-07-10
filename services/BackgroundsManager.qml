@@ -48,6 +48,27 @@ QtObject {
     property var rails: [[], [], [], [], [], [], [], [], []]
     property int _seq: 0
 
+    // Rail appends are DEFERRED to a clean event-loop turn. Modules call
+    // requestBackground from inside a component's creation (wrapper Loader →
+    // item onCompleted), and a Repeater delegate created during another
+    // creation's finalization gets ITS OWN finalization deferred — its
+    // Component.onCompleted and every QML animation in it stay dead for the
+    // first ~100+ms, which snapped the appear spring to full size. Appending
+    // from Qt.callLater guarantees WindowSlot delegates are created outside
+    // any foreign creation stack and finalize (and animate) immediately.
+    // The seq is still assigned and returned synchronously.
+    property var _pendingAdds: []
+
+    function _flushPendingAdds() {
+        if (_pendingAdds.length === 0) return;
+        const adds = _pendingAdds;
+        _pendingAdds = [];
+        const newRails = rails.slice();
+        for (const p of adds)
+            newRails[p.railIdx] = [...newRails[p.railIdx], { wrapper: p.wrapper, arrivalSeq: p.seq }];
+        rails = newRails;
+    }
+
     // Per-arrivalSeq dying state: arrivalSeq → { deathRect: {x,y,w,h} | null }.
     // Kept OUTSIDE the rail entries so flipping an entry into/out of dying
     // never changes its object identity (see lifecycle note above). deathRect
@@ -246,6 +267,10 @@ QtObject {
         const curBorrow = _findBorrow(wrapper);
         if (curBorrow)
             return borrowState[curBorrow.donorSeq].stack[curBorrow.idx].borrowSeq;
+        // Queued but not yet flushed → same seq.
+        const pending = _pendingAdds.find(p => p.wrapper === wrapper);
+        if (pending)
+            return pending.seq;
         const i = determineRailIndex(wrapper);
         const existing = rails[i].find(e => e.wrapper === wrapper);
         if (existing) {
@@ -297,9 +322,8 @@ QtObject {
             // Empty rail → fall through: open an own bg (groups with overlays).
         }
         const seq = _seq++;
-        const newRails = rails.slice();
-        newRails[i] = [...rails[i], { wrapper: wrapper, arrivalSeq: seq }];
-        rails = newRails;
+        _pendingAdds.push({ wrapper: wrapper, railIdx: i, seq: seq });
+        Qt.callLater(_flushPendingAdds);
         return seq;
     }
 
@@ -313,6 +337,12 @@ QtObject {
     function relocateBackground(wrapper) {
         if (!wrapper) return;
         const target = determineRailIndex(wrapper);
+        // Still queued → just retarget the pending append.
+        const pending = _pendingAdds.find(p => p.wrapper === wrapper);
+        if (pending) {
+            pending.railIdx = target;
+            return;
+        }
         let curRail = -1, curIdx = -1;
         for (let i = 0; i < 9; i++) {
             const idx = rails[i].findIndex(e => e.wrapper === wrapper && !isDying(e.arrivalSeq));
@@ -336,6 +366,12 @@ QtObject {
     // then calls finalizeRemoval.
     function removeBackground(wrapper) {
         if (!wrapper) return;
+        // Queued but never flushed → it never appeared; just drop it.
+        const pi = _pendingAdds.findIndex(p => p.wrapper === wrapper);
+        if (pi >= 0) {
+            _pendingAdds.splice(pi, 1);
+            return;
+        }
         // Borrower closing → pop it from its donor's stack (out-of-order
         // closes splice mid-stack). The slot morphs to the next stack top,
         // or home to the donor; a deferred donor close fires once the stack

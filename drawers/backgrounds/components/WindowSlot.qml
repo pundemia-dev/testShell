@@ -41,15 +41,27 @@ Item {
     // when the stack drains. The rail entry itself never changes (identity
     // rule) — everything is keyed off the out-of-band manager.borrowState
     // map, so the flip reaches this live delegate as a property change.
-    readonly property var _borrow: manager.borrowState[arrivalSeq]
+    // Latched arrivalSeq: ScriptModel transiently nulls modelData during row
+    // moves/removals, flipping the required arrivalSeq to -1 and back on a
+    // LIVE delegate. All borrow/publish logic keys off this latched copy so
+    // the flicker can't fake a borrow transition (which would enable the
+    // x/y flight springs mid-collapse and skew where a closing bg flies) or
+    // pollute the manager's seq-keyed maps with -1 entries.
+    property int latchedSeq: -1
+    onArrivalSeqChanged: {
+        if (arrivalSeq >= 0)
+            latchedSeq = arrivalSeq;
+    }
+
+    readonly property var _borrow: manager.borrowState[latchedSeq]
     readonly property var borrowers: _borrow?.stack ?? []
     readonly property bool borrowed: borrowers.length > 0
     readonly property var activeWrapper: borrowed ? borrowers[borrowers.length - 1].wrapper : wrapper
     // Seq the slot's live geometry/hover is published under: the top
     // borrower's borrowSeq while borrowed (so the borrower's module can
     // subscribe to slotHover/slotRects with the seq requestBackground gave
-    // it), the entry's own arrivalSeq otherwise.
-    readonly property int activeSeq: borrowed ? borrowers[borrowers.length - 1].borrowSeq : arrivalSeq
+    // it), the entry's own seq otherwise.
+    readonly property int activeSeq: borrowed ? borrowers[borrowers.length - 1].borrowSeq : latchedSeq
 
     // ── Close animation (dying) ──────────────────────────────────────
     // Bound from manager.dyingState via the Rail delegate. While true, the slot
@@ -63,12 +75,21 @@ Item {
     property var deathRect: null
     property bool _collapseStarted: false
     property bool _finalized: false
-    property bool _sizeNoAnim: false   // gate to snap _rawWidth/_rawHeight (no spring)
 
     // ── Content sizing ───────────────────────────────────────────────
     // The loader whose item drives targetWrapper* sizing: the borrower's
     // while its content is on this slot, the donor's own otherwise.
-    readonly property Item contentLoader: borrowed ? borrowLoader : loader
+    // Assigned IMPERATIVELY (loader Component.onCompleted + the borrow
+    // transition handler), NOT as a declarative binding: it must stay null
+    // through the delegate's initial binding pass so targetWrapper* first
+    // evaluates to 0 and the size springs animate the appear from zero.
+    // A binding resolves the loader id within the creation pass and the
+    // panel pops in at full size with no appear animation.
+    property Item contentLoader: null
+
+    function _syncContentLoader() {
+        contentLoader = borrowed ? borrowLoader : loader;
+    }
 
     readonly property int targetWrapperWidth: {
         if (!activeWrapper)
@@ -106,10 +127,62 @@ Item {
         when: root.targetWrapperHeight > 0
     }
 
-    property int _rawWidth: targetWrapperWidth
-    property int _rawHeight: targetWrapperHeight
+    // _rawWidth/_rawHeight are driven by EXPLICIT SpringAnimations (below),
+    // not by a declared binding + Behavior. Reason: this delegate is created
+    // from within another component's finalization (wrapper Loader →
+    // requestBackground → Repeater), so its Behaviors aren't finalized yet
+    // when the content size settles ~30-160ms later — and a non-finalized
+    // Behavior passes EVERY write straight through (binding or imperative),
+    // which snapped the appear to full size. Explicitly started animations
+    // don't care about Behavior finalization, so the appear springs from the
+    // first frame of the delegate's life.
+    property int _rawWidth: 0
+    property int _rawHeight: 0
+    // Pre-completion target arrivals snap (parity with the old declared
+    // binding, whose initial evaluation was never animated — startup bar
+    // segments, fast fully-sized content); anything later springs.
+    property bool _sizeReady: false
+    onTargetWrapperWidthChanged: {
+        console.log(`WSDBG seq=${latchedSeq} targetW=${targetWrapperWidth} t=${Date.now() % 100000}`); // TEMP DEBUG
+        if (dying)
+            return;
+        if (!_sizeReady) {
+            sprW.stop();
+            _rawWidth = targetWrapperWidth;
+        } else {
+            _driveWidth(targetWrapperWidth);
+        }
+    }
+    onTargetWrapperHeightChanged: {
+        if (dying)
+            return;
+        if (!_sizeReady) {
+            sprH.stop();
+            _rawHeight = targetWrapperHeight;
+        } else {
+            _driveHeight(targetWrapperHeight);
+        }
+    }
     readonly property int paintedWidth: Math.max(0, _rawWidth)
     readonly property int paintedHeight: Math.max(0, _rawHeight)
+
+    // Spring _rawWidth/_rawHeight toward v. SpringAnimation live-tracks `to`
+    // while running, so retargets mid-flight keep their velocity.
+    function _driveWidth(v) {
+        sprW.to = v;
+        if (!sprW.running)
+            sprW.restart();
+    }
+    function _driveHeight(v) {
+        sprH.to = v;
+        if (!sprH.running)
+            sprH.restart();
+    }
+
+    // TEMP DEBUG (remove after verifying the appear spring)
+    on_RawWidthChanged: console.log(`WSDBG seq=${latchedSeq} rawW=${_rawWidth} t=${Date.now() % 100000}`)
+    onContentLoaderChanged: console.log(`WSDBG seq=${latchedSeq} contentLoader=${contentLoader} t=${Date.now() % 100000}`)
+    on_CollapseStartedChanged: console.log(`WSDBG seq=${latchedSeq} collapseStarted=${_collapseStarted} t=${Date.now() % 100000}`)
 
     // ── Liquid rounding morph (Config.backgrounds.liquidRounding) ───────
     // Time-based corner morph parallel to appear/collapse (not size-keyed):
@@ -156,21 +229,23 @@ Item {
     // deform engine on the BlobRect below, driven by the centre velocity this
     // motion generates (resize from an edge moves the centre toward that edge, so
     // the stretch direction encodes the expansion origin). See services/Liquid.qml.
-    Behavior on _rawWidth {
-        enabled: !root._sizeNoAnim
-        SpringAnimation {
-            spring: Liquid.sizeSpring
-            damping: Liquid.sizeDamping
-            epsilon: Liquid.sizeEpsilon
-        }
+    SpringAnimation {
+        id: sprW
+        target: root
+        property: "_rawWidth"
+        spring: Liquid.sizeSpring
+        damping: Liquid.sizeDamping
+        epsilon: Liquid.sizeEpsilon
+        // TEMP DEBUG
+        onRunningChanged: console.log(`WSDBG seq=${root.latchedSeq} sprW running=${running} to=${to}`)
     }
-    Behavior on _rawHeight {
-        enabled: !root._sizeNoAnim
-        SpringAnimation {
-            spring: Liquid.sizeSpring
-            damping: Liquid.sizeDamping
-            epsilon: Liquid.sizeEpsilon
-        }
+    SpringAnimation {
+        id: sprH
+        target: root
+        property: "_rawHeight"
+        spring: Liquid.sizeSpring
+        damping: Liquid.sizeDamping
+        epsilon: Liquid.sizeEpsilon
     }
 
     // ── Collapse-on-close ────────────────────────────────────────────
@@ -181,6 +256,7 @@ Item {
     // shrinking paintedWidth via prevSlot. When the collapse reaches 0 we ask the
     // manager to perform the real splice.
     onDyingChanged: {
+        console.log(`WSDBG seq=${latchedSeq} dying=${dying} t=${Date.now() % 100000}`); // TEMP DEBUG
         if (root.dying)
             root._startCollapse();
         else
@@ -205,16 +281,16 @@ Item {
                                 root.targetWrapperWidth, root._rawWidth);
         const startH = Math.max(root.deathRect ? root.deathRect.h : 0,
                                 root.targetWrapperHeight, root._rawHeight);
-        root._sizeNoAnim = true;
+        sprW.stop();
+        sprH.stop();
         root._rawWidth = startW;
         root._rawHeight = startH;
-        root._sizeNoAnim = false;
         // Next tick so the snapped start size lands before the collapse animates.
         Qt.callLater(() => {
             if (!root.dying)
                 return;
-            root._rawWidth = 0;
-            root._rawHeight = 0;
+            root._driveWidth(0);
+            root._driveHeight(0);
         });
         // Bloom the corners back toward a droplet (the shader content blur
         // rides the same mix, hence the wider gate).
@@ -226,13 +302,14 @@ Item {
     }
 
     function _cancelCollapse() {
-        // Revived mid-collapse → reverse into a re-open by restoring the live
-        // target bindings (broken by the imperative assignments above).
+        // Revived mid-collapse → reverse into a re-open. Re-sync to the live
+        // targets; the onTargetWrapper*Changed handlers (gated on `dying`,
+        // which just flipped false) take over subsequent changes.
         finalizeTimer.stop();
         root._collapseStarted = false;
         root._finalized = false;
-        root._rawWidth = Qt.binding(() => root.targetWrapperWidth);
-        root._rawHeight = Qt.binding(() => root.targetWrapperHeight);
+        root._driveWidth(root.targetWrapperWidth);
+        root._driveHeight(root.targetWrapperHeight);
         // Re-open rounding (relax the droplet back to the configured radius;
         // the shader content blur rides the same mix, hence the wider gate).
         collapseRoundAnim.stop();
@@ -257,7 +334,9 @@ Item {
         // Defer the splice — it removes this entry from the rail model, which
         // destroys this very delegate. Doing that from inside the delegate's
         // own call stack is asking for trouble.
-        const seq = root.arrivalSeq;
+        // latchedSeq, not arrivalSeq — the raw value may be flickering -1
+        // (ScriptModel modelData null) exactly when the splice lands.
+        const seq = root.latchedSeq;
         const mgr = root.manager;
         Qt.callLater(() => {
             if (mgr && mgr.finalizeRemoval)
@@ -498,23 +577,30 @@ Item {
     // flight gets the liquid stretch for free.
     property bool _posAnimActive: false
     property int _prevActiveSeq: -1
+    // activeSeq derives from latchedSeq + borrowState only, so this fires
+    // exactly once at completion (the latch, prev < 0 → no-op) and then on
+    // REAL borrow transitions — never on ScriptModel's modelData flicker.
     onActiveSeqChanged: {
+        const prev = _prevActiveSeq;
+        _prevActiveSeq = activeSeq;
+        _syncContentLoader();
+        if (prev < 0)
+            return; // initial latch, not a borrow transition
         _posAnimActive = true;
         posAnimOffTimer.restart();
         // Re-key the published geometry/hover to the new active seq. Stale
         // borrower keys are dropped; the donor's own key is refreshed by
         // _publishSlotRect (frozen homeRect while borrowed).
         if (manager) {
-            if (_prevActiveSeq >= 0 && _prevActiveSeq !== arrivalSeq) {
-                manager.clearSlotRect(_prevActiveSeq);
-                manager.clearSlotHover(_prevActiveSeq);
-                manager.clearSlotDragOver(_prevActiveSeq);
+            if (prev !== latchedSeq) {
+                manager.clearSlotRect(prev);
+                manager.clearSlotHover(prev);
+                manager.clearSlotDragOver(prev);
             }
             _publishSlotRect();
             manager.setSlotHover(activeSeq, _slotHovered);
             manager.setSlotDragOver(activeSeq, _slotDragOver);
         }
-        _prevActiveSeq = activeSeq;
     }
     Timer {
         id: posAnimOffTimer
@@ -936,11 +1022,11 @@ Item {
     readonly property bool _slotDragOver: _envDragOver
 
     on_SlotHoveredChanged: {
-        if (manager && manager.setSlotHover)
+        if (manager && manager.setSlotHover && activeSeq >= 0)
             manager.setSlotHover(activeSeq, _slotHovered);
     }
     on_SlotDragOverChanged: {
-        if (manager && manager.setSlotDragOver)
+        if (manager && manager.setSlotDragOver && activeSeq >= 0)
             manager.setSlotDragOver(activeSeq, _slotDragOver);
     }
 
@@ -1826,6 +1912,8 @@ Item {
                             loader.updateContentSize();
                         }
                     }
+
+                    Component.onCompleted: root._syncContentLoader()
                 }
 
                 // Borrower content (mode "replace"): only the borrow-stack
@@ -1874,7 +1962,7 @@ Item {
     // Implemented imperatively via signal handlers (NOT a side-effecting
     // readonly binding) — Qt 6 flags the latter as a binding loop.
     function _publishSlotRect() {
-        if (!manager || !manager.setSlotRect)
+        if (!manager || !manager.setSlotRect || activeSeq < 0)
             return;
         // Live (possibly flying) geometry goes to the active seq; while
         // borrowed, the donor's own seq keeps the frozen home footprint so
@@ -1882,7 +1970,7 @@ Item {
         manager.setSlotRect(activeSeq, x, y, paintedWidth, paintedHeight);
         if (borrowed && _borrow.homeRect) {
             const hr = _borrow.homeRect;
-            manager.setSlotRect(arrivalSeq, hr.x, hr.y, hr.w, hr.h);
+            manager.setSlotRect(latchedSeq, hr.x, hr.y, hr.w, hr.h);
         }
     }
     Connections {
@@ -1922,7 +2010,19 @@ Item {
         BlurManager.addRegion(blurNeckBottom);
         BlurManager.addRegion(blurNeckLeft);
         BlurManager.addRegion(blurNeckRight);
-        root._prevActiveSeq = root.activeSeq;
+        // Latch the seq. This fires the activeSeq handler once; prev < 0
+        // makes it a no-op beyond seeding _prevActiveSeq + contentLoader
+        // (already pointed at the donor loader by its own onCompleted).
+        root.latchedSeq = root.arrivalSeq;
+        // From here on, size changes animate. Fallback sync in case the
+        // initial target evaluation never fired the change handlers.
+        root._sizeReady = true;
+        if (!root.dying) {
+            if (root._rawWidth === 0 && root.targetWrapperWidth > 0 && !sprW.running)
+                root._rawWidth = root.targetWrapperWidth;
+            if (root._rawHeight === 0 && root.targetWrapperHeight > 0 && !sprH.running)
+                root._rawHeight = root.targetWrapperHeight;
+        }
         // Delegate created already dying (safety path — normally the flip
         // reaches a live delegate), so onDyingChanged won't fire. Kick off
         // the collapse here.
@@ -1950,18 +2050,18 @@ Item {
         BlurManager.removeRegion(blurNeckLeft);
         BlurManager.removeRegion(blurNeckRight);
         if (manager && manager.clearSlotRect) {
-            manager.clearSlotRect(arrivalSeq);
-            if (activeSeq !== arrivalSeq)
+            manager.clearSlotRect(latchedSeq);
+            if (activeSeq !== latchedSeq)
                 manager.clearSlotRect(activeSeq);
         }
         if (manager && manager.clearSlotHover) {
-            manager.clearSlotHover(arrivalSeq);
-            if (activeSeq !== arrivalSeq)
+            manager.clearSlotHover(latchedSeq);
+            if (activeSeq !== latchedSeq)
                 manager.clearSlotHover(activeSeq);
         }
         if (manager && manager.clearSlotDragOver) {
-            manager.clearSlotDragOver(arrivalSeq);
-            if (activeSeq !== arrivalSeq)
+            manager.clearSlotDragOver(latchedSeq);
+            if (activeSeq !== latchedSeq)
                 manager.clearSlotDragOver(activeSeq);
         }
     }
