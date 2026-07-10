@@ -173,6 +173,8 @@ write a new module/component, pick the fill colour by this rule:**
 
 If you need to add a window-level behaviour, first check whether an existing contract field (mode/pinned/reservesSpace/m*/p*) already covers it. Adding a new contract field is the last resort — it widens the public surface every module has to know about. (See [feedback memory on contract surface minimalism].)
 
+Rail entries (`{ wrapper, arrivalSeq }` in `BackgroundsManager.rails`) are **identity-stable**: created once, spliced only by `finalizeRemoval`, never replaced or mutated in between. `Rail.qml` feeds them to `ScriptModel`s that diff by object identity — a replaced entry object destroys + recreates that WindowSlot delegate (and everything it hosts). Any transient per-entry state goes in the seq-keyed manager maps (`dyingState`, `slotRects`, `slotHover`, `slotDragOver`), not on the entry; external bindings over rail queries must also depend on `dyingState` (closing flips only the map, not `rails`). Details: [`docs/development/architecture.md`](docs/development/architecture.md) § Entry lifecycle.
+
 ### Niri-specific shortcut binding
 
 When adding a keyboard shortcut for a module:

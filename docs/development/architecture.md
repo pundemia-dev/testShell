@@ -29,18 +29,37 @@ Screen
   for per-zone SDF присасывание. Lives inside `bgRenderHost`.
   See [border-zones.md](./border-zones.md).
 - **9 `Rail` instances**, one per anchor position (topLeft … bottomRight).
-  Each `Rail` is a Repeater over its slice of `manager.rails[i]`.
+  Each `Rail` renders its slice of `manager.rails[i]` through two
+  `ScriptModel`-backed Repeaters (pinned / dynamic). ScriptModel diffs by
+  element identity, so opening or closing one bg touches exactly one delegate —
+  rail siblings are never rebuilt.
 - **One `contentLayer` (z=100)** — every module's content is reparented here
   with `z = arrivalSeq + 0.5`. Per-slot envelope Items (HoverHandler + DropArea)
   live here at z=−1.
 
 Key files:
 - `services/BackgroundsManager.qml` — `rails[][]`, `requestBackground/removeBackground`,
-  `reservedTop/Bottom/Left/Right`, zone helpers, `slotRects/slotHover/slotDragOver`.
+  `dyingState`, `reservedTop/Bottom/Left/Right`, zone helpers,
+  `slotRects/slotHover/slotDragOver`.
 - `drawers/backgrounds/components/Rail.qml` — sorts `pinned → push → overlay`.
 - `drawers/backgrounds/components/WindowSlot.qml` — BlobRect + content Loader,
   position math, L-step, bridges, holdover, envelope.
   See [input-mask.md](./input-mask.md).
+
+Entry lifecycle (close-anim latching): rail entries `{ wrapper, arrivalSeq }`
+are **identity-stable** — created once in `requestBackground`, spliced out only
+by `finalizeRemoval`. `removeBackground` doesn't touch `rails` at all: it
+records the entry in the seq-keyed `manager.dyingState` map (with the last
+painted rect as `deathRect`); the live `WindowSlot` sees `dying` flip via its
+binding, collapses to 0, then calls `finalizeRemoval` for the real splice.
+Re-requesting a dying wrapper revives it by clearing the map key (the in-flight
+collapse reverses into a re-open, same `arrivalSeq`). **Never replace or mutate
+an entry object, and never store per-entry state on it** — a new object
+identity makes ScriptModel destroy + recreate that delegate; transient state
+belongs in the seq-keyed maps (`dyingState`, `slotRects`, `slotHover`,
+`slotDragOver`). Bindings that consume these queries outside the manager must
+depend on `dyingState` too (see `BorderZone._dyingRef`), since a close no
+longer reassigns `rails`.
 
 ## Wrapper contract
 
