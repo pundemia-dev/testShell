@@ -5,8 +5,8 @@ import Quickshell
 import Caelestia.Blobs
 
 // One rail = one anchor position. Renders its slice of manager.rails as
-// WindowSlots, sorted pinned (by seq) → push (by seq) → overlay (by seq).
-// Position math + L-step lives in WindowSlot.qml.
+// WindowSlots, sorted pinned → push → overlay, each group by
+// (wrapper.layer, arrivalSeq). Position math + L-step lives in WindowSlot.qml.
 //
 // The Repeaters run on ScriptModels, NOT raw JS arrays: a Repeater on a JS
 // array destroys + recreates EVERY delegate whenever the array is reassigned
@@ -41,16 +41,15 @@ Item {
 
     anchors.fill: parent
 
+    // Groups + ordering come from the manager (groupEntries/entryOrder):
+    // pinned → push → overlay, each sorted by (wrapper.layer, arrivalSeq).
+    // wrapper.layer is a live QObject property read, so a config change
+    // resorts the rail in place — ScriptModel turns that into row moves,
+    // never delegate recreation.
     readonly property var sortedWindows: {
         if (!windows || windows.length === 0) return [];
-        const arr = windows.slice();
-        const pinned = arr.filter(e => e.wrapper && e.wrapper.pinned)
-                          .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        const push = arr.filter(e => e.wrapper && !e.wrapper.pinned && (e.wrapper.mode ?? "push") !== "overlay")
-                        .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        const overlay = arr.filter(e => e.wrapper && !e.wrapper.pinned && e.wrapper.mode === "overlay")
-                           .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        return pinned.concat(push, overlay);
+        const groups = manager.groupEntries(windows.filter(e => e.wrapper));
+        return groups.pinned.concat(groups.push, groups.overlay);
     }
 
     Component {

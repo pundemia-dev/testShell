@@ -29,7 +29,14 @@ import Quickshell
 // Rail.qml feeds them to ScriptModels, which diff by element identity — so an
 // open/close/dying change touches exactly one delegate and never rebuilds the
 // rail's siblings. All transient per-entry state (dying, deathRect, painted
-// rect, hover) lives out-of-band in seq-keyed maps.
+// rect, hover, borrow stack) lives out-of-band in seq-keyed maps.
+//
+// mode "replace" (borrowing): requestBackground for a replace-mode wrapper
+// doesn't append an entry — it picks a donor entry on the wrapper's rail
+// (chain depth = wrapper.layer) and pushes onto borrowState[donorSeq].stack.
+// The donor's WindowSlot morphs to the borrower and back; removeBackground
+// on the borrower pops the stack. A donor closed while borrowed defers its
+// dying until the stack drains (donorCloseRequested).
 //
 // Dying entries are excluded from layout-affecting queries (reserved-edge,
 // zone interaction targets) so a closing panel releases its exclusion and stops
@@ -146,6 +153,62 @@ QtObject {
         slotDragOver = updated;
     }
 
+    // ── Borrowed backgrounds (mode "replace") ────────────────────────
+    // donorSeq → { stack: [{ wrapper, borrowSeq }...],  // LIFO, top = last
+    //              homeRect: {x,y,w,h} | null,          // donor's painted rect at first borrow
+    //              donorCloseRequested: bool }
+    // Kept OUTSIDE the rail entries (same identity rule as dyingState): a
+    // borrow flips only this map, the donor entry object never changes, so
+    // the live WindowSlot delegate sees it as a plain property change and
+    // morphs in place. While borrowed, the donor entry stays alive on its
+    // rail with its intrinsic contract values — so wlr exclusion zones and
+    // zone-strip queries stay frozen at the donor's footprint for free.
+    // External bindings over rail queries must depend on this map too (like
+    // dyingState) if they need to react to borrows.
+    property var borrowState: ({})
+
+    function _findBorrow(wrapper) {
+        for (const key in borrowState) {
+            const idx = borrowState[key].stack.findIndex(b => b.wrapper === wrapper);
+            if (idx >= 0)
+                return { donorSeq: Number(key), idx: idx };
+        }
+        return null;
+    }
+
+    // Non-dying entries of a rail in visual chain order (pinned → push →
+    // overlay, each group by entryOrder). Depth d in this list is what a
+    // replace-mode wrapper's `layer` indexes into when picking a donor.
+    function _chainEntries(railIdx) {
+        const dying = dyingState;
+        const alive = rails[railIdx].filter(e => e.wrapper && dying[e.arrivalSeq] === undefined);
+        const groups = groupEntries(alive);
+        return groups.pinned.concat(groups.push, groups.overlay);
+    }
+
+    // Chain ordering inside a mode group (pinned / push / overlay): explicit
+    // wrapper.layer first (lower = nearer the screen edge), arrival order as
+    // the tie-breaker. Default layer 0 everywhere preserves pure-arrival
+    // ordering. Shared by Rail.sortedWindows and the zone queries so the
+    // geometric chain and the interaction targets never disagree.
+    function entryOrder(a, b) {
+        const la = a.wrapper?.layer ?? 0;
+        const lb = b.wrapper?.layer ?? 0;
+        return la !== lb ? la - lb : a.arrivalSeq - b.arrivalSeq;
+    }
+
+    // Split a rail slice into the three mode groups. mode "replace" entries
+    // only exist on a rail as the no-donor fallback — they position like
+    // overlays, so they group with them.
+    function groupEntries(entries) {
+        const mode = e => e.wrapper.mode ?? "push";
+        return {
+            pinned: entries.filter(e => e.wrapper.pinned).sort(entryOrder),
+            push: entries.filter(e => !e.wrapper.pinned && mode(e) !== "overlay" && mode(e) !== "replace").sort(entryOrder),
+            overlay: entries.filter(e => !e.wrapper.pinned && (mode(e) === "overlay" || mode(e) === "replace")).sort(entryOrder)
+        };
+    }
+
     function determineRailIndex(wrapper) {
         const left = wrapper.aLeft ?? false;
         const right = wrapper.aRight ?? false;
@@ -179,6 +242,10 @@ QtObject {
     // the seq.
     function requestBackground(wrapper /*, isolate, excludeBarArea */) {
         if (!wrapper) return -1;
+        // Already borrowing → same borrowSeq (idempotent, like revive).
+        const curBorrow = _findBorrow(wrapper);
+        if (curBorrow)
+            return borrowState[curBorrow.donorSeq].stack[curBorrow.idx].borrowSeq;
         const i = determineRailIndex(wrapper);
         const existing = rails[i].find(e => e.wrapper === wrapper);
         if (existing) {
@@ -190,7 +257,44 @@ QtObject {
                 delete updated[existing.arrivalSeq];
                 dyingState = updated;
             }
+            // A re-opened donor no longer wants its deferred close.
+            const st = borrowState[existing.arrivalSeq];
+            if (st && st.donorCloseRequested) {
+                const updated = Object.assign({}, borrowState);
+                updated[existing.arrivalSeq] = { stack: st.stack, homeRect: st.homeRect, donorCloseRequested: false };
+                borrowState = updated;
+            }
             return existing.arrivalSeq;
+        }
+        // mode "replace": borrow the bg of the chain entry at depth `layer`
+        // on this wrapper's rail instead of opening an own bg. The donor's
+        // WindowSlot morphs to this wrapper's anchors/margins/size and back.
+        if ((wrapper.mode ?? "push") === "replace") {
+            const chain = _chainEntries(i);
+            if (chain.length > 0) {
+                const depth = Math.min(Math.max(wrapper.layer ?? 0, 0), chain.length - 1);
+                const donor = chain[depth];
+                const seq = _seq++;
+                const st = borrowState[donor.arrivalSeq];
+                const updated = Object.assign({}, borrowState);
+                if (st) {
+                    updated[donor.arrivalSeq] = {
+                        stack: [...st.stack, { wrapper: wrapper, borrowSeq: seq }],
+                        homeRect: st.homeRect,
+                        donorCloseRequested: st.donorCloseRequested
+                    };
+                } else {
+                    const r = slotRects[donor.arrivalSeq] ?? null;
+                    updated[donor.arrivalSeq] = {
+                        stack: [{ wrapper: wrapper, borrowSeq: seq }],
+                        homeRect: r ? { x: r.x, y: r.y, w: r.w, h: r.h } : null,
+                        donorCloseRequested: false
+                    };
+                }
+                borrowState = updated;
+                return seq;
+            }
+            // Empty rail → fall through: open an own bg (groups with overlays).
         }
         const seq = _seq++;
         const newRails = rails.slice();
@@ -232,10 +336,49 @@ QtObject {
     // then calls finalizeRemoval.
     function removeBackground(wrapper) {
         if (!wrapper) return;
+        // Borrower closing → pop it from its donor's stack (out-of-order
+        // closes splice mid-stack). The slot morphs to the next stack top,
+        // or home to the donor; a deferred donor close fires once the stack
+        // drains.
+        const b = _findBorrow(wrapper);
+        if (b) {
+            const st = borrowState[b.donorSeq];
+            const stack = st.stack.slice();
+            stack.splice(b.idx, 1);
+            const updated = Object.assign({}, borrowState);
+            if (stack.length > 0) {
+                updated[b.donorSeq] = { stack: stack, homeRect: st.homeRect, donorCloseRequested: st.donorCloseRequested };
+                borrowState = updated;
+                return;
+            }
+            delete updated[b.donorSeq];
+            borrowState = updated;
+            if (st.donorCloseRequested) {
+                for (let i = 0; i < 9; i++) {
+                    const entry = rails[i].find(e => e.arrivalSeq === b.donorSeq);
+                    if (entry) {
+                        removeBackground(entry.wrapper);
+                        break;
+                    }
+                }
+            }
+            return;
+        }
         for (let i = 0; i < 9; i++) {
             const entry = rails[i].find(e => e.wrapper === wrapper);
             if (entry) {
                 if (isDying(entry.arrivalSeq)) return; // already collapsing
+                // Donor with live borrowers: its bg is out on loan — defer
+                // the close until the last borrower returns it.
+                const st = borrowState[entry.arrivalSeq];
+                if (st && st.stack.length > 0) {
+                    if (!st.donorCloseRequested) {
+                        const updated = Object.assign({}, borrowState);
+                        updated[entry.arrivalSeq] = { stack: st.stack, homeRect: st.homeRect, donorCloseRequested: true };
+                        borrowState = updated;
+                    }
+                    return;
+                }
                 const r = slotRects[entry.arrivalSeq] ?? null;
                 const updated = Object.assign({}, dyingState);
                 updated[entry.arrivalSeq] = {
@@ -266,6 +409,13 @@ QtObject {
         const updated = Object.assign({}, dyingState);
         delete updated[arrivalSeq];
         dyingState = updated;
+        // Safety: a donor should only die once its stack drained, but never
+        // leave a stale borrow record behind the splice.
+        if (borrowState[arrivalSeq] !== undefined) {
+            const b = Object.assign({}, borrowState);
+            delete b[arrivalSeq];
+            borrowState = b;
+        }
     }
 
     // Aggregated layer-shell exclusion per side. Cached as readonly properties
@@ -382,18 +532,12 @@ QtObject {
         if (!rail || rail.length === 0) return [];
 
         const dying = dyingState;
-        const pinned = rail.filter(e => e.wrapper && dying[e.arrivalSeq] === undefined && e.wrapper.pinned)
-                           .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        const push = rail.filter(e => e.wrapper && dying[e.arrivalSeq] === undefined && !e.wrapper.pinned
-                                       && (e.wrapper.mode ?? "push") !== "overlay")
-                         .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        const overlay = rail.filter(e => e.wrapper && dying[e.arrivalSeq] === undefined && !e.wrapper.pinned
-                                          && e.wrapper.mode === "overlay")
-                            .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
+        const alive = rail.filter(e => e.wrapper && dying[e.arrivalSeq] === undefined);
+        const groups = groupEntries(alive);
 
-        const layer1 = pinned.length > 0 ? [pinned[0]]
-                                          : (push.length > 0 ? [push[0]] : []);
-        return layer1.concat(overlay);
+        const layer1 = groups.pinned.length > 0 ? [groups.pinned[0]]
+                                                : (groups.push.length > 0 ? [groups.push[0]] : []);
+        return layer1.concat(groups.overlay);
     }
 
     // The "topmost" edge-nearest entry — used to derive MouseArea thickness

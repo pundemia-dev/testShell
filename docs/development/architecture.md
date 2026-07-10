@@ -57,9 +57,10 @@ collapse reverses into a re-open, same `arrivalSeq`). **Never replace or mutate
 an entry object, and never store per-entry state on it** — a new object
 identity makes ScriptModel destroy + recreate that delegate; transient state
 belongs in the seq-keyed maps (`dyingState`, `slotRects`, `slotHover`,
-`slotDragOver`). Bindings that consume these queries outside the manager must
-depend on `dyingState` too (see `BorderZone._dyingRef`), since a close no
-longer reassigns `rails`.
+`slotDragOver`, `borrowState`). Bindings that consume these queries outside
+the manager must depend on `dyingState` too (see `BorderZone._dyingRef`),
+since a close no longer reassigns `rails` — and on `borrowState` if they need
+to react to mode-"replace" borrows (a borrow flips only that map).
 
 ## Wrapper contract
 
@@ -80,11 +81,11 @@ QtObject {
     property int vCenterOffset, hCenterOffset
 
     // Stacking semantics
-    property string mode: "push"        // "push" | "overlay"
+    property string mode: "push"        // "push" | "overlay" | "replace"
     property bool pinned: false         // visually fixed at layer 1
     property bool reservesSpace: false  // → wlr-layer-shell exclusion zone
     property bool sticks: true          // false → no SDF merge, clean floating contour
-    readonly property int layer: 0      // assigned by Rail
+    property int layer: 0               // chain depth on the rail (see below)
     property int windowRounding: -1
 
     property Component content: null
@@ -100,6 +101,26 @@ manager.removeBackground(wrapper)
 **Margin direction for layer-2+ slots**: gap to prev is taken from **this
 slot's own facing margin** (`mLeft` when prev is to the left, `mTop` when prev
 is above) — NOT `prev.mRight`/`prev.mBottom`.
+
+**`layer`** orders slots *within their mode group* on the rail: groups stay
+pinned → push → overlay, each sorted by `(layer, arrivalSeq)` — lower `layer`
+sits nearer the screen edge (`BackgroundsManager.entryOrder`/`groupEntries`).
+Draw z-order is NOT affected — that stays "newest open on top" (seq-based).
+
+**`mode: "replace"`** borrows an existing bg instead of opening one: on
+`requestBackground` the manager picks a donor entry on the wrapper's rail —
+the chain slot at depth `layer` (clamped; empty rail → fallback: the wrapper
+opens its own bg, positioned like an overlay) — and pushes the wrapper onto
+`borrowState[donorSeq].stack`. The donor's WindowSlot then reads every
+wrapper-derived input from the stack top (`activeWrapper`) and **morphs** to
+the borrower's anchors/margins/size (animated x/y + the usual size springs);
+`removeBackground` pops the stack and the bg flies home. Multiple borrowers
+stack LIFO on one donor. While borrowed: the donor's content stays loaded but
+hidden (state preserved), its chain place and wlr exclusion stay frozen at the
+home footprint (siblings and niri windows don't move), live geometry/hover are
+published under the borrower's seq (returned by `requestBackground`) while the
+donor's seq keeps the frozen home rect. A donor closed while borrowed defers
+its dying until the stack drains.
 
 ## Module system
 

@@ -16,7 +16,7 @@ import QtQuick.Layouts
 //   margins/paddings  EdgesData   (all + left/right/top/bottom)
 //   hCenterOffset     int (may be negative)
 //   vCenterOffset     int (may be negative)
-//   mode              "push" | "overlay"
+//   mode              "push" | "overlay" | "replace"
 //   layer             int
 //   rounding          number | null (null = follow Config.backgrounds.rounding)
 ColumnLayout {
@@ -149,7 +149,7 @@ ColumnLayout {
 
         SettingRow {
             label: qsTr("Mode")
-            description: qsTr("Push shifts siblings aside; Overlay draws on top of them.")
+            description: qsTr("Push shifts siblings aside; Overlay draws on top of them; Replace borrows an existing background on the rail and morphs it into this panel.")
 
             RowLayout {
                 spacing: Appearance.spacing.small
@@ -157,7 +157,8 @@ ColumnLayout {
                 Repeater {
                     model: [
                         { key: "push", label: qsTr("Push") },
-                        { key: "overlay", label: qsTr("Overlay") }
+                        { key: "overlay", label: qsTr("Overlay") },
+                        { key: "replace", label: qsTr("Replace") }
                     ]
                     delegate: ToggleButton {
                         required property var modelData
@@ -181,7 +182,7 @@ ColumnLayout {
 
         SettingRow {
             label: qsTr("Layer")
-            description: qsTr("Stacking depth on the anchor rail.")
+            description: qsTr("Chain depth on the anchor rail — lower sits nearer the screen edge. For Replace: which slot (by depth) to borrow.")
             CustomSpinBox {
                 value: root.cfg.layer
                 min: 0

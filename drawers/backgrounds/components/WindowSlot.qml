@@ -34,6 +34,23 @@ Item {
     required property int arrivalSeq
     required property var manager
 
+    // ── Borrow state (mode "replace") ────────────────────────────────
+    // While another wrapper borrows this slot's bg, every wrapper-derived
+    // input below reads from the ACTIVE wrapper (borrow-stack top) instead:
+    // the bg morphs to the borrower's anchors/margins/size and back home
+    // when the stack drains. The rail entry itself never changes (identity
+    // rule) — everything is keyed off the out-of-band manager.borrowState
+    // map, so the flip reaches this live delegate as a property change.
+    readonly property var _borrow: manager.borrowState[arrivalSeq]
+    readonly property var borrowers: _borrow?.stack ?? []
+    readonly property bool borrowed: borrowers.length > 0
+    readonly property var activeWrapper: borrowed ? borrowers[borrowers.length - 1].wrapper : wrapper
+    // Seq the slot's live geometry/hover is published under: the top
+    // borrower's borrowSeq while borrowed (so the borrower's module can
+    // subscribe to slotHover/slotRects with the seq requestBackground gave
+    // it), the entry's own arrivalSeq otherwise.
+    readonly property int activeSeq: borrowed ? borrowers[borrowers.length - 1].borrowSeq : arrivalSeq
+
     // ── Close animation (dying) ──────────────────────────────────────
     // Bound from manager.dyingState via the Rail delegate. While true, the slot
     // collapses its size to 0 (mirror of the appear) and, once collapsed, asks
@@ -49,23 +66,25 @@ Item {
     property bool _sizeNoAnim: false   // gate to snap _rawWidth/_rawHeight (no spring)
 
     // ── Content sizing ───────────────────────────────────────────────
-    property Item contentLoader: null
+    // The loader whose item drives targetWrapper* sizing: the borrower's
+    // while its content is on this slot, the donor's own otherwise.
+    readonly property Item contentLoader: borrowed ? borrowLoader : loader
 
     readonly property int targetWrapperWidth: {
-        if (!wrapper)
+        if (!activeWrapper)
             return 0;
-        if (wrapper.wrapperWidth !== undefined && wrapper.wrapperWidth > 0)
-            return wrapper.wrapperWidth;
+        if (activeWrapper.wrapperWidth !== undefined && activeWrapper.wrapperWidth > 0)
+            return activeWrapper.wrapperWidth;
         if (contentLoader && contentLoader.item) {
             return (contentLoader.item.childrenRect.width || contentLoader.item.implicitWidth) + pLeft + pRight;
         }
         return 0;
     }
     readonly property int targetWrapperHeight: {
-        if (!wrapper)
+        if (!activeWrapper)
             return 0;
-        if (wrapper.wrapperHeight !== undefined && wrapper.wrapperHeight > 0)
-            return wrapper.wrapperHeight;
+        if (activeWrapper.wrapperHeight !== undefined && activeWrapper.wrapperHeight > 0)
+            return activeWrapper.wrapperHeight;
         if (contentLoader && contentLoader.item) {
             return (contentLoader.item.childrenRect.height || contentLoader.item.implicitHeight) + pTop + pBottom;
         }
@@ -255,26 +274,35 @@ Item {
     }
 
     // ── Anchor flags ─────────────────────────────────────────────────
-    readonly property bool aLeft: anchor === "topLeft" || anchor === "left" || anchor === "bottomLeft"
-    readonly property bool aRight: anchor === "topRight" || anchor === "right" || anchor === "bottomRight"
-    readonly property bool aTop: anchor === "topLeft" || anchor === "top" || anchor === "topRight"
-    readonly property bool aBottom: anchor === "bottomLeft" || anchor === "bottom" || anchor === "bottomRight"
-    readonly property bool aHCenter: anchor === "top" || anchor === "center" || anchor === "bottom"
-    readonly property bool aVCenter: anchor === "left" || anchor === "center" || anchor === "right"
+    // While borrowed, the slot positions by the BORROWER's contract anchors
+    // (own-anchor on both axes, like an overlay) — the rail's anchor string
+    // only describes the donor's home.
+    readonly property bool aLeft: borrowed ? (activeWrapper.aLeft ?? false)
+        : anchor === "topLeft" || anchor === "left" || anchor === "bottomLeft"
+    readonly property bool aRight: borrowed ? (activeWrapper.aRight ?? false)
+        : anchor === "topRight" || anchor === "right" || anchor === "bottomRight"
+    readonly property bool aTop: borrowed ? (activeWrapper.aTop ?? false)
+        : anchor === "topLeft" || anchor === "top" || anchor === "topRight"
+    readonly property bool aBottom: borrowed ? (activeWrapper.aBottom ?? false)
+        : anchor === "bottomLeft" || anchor === "bottom" || anchor === "bottomRight"
+    readonly property bool aHCenter: borrowed ? (activeWrapper.aHorizontalCenter ?? false)
+        : anchor === "top" || anchor === "center" || anchor === "bottom"
+    readonly property bool aVCenter: borrowed ? (activeWrapper.aVerticalCenter ?? false)
+        : anchor === "left" || anchor === "center" || anchor === "right"
     readonly property bool aCorner: anchor === "topLeft" || anchor === "topRight" || anchor === "bottomLeft" || anchor === "bottomRight"
 
-    // ── Wrapper props ────────────────────────────────────────────────
-    readonly property int mLeft: wrapper?.mLeft ?? 0
-    readonly property int mRight: wrapper?.mRight ?? 0
-    readonly property int mTop: wrapper?.mTop ?? 0
-    readonly property int mBottom: wrapper?.mBottom ?? 0
-    readonly property int vCenterOffset: wrapper?.vCenterOffset ?? 0
-    readonly property int hCenterOffset: wrapper?.hCenterOffset ?? 0
-    readonly property int pLeft: wrapper?.pLeft ?? Config.backgrounds.paddings.left ?? 0
-    readonly property int pTop: wrapper?.pTop ?? Config.backgrounds.paddings.top ?? 0
-    readonly property int pRight: wrapper?.pRight ?? Config.backgrounds.paddings.right ?? 0
-    readonly property int pBottom: wrapper?.pBottom ?? Config.backgrounds.paddings.bottom ?? 0
-    readonly property int windowRounding: wrapper?.windowRounding ?? Config.backgrounds.rounding ?? 0
+    // ── Wrapper props (all from the ACTIVE wrapper — borrower when borrowed) ──
+    readonly property int mLeft: activeWrapper?.mLeft ?? 0
+    readonly property int mRight: activeWrapper?.mRight ?? 0
+    readonly property int mTop: activeWrapper?.mTop ?? 0
+    readonly property int mBottom: activeWrapper?.mBottom ?? 0
+    readonly property int vCenterOffset: activeWrapper?.vCenterOffset ?? 0
+    readonly property int hCenterOffset: activeWrapper?.hCenterOffset ?? 0
+    readonly property int pLeft: activeWrapper?.pLeft ?? Config.backgrounds.paddings.left ?? 0
+    readonly property int pTop: activeWrapper?.pTop ?? Config.backgrounds.paddings.top ?? 0
+    readonly property int pRight: activeWrapper?.pRight ?? Config.backgrounds.paddings.right ?? 0
+    readonly property int pBottom: activeWrapper?.pBottom ?? Config.backgrounds.paddings.bottom ?? 0
+    readonly property int windowRounding: activeWrapper?.windowRounding ?? Config.backgrounds.rounding ?? 0
     readonly property bool liquidRounding: Config.backgrounds.liquidRounding ?? false
     // Content blur is an independent consumer of the liquid mix — it needs the
     // mix animated (and the C++ boost computed) even with liquidRounding off.
@@ -290,11 +318,14 @@ Item {
     readonly property string mode: wrapper?.mode ?? "push"
     // Whether this bg присасывается (merges with neighbours + frame). false →
     // clean floating contour. Default true preserves legacy merge behaviour.
-    readonly property bool sticks: wrapper?.sticks ?? true
+    readonly property bool sticks: activeWrapper?.sticks ?? true
     readonly property bool isPinned: wrapper?.pinned ?? false
-    readonly property bool isOverlay: mode === "overlay"
+    // mode "replace" reaches a slot of its own only via the no-donor
+    // fallback — it positions like an overlay.
+    readonly property bool isOverlay: mode === "overlay" || mode === "replace"
 
     readonly property var content: wrapper?.content
+    readonly property var borrowContent: borrowed ? activeWrapper.content : null
 
     // ── Edge offsets ─────────────────────────────────────────────────
     // Pinned wrappers paint at the very edge (edge=0). Push-mode non-pinned
@@ -303,10 +334,12 @@ Item {
     // sit *on top of* other wrappers (that's the whole point of overlay),
     // so they also get edge=0 — otherwise mode:"overlay" would actually
     // behave as "push offset by reserved area".
-    readonly property int edgeLeft: (isPinned || isOverlay) ? 0 : left_area
-    readonly property int edgeRight: (isPinned || isOverlay) ? 0 : right_area
-    readonly property int edgeTop: (isPinned || isOverlay) ? 0 : top_area
-    readonly property int edgeBottom: (isPinned || isOverlay) ? 0 : bottom_area
+    // A borrowed slot flies as the borrower's panel: push-style insets
+    // (respect exclusion zones) regardless of the donor's own pinned/mode.
+    readonly property int edgeLeft: (!borrowed && (isPinned || isOverlay)) ? 0 : left_area
+    readonly property int edgeRight: (!borrowed && (isPinned || isOverlay)) ? 0 : right_area
+    readonly property int edgeTop: (!borrowed && (isPinned || isOverlay)) ? 0 : top_area
+    readonly property int edgeBottom: (!borrowed && (isPinned || isOverlay)) ? 0 : bottom_area
 
     // ── Previous sibling on rail ─────────────────────────────────────
     readonly property var prevSlot: railRef ? railRef.prevSlot(layerIdx - 1) : null
@@ -320,6 +353,8 @@ Item {
         return "";
     }
     readonly property bool isLStep: {
+        if (borrowed)
+            return false;
         if (!aCorner)
             return false;
         if (layerIdx !== 2)
@@ -391,8 +426,8 @@ Item {
     // gap, not prev.mBottom. Each margin reads as "gap on this side from
     // whatever is adjacent" (prev bg, reserved space, or screen edge).
     readonly property int targetX: {
-        // Overlay: cover prev (act like layer 1 of this anchor).
-        if (isOverlay)
+        // Overlay / borrowed: cover prev (act like layer 1 of this anchor).
+        if (isOverlay || borrowed)
             return ownX;
         // Layer 1: own-anchor on both axes.
         if (layerIdx <= 1 || !prevSlot)
@@ -400,48 +435,108 @@ Item {
         // L-step (layer 2 on corner with side reservation): sideways step.
         if (isLStep) {
             if (anchor === "topLeft" || anchor === "bottomLeft") {
-                return prevSlot.targetX + prevSlot.paintedWidth + mLeft;
+                return prevSlot.chainX + prevSlot.chainW + mLeft;
             }
             // topRight / bottomRight
-            return prevSlot.targetX - paintedWidth - mRight;
+            return prevSlot.chainX - paintedWidth - mRight;
         }
         // Side-growing rails (left/right): X is growth axis → from prev.
         if (anchor === "left")
-            return prevSlot.targetX + prevSlot.paintedWidth + mLeft;
+            return prevSlot.chainX + prevSlot.chainW + mLeft;
         if (anchor === "right")
-            return prevSlot.targetX - paintedWidth - mRight;
+            return prevSlot.chainX - paintedWidth - mRight;
         // Otherwise (vertical-growth rails): own X.
         return ownX;
     }
 
     readonly property int targetY: {
-        if (isOverlay)
+        if (isOverlay || borrowed)
             return ownY;
         if (layerIdx <= 1 || !prevSlot)
             return ownY;
         if (isLStep) {
             // Align with prev's edge facing the corner.
             if (anchor === "topLeft" || anchor === "topRight") {
-                return prevSlot.targetY;
+                return prevSlot.chainY;
             }
             // bottomLeft / bottomRight: align bottoms.
-            return prevSlot.targetY + prevSlot.paintedHeight - paintedHeight;
+            return prevSlot.chainY + prevSlot.chainH - paintedHeight;
         }
         // Top/center/topLeft/topRight rails grow DOWN; left/right keep own Y.
         if (aTop)
-            return prevSlot.targetY + prevSlot.paintedHeight + mTop;
+            return prevSlot.chainY + prevSlot.chainH + mTop;
         if (aBottom)
-            return prevSlot.targetY - paintedHeight - mBottom;
+            return prevSlot.chainY - paintedHeight - mBottom;
         if (anchor === "center")
-            return prevSlot.targetY + prevSlot.paintedHeight + mTop;
+            return prevSlot.chainY + prevSlot.chainH + mTop;
         return ownY;
     }
+
+    // ── Chain-facing geometry (what SIBLINGS on this rail see) ───────
+    // While this slot's bg is out on loan (borrowed), its place in the chain
+    // is frozen at the pre-borrow rect so neighbours don't follow the flying
+    // bg — consistent with the frozen wlr exclusion. Falls back to the live
+    // values if the donor was borrowed before ever publishing a rect.
+    readonly property real chainX: borrowed && _borrow.homeRect ? _borrow.homeRect.x : targetX
+    readonly property real chainY: borrowed && _borrow.homeRect ? _borrow.homeRect.y : targetY
+    readonly property real chainW: borrowed && _borrow.homeRect ? _borrow.homeRect.w : paintedWidth
+    readonly property real chainH: borrowed && _borrow.homeRect ? _borrow.homeRect.h : paintedHeight
 
     // ── Geometry ─────────────────────────────────────────────────────
     x: targetX
     y: targetY
     width: paintedWidth
     height: paintedHeight
+
+    // ── Borrow morph (position) ──────────────────────────────────────
+    // x/y are normally unanimated — chain re-packs already ride the
+    // neighbours' size springs, so a permanent position Behavior would
+    // double-animate them. A borrow transition (stack top changed: borrow,
+    // return, or hand-off between borrowers) re-anchors the slot in one
+    // step instead, so the springs are enabled for one flight window. The
+    // SDF velocity deform + repolish already ride x/y changes, so the
+    // flight gets the liquid stretch for free.
+    property bool _posAnimActive: false
+    property int _prevActiveSeq: -1
+    onActiveSeqChanged: {
+        _posAnimActive = true;
+        posAnimOffTimer.restart();
+        // Re-key the published geometry/hover to the new active seq. Stale
+        // borrower keys are dropped; the donor's own key is refreshed by
+        // _publishSlotRect (frozen homeRect while borrowed).
+        if (manager) {
+            if (_prevActiveSeq >= 0 && _prevActiveSeq !== arrivalSeq) {
+                manager.clearSlotRect(_prevActiveSeq);
+                manager.clearSlotHover(_prevActiveSeq);
+                manager.clearSlotDragOver(_prevActiveSeq);
+            }
+            _publishSlotRect();
+            manager.setSlotHover(activeSeq, _slotHovered);
+            manager.setSlotDragOver(activeSeq, _slotDragOver);
+        }
+        _prevActiveSeq = activeSeq;
+    }
+    Timer {
+        id: posAnimOffTimer
+        interval: Appearance.anim.durations.extraLarge
+        onTriggered: root._posAnimActive = false
+    }
+    Behavior on x {
+        enabled: root._posAnimActive
+        SpringAnimation {
+            spring: Liquid.sizeSpring
+            damping: Liquid.sizeDamping
+            epsilon: Liquid.sizeEpsilon
+        }
+    }
+    Behavior on y {
+        enabled: root._posAnimActive
+        SpringAnimation {
+            spring: Liquid.sizeSpring
+            damping: Liquid.sizeDamping
+            epsilon: Liquid.sizeEpsilon
+        }
+    }
     // WindowSlot itself is a logical geometry holder; visible fragments
     // (bg + content) are reparented to contentLayer with z=arrivalSeq so
     // they stack correctly across rails (z compared in a shared parent).
@@ -561,17 +656,17 @@ Item {
     // compositor surface. Up to 4 sides: any side with a positive gap
     // produces a non-empty bridge; zero-sized bridges contribute nothing
     // to the mask.
-    readonly property int _prevBottom: prevSlot ? prevSlot.targetY + prevSlot.paintedHeight : 0
-    readonly property int _prevTop: prevSlot ? prevSlot.targetY : zHeight
-    readonly property int _prevRight: prevSlot ? prevSlot.targetX + prevSlot.paintedWidth : 0
-    readonly property int _prevLeft: prevSlot ? prevSlot.targetX : zWidth
+    readonly property int _prevBottom: prevSlot ? prevSlot.chainY + prevSlot.chainH : 0
+    readonly property int _prevTop: prevSlot ? prevSlot.chainY : zHeight
+    readonly property int _prevRight: prevSlot ? prevSlot.chainX + prevSlot.chainW : 0
+    readonly property int _prevLeft: prevSlot ? prevSlot.chainX : zWidth
 
     readonly property rect _bridgeTopRect: {
         // Layer-1 with top anchor: gap from screen top to root.y
-        if (!isOverlay && layerIdx <= 1 && aTop && root.y > 0)
+        if (!isOverlay && !borrowed && layerIdx <= 1 && aTop && root.y > 0)
             return Qt.rect(root.x, 0, paintedWidth, root.y);
         // Layer-2+ aTop / center / topLeft+topRight non-L-step: from prev.bottom to root.y
-        if (!isOverlay && layerIdx > 1 && prevSlot && !isLStep && (aTop || anchor === "center")) {
+        if (!isOverlay && !borrowed && layerIdx > 1 && prevSlot && !isLStep && (aTop || anchor === "center")) {
             const gap = root.y - _prevBottom;
             if (gap > 0)
                 return Qt.rect(root.x, _prevBottom, paintedWidth, gap);
@@ -580,11 +675,11 @@ Item {
     }
 
     readonly property rect _bridgeBottomRect: {
-        if (!isOverlay && layerIdx <= 1 && aBottom && (root.y + paintedHeight) < zHeight) {
+        if (!isOverlay && !borrowed && layerIdx <= 1 && aBottom && (root.y + paintedHeight) < zHeight) {
             const top = root.y + paintedHeight;
             return Qt.rect(root.x, top, paintedWidth, zHeight - top);
         }
-        if (!isOverlay && layerIdx > 1 && prevSlot && !isLStep && aBottom) {
+        if (!isOverlay && !borrowed && layerIdx > 1 && prevSlot && !isLStep && aBottom) {
             const top = root.y + paintedHeight;
             const gap = _prevTop - top;
             if (gap > 0)
@@ -595,10 +690,10 @@ Item {
 
     readonly property rect _bridgeLeftRect: {
         // Layer-1 with left anchor: from x=0 to root.x
-        if (!isOverlay && layerIdx <= 1 && aLeft && root.x > 0)
+        if (!isOverlay && !borrowed && layerIdx <= 1 && aLeft && root.x > 0)
             return Qt.rect(0, root.y, root.x, paintedHeight);
         // Layer-2+ left rail or L-step topLeft/bottomLeft: from prev.right to root.x
-        if (!isOverlay && layerIdx > 1 && prevSlot && (anchor === "left" || ((anchor === "topLeft" || anchor === "bottomLeft") && isLStep))) {
+        if (!isOverlay && !borrowed && layerIdx > 1 && prevSlot && (anchor === "left" || ((anchor === "topLeft" || anchor === "bottomLeft") && isLStep))) {
             const gap = root.x - _prevRight;
             if (gap > 0)
                 return Qt.rect(_prevRight, root.y, gap, paintedHeight);
@@ -607,11 +702,11 @@ Item {
     }
 
     readonly property rect _bridgeRightRect: {
-        if (!isOverlay && layerIdx <= 1 && aRight && (root.x + paintedWidth) < zWidth) {
+        if (!isOverlay && !borrowed && layerIdx <= 1 && aRight && (root.x + paintedWidth) < zWidth) {
             const left = root.x + paintedWidth;
             return Qt.rect(left, root.y, zWidth - left, paintedHeight);
         }
-        if (!isOverlay && layerIdx > 1 && prevSlot && (anchor === "right" || ((anchor === "topRight" || anchor === "bottomRight") && isLStep))) {
+        if (!isOverlay && !borrowed && layerIdx > 1 && prevSlot && (anchor === "right" || ((anchor === "topRight" || anchor === "bottomRight") && isLStep))) {
             const left = root.x + paintedWidth;
             const gap = _prevLeft - left;
             if (gap > 0)
@@ -813,7 +908,7 @@ Item {
         // Add adjacent bridges using STABLE position so they're correct from
         // the first frame too. Bridges extend to the screen edge for layer-1
         // anchored sides, and toward prev for layer-2+.
-        if (!isOverlay && layerIdx <= 1) {
+        if (!isOverlay && !borrowed && layerIdx <= 1) {
             if (aTop && sp.y > 0)
                 yMin = Math.min(yMin, 0);
             if (aBottom && (sp.y + sh) < zHeight)
@@ -822,14 +917,15 @@ Item {
                 xMin = Math.min(xMin, 0);
             if (aRight && (sp.x + sw) < zWidth)
                 xMax = Math.max(xMax, zWidth);
-        } else if (!isOverlay && layerIdx > 1 && prevSlot) {
+        } else if (!isOverlay && !borrowed && layerIdx > 1 && prevSlot) {
             // Layer-2+: bridge toward prev (existing _bridge*Rect logic uses
             // animated geometry; we approximate using prev's stable bounds
-            // would be complex — just include prevSlot's current rect).
-            xMin = Math.min(xMin, prevSlot.x);
-            yMin = Math.min(yMin, prevSlot.y);
-            xMax = Math.max(xMax, prevSlot.x + prevSlot.paintedWidth);
-            yMax = Math.max(yMax, prevSlot.y + prevSlot.paintedHeight);
+            // would be complex — just include prevSlot's chain rect, which is
+            // its current rect unless prev's bg is out on loan).
+            xMin = Math.min(xMin, prevSlot.chainX);
+            yMin = Math.min(yMin, prevSlot.chainY);
+            xMax = Math.max(xMax, prevSlot.chainX + prevSlot.chainW);
+            yMax = Math.max(yMax, prevSlot.chainY + prevSlot.chainH);
         }
         return Qt.rect(xMin, yMin, xMax - xMin, yMax - yMin);
     }
@@ -841,11 +937,11 @@ Item {
 
     on_SlotHoveredChanged: {
         if (manager && manager.setSlotHover)
-            manager.setSlotHover(arrivalSeq, _slotHovered);
+            manager.setSlotHover(activeSeq, _slotHovered);
     }
     on_SlotDragOverChanged: {
         if (manager && manager.setSlotDragOver)
-            manager.setSlotDragOver(arrivalSeq, _slotDragOver);
+            manager.setSlotDragOver(activeSeq, _slotDragOver);
     }
 
     // Envelope Item — sized to the resize-union DISPLAY rect, not the live
@@ -938,7 +1034,13 @@ Item {
         // reshape the visible corners only with liquidRounding on.
         speedRounding: root._liquidMixNeeded ? Liquid.roundingSpeed : 0
         speedRoundingApply: root.liquidRounding
-        zoneIndex: root.manager ? root.manager.zoneForRail(root.railRef ? root.railRef.railIndex : -1) : -1
+        // While borrowed, присасывание follows the borrower's zone (the rail
+        // its anchors imply), not the donor's home zone.
+        zoneIndex: root.manager
+            ? root.manager.zoneForRail(root.borrowed
+                ? root.manager.determineRailIndex(root.activeWrapper)
+                : (root.railRef ? root.railRef.railIndex : -1))
+            : -1
         sticks: root.sticks
     }
 
@@ -1013,7 +1115,9 @@ Item {
         y: root.y - root.fadeWidth
         width: root.paintedWidth + 2 * root.fadeWidth
         height: root.paintedHeight + 2 * root.fadeWidth
-        z: root.arrivalSeq
+        // activeSeq: a borrow is a fresh "open", so the loaned bg (and its
+        // content at +0.5) stacks above everything older, like any new panel.
+        z: root.activeSeq
 
         // Mask = SDF union of all bgs (bgRenderHost FBO), cropped to the
         // same region fadeAura covers.
@@ -1618,7 +1722,7 @@ Item {
         y: root.y
         width: root.paintedWidth
         height: root.paintedHeight
-        z: root.arrivalSeq + 0.5
+        z: root.activeSeq + 0.5
 
         // Mirror the SDF blob's velocity deform onto the content so it stretches
         // WITH the background instead of staying rectangular. bgRect.deformMatrix
@@ -1688,6 +1792,9 @@ Item {
                 Loader {
                     id: loader
                     sourceComponent: root.content
+                    // Donor content stays ALIVE (state preserved — e.g. the
+                    // bar) but hidden while its bg is out on loan.
+                    visible: !root.borrowed
 
                     // Content size is mirrored into plain properties instead of
                     // read inline: the x/y bindings also depend on parent size,
@@ -1719,8 +1826,41 @@ Item {
                             loader.updateContentSize();
                         }
                     }
+                }
 
-                    Component.onCompleted: root.contentLoader = loader
+                // Borrower content (mode "replace"): only the borrow-stack
+                // TOP is instantiated; a hand-off between borrowers swaps the
+                // component here and the slot morphs to the new size. Unloads
+                // itself once the stack drains (borrowContent → null).
+                Loader {
+                    id: borrowLoader
+                    sourceComponent: root.borrowContent
+                    visible: root.borrowed
+
+                    property real contentW: 0
+                    property real contentH: 0
+                    x: (parent.width - contentW) / 2
+                    y: (parent.height - contentH) / 2
+
+                    function updateContentSize(): void {
+                        contentW = item ? (item.childrenRect.width || item.implicitWidth) : 0;
+                        contentH = item ? (item.childrenRect.height || item.implicitHeight) : 0;
+                    }
+
+                    onItemChanged: updateContentSize()
+                    Connections {
+                        target: borrowLoader.item
+
+                        function onChildrenRectChanged(): void {
+                            borrowLoader.updateContentSize();
+                        }
+                        function onImplicitWidthChanged(): void {
+                            borrowLoader.updateContentSize();
+                        }
+                        function onImplicitHeightChanged(): void {
+                            borrowLoader.updateContentSize();
+                        }
+                    }
                 }
             }
         }
@@ -1734,8 +1874,16 @@ Item {
     // Implemented imperatively via signal handlers (NOT a side-effecting
     // readonly binding) — Qt 6 flags the latter as a binding loop.
     function _publishSlotRect() {
-        if (manager && manager.setSlotRect)
-            manager.setSlotRect(arrivalSeq, x, y, paintedWidth, paintedHeight);
+        if (!manager || !manager.setSlotRect)
+            return;
+        // Live (possibly flying) geometry goes to the active seq; while
+        // borrowed, the donor's own seq keeps the frozen home footprint so
+        // BorderZone strips hold the donor's place.
+        manager.setSlotRect(activeSeq, x, y, paintedWidth, paintedHeight);
+        if (borrowed && _borrow.homeRect) {
+            const hr = _borrow.homeRect;
+            manager.setSlotRect(arrivalSeq, hr.x, hr.y, hr.w, hr.h);
+        }
     }
     Connections {
         target: root
@@ -1774,12 +1922,13 @@ Item {
         BlurManager.addRegion(blurNeckBottom);
         BlurManager.addRegion(blurNeckLeft);
         BlurManager.addRegion(blurNeckRight);
+        root._prevActiveSeq = root.activeSeq;
         // Delegate created already dying (safety path — normally the flip
         // reaches a live delegate), so onDyingChanged won't fire. Kick off
         // the collapse here.
         if (root.dying) {
             root._startCollapse();
-        } else if (!root.isPinned) {
+        } else if (!root.isPinned && !root.borrowed) {
             // Real open → droplet rounding (+ shader content blur/squeeze on
             // the same mix, hence the wider gate). Pinned panels (bar) skip
             // the droplet by design — they appear at startup, not as an
@@ -1800,11 +1949,20 @@ Item {
         BlurManager.removeRegion(blurNeckBottom);
         BlurManager.removeRegion(blurNeckLeft);
         BlurManager.removeRegion(blurNeckRight);
-        if (manager && manager.clearSlotRect)
+        if (manager && manager.clearSlotRect) {
             manager.clearSlotRect(arrivalSeq);
-        if (manager && manager.clearSlotHover)
+            if (activeSeq !== arrivalSeq)
+                manager.clearSlotRect(activeSeq);
+        }
+        if (manager && manager.clearSlotHover) {
             manager.clearSlotHover(arrivalSeq);
-        if (manager && manager.clearSlotDragOver)
+            if (activeSeq !== arrivalSeq)
+                manager.clearSlotHover(activeSeq);
+        }
+        if (manager && manager.clearSlotDragOver) {
             manager.clearSlotDragOver(arrivalSeq);
+            if (activeSeq !== arrivalSeq)
+                manager.clearSlotDragOver(activeSeq);
+        }
     }
 }
