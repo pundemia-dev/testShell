@@ -214,6 +214,15 @@ void BlobRect::setSticks(bool s) {
     }
 }
 
+void BlobRect::setSpeedRoundingApply(bool v) {
+    if (m_speedRoundingApply != v) {
+        m_speedRoundingApply = v;
+        emit speedRoundingApplyChanged();
+        if (m_group)
+            m_group->markDirty();
+    }
+}
+
 void BlobRect::cornerRadii(float out[4]) const {
     const auto maxR = static_cast<float>(std::min(width(), height())) * 0.5f;
     const auto base = std::min(static_cast<float>(m_radius), maxR);
@@ -222,8 +231,10 @@ void BlobRect::cornerRadii(float out[4]) const {
     out[2] = std::min(m_bottomLeftRadius >= 0 ? static_cast<float>(m_bottomLeftRadius) : base, maxR);
     out[3] = std::min(m_topLeftRadius >= 0 ? static_cast<float>(m_topLeftRadius) : base, maxR);
     // Speed-keyed rounding: lift every corner toward the capsule radius while
-    // the rect is in motion (m_roundBoost 0..1 from updatePhysics).
-    if (m_roundBoost > 0.0f) {
+    // the rect is in motion (m_roundBoost 0..1 from updatePhysics). Gated by
+    // speedRoundingApply — blur-only consumers track the boost without it
+    // reshaping the visible corners.
+    if (m_roundBoost > 0.0f && m_speedRoundingApply) {
         for (int i = 0; i < 4; ++i)
             out[i] += (maxR - out[i]) * m_roundBoost;
     }

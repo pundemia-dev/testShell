@@ -28,6 +28,11 @@ class BlobRect : public BlobShape {
     // that must track the motion-driven part of the rounding (e.g. the content
     // squeeze) — zero at rest, so magnet-driven unequal radii never trigger them.
     Q_PROPERTY(qreal roundBoost READ roundBoost NOTIFY roundBoostChanged)
+    // Whether the boost is APPLIED to the corner radii. Consumers that only
+    // need the motion mix (content blur) can keep speedRounding > 0 to have
+    // the boost computed while leaving the visible corners untouched.
+    Q_PROPERTY(bool speedRoundingApply READ speedRoundingApply WRITE setSpeedRoundingApply NOTIFY
+            speedRoundingApplyChanged)
     Q_PROPERTY(QQmlListProperty<BlobRect> exclude READ exclude NOTIFY excludeChanged)
     Q_PROPERTY(qreal topLeftRadius READ topLeftRadius WRITE setTopLeftRadius NOTIFY topLeftRadiusChanged)
     Q_PROPERTY(qreal topRightRadius READ topRightRadius WRITE setTopRightRadius NOTIFY topRightRadiusChanged)
@@ -90,6 +95,10 @@ public:
 
     qreal roundBoost() const { return m_roundBoost; }
 
+    bool speedRoundingApply() const { return m_speedRoundingApply; }
+
+    void setSpeedRoundingApply(bool v);
+
     QQmlListProperty<BlobRect> exclude();
 
     bool isExcluded(const BlobShape* other) const override;
@@ -126,6 +135,7 @@ signals:
     void deformAttenChanged();
     void speedRoundingChanged();
     void roundBoostChanged();
+    void speedRoundingApplyChanged();
     void excludeChanged();
     void topLeftRadiusChanged();
     void topRightRadiusChanged();
@@ -164,8 +174,10 @@ private:
     qreal m_deformAtten = 1.0;
     qreal m_speedRounding = 0.0;
     // Smoothed 0..1 mix toward the capsule radius, driven by centre speed in
-    // updatePhysics; read by cornerRadii.
+    // updatePhysics; read by cornerRadii (when m_speedRoundingApply) and
+    // published to QML via roundBoost.
     float m_roundBoost = 0.0f;
+    bool m_speedRoundingApply = true;
 
     qreal m_topLeftRadius = -1;
     qreal m_topRightRadius = -1;

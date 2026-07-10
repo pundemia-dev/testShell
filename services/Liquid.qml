@@ -69,23 +69,11 @@ Singleton {
         return Math.max(deformSizeFloor, a);
     }
 
-    // 4 ── Appear/collapse blur (content MultiEffect) ──────────────────────────
-    // A blur on the panel CONTENT, driven by its OWN time-based animation — NOT
-    // the size spring. This decoupling is the whole point: the size spring reaches
-    // full in ~100ms, so a size-keyed blur clears while the panel is still a tiny,
-    // fast-moving speck (strongest blur exactly when least visible) — invisible in
-    // practice. A time ramp instead keeps the blur on the already-full-size panel
-    // and resolves it over `appearBlurDuration`:
-    //   appear  : blur 1 → 0  (content materialises sharp)
-    //   collapse: blur 0 → 1  (content dissolves as it shrinks away)
-    // The MultiEffect layer is gated to only switch on while blurring, so there's
-    // zero steady-state cost. Set appearBlurMax = 0 to disable entirely.
-    //
-    //   • appearBlurMax      — MultiEffect.blurMax: peak blur radius in SCREEN px
-    //                          at blur=1 (meaningful range 2..64). 0 disables.
-    //   • appearBlurDuration — ms for the blur to clear (appear) / build (collapse).
-    property int appearBlurMax: 16
-    property int appearBlurDuration: 300
+    // 4 ── (removed) Appear/collapse content blur ──────────────────────────────
+    // Migrated into the contentwarp shader on WindowSlot's scalingRoot: the
+    // fragment stage blurs by Config.backgrounds.liquidContentBlurMax scaled by
+    // the same animated mix as the rounding morph, so it covers open, close AND
+    // movement. Tuning lives in Config.backgrounds (settings dials), not here.
 
     // 5 ── Speed-keyed rounding (BlobRect.speedRounding) ───────────────────────
     // While a panel MOVES, its corner radii ride toward the full capsule and

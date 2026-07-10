@@ -23,6 +23,19 @@ JsonObject {
     // Central dip depth for the inverted squeeze, relative to the animated
     // radius (0 = flat centre).
     property real liquidContentWarpPinch: 0.6
+    // Liquid content blur: frost the content while the panel opens/closes/
+    // moves, resolving sharp at rest. Rides the same animated mix as the
+    // squeeze but is INDEPENDENT of liquidRounding (the mix and the C++
+    // motion boost are computed whenever either consumer is on; corners are
+    // only reshaped when liquidRounding itself is on). blurMax is the peak
+    // radius in px at full mix.
+    property bool liquidContentBlur: false
+    property real liquidContentBlurMax: 16
+    // Blur quality tuning (config-only). Spread scales the Poisson tap rings
+    // relative to the radius; softness scales the mip-bias prefilter that
+    // smooths out the 13-tap graininess at large radii (0 = raw taps).
+    property real liquidContentBlurSpread: 1.0
+    property real liquidContentBlurSoftness: 1.0
     property bool invertBaseRounding: false
     // Guard band (px) around the border-rounding arcs where присасывание is
     // muted, so sinking bgs never reshape the arcs. -1 = auto (rounding +

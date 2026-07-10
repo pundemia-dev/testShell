@@ -90,30 +90,8 @@ Item {
     readonly property int paintedWidth: Math.max(0, _rawWidth)
     readonly property int paintedHeight: Math.max(0, _rawHeight)
 
-    // ── Appear/collapse content blur (see services/Liquid.qml §4) ───────
-    // Time-based blur amount (0..1), decoupled from the size spring so it stays
-    // visible on the full-size panel. Driven by the two animations below; fed to
-    // the content MultiEffect in the content tree. Appear blur is gated to NON-
-    // pinned panels (a pinned bar that merely re-instantiates on a sibling change
-    // must not blur-flash; only real opens/closes blur).
-    property real _blurAmt: 0
-    NumberAnimation {
-        id: appearBlurAnim
-        target: root; property: "_blurAmt"
-        from: 1.0; to: 0.0
-        duration: Liquid.appearBlurDuration
-        easing.type: Easing.InQuad   // linger blurry, then resolve crisp
-    }
-    NumberAnimation {
-        id: collapseBlurAnim
-        target: root; property: "_blurAmt"
-        to: 1.0
-        duration: Liquid.appearBlurDuration
-        easing.type: Easing.OutQuad
-    }
-
     // ── Liquid rounding morph (Config.backgrounds.liquidRounding) ───────
-    // Time-based corner morph parallel to appear/collapse, like _blurAmt:
+    // Time-based corner morph parallel to appear/collapse (not size-keyed):
     // 0 = configured windowRounding, 1 = full capsule (half the painted short
     // side). Appear starts as a droplet and relaxes into the configured
     // radius; collapse blooms back toward a droplet as the panel shrinks.
@@ -139,13 +117,18 @@ Item {
         easing.bezierCurve: Appearance.anim.curves.emphasizedDecel
     }
 
-    // ── Liquid content squeeze (Config.backgrounds.liquidContentWarp) ──
+    // ── Liquid content effects driver ───────────────────────────────────
     // The ANIMATED part of the rounding only: open/close morph (_roundMix)
     // OR motion boost (bgRect.roundBoost). Both are zero at rest, so a
-    // settled panel with magnet-shrunk (unequal) corners never squeezes its
-    // content. Feeds the GridMesh warp on scalingRoot below.
+    // settled panel with magnet-shrunk (unequal) corners never triggers the
+    // content effects. Two independent consumers on the scalingRoot shader:
+    // the GridMesh squeeze (needs liquidRounding — it presses into the
+    // animated contour) and the content blur (standalone).
+    readonly property real _liquidMix: _liquidMixNeeded ? Math.max(_roundMix, bgRect.roundBoost) : 0
     readonly property real _warpMix: (Config.backgrounds.liquidContentWarp ?? false) && liquidRounding
-        ? Math.max(_roundMix, bgRect.roundBoost) : 0
+        ? _liquidMix : 0
+    readonly property real _blurPx: liquidContentBlur
+        ? _liquidMix * (Config.backgrounds.liquidContentBlurMax ?? 16) : 0
 
     // Size follow: one brisk spring per axis, both sharing Liquid's params. The
     // visible "liquid glass" squash/stretch is NOT produced here — it's the SDF
@@ -211,13 +194,9 @@ Item {
             root._rawWidth = 0;
             root._rawHeight = 0;
         });
-        // Build the dissolve blur as it shrinks away.
-        if (Liquid.appearBlurMax > 0) {
-            appearBlurAnim.stop();
-            collapseBlurAnim.restart();
-        }
-        // Bloom the corners back toward a droplet.
-        if (root.liquidRounding) {
+        // Bloom the corners back toward a droplet (the shader content blur
+        // rides the same mix, hence the wider gate).
+        if (root._liquidMixNeeded) {
             appearRoundAnim.stop();
             collapseRoundAnim.restart();
         }
@@ -232,15 +211,10 @@ Item {
         root._finalized = false;
         root._rawWidth = Qt.binding(() => root.targetWrapperWidth);
         root._rawHeight = Qt.binding(() => root.targetWrapperHeight);
-        // Re-open blur (reverse the dissolve).
-        collapseBlurAnim.stop();
-        if (!root.isPinned && Liquid.appearBlurMax > 0)
-            appearBlurAnim.restart();
-        else
-            root._blurAmt = 0;
-        // Re-open rounding (relax the droplet back to the configured radius).
+        // Re-open rounding (relax the droplet back to the configured radius;
+        // the shader content blur rides the same mix, hence the wider gate).
         collapseRoundAnim.stop();
-        if (!root.isPinned && root.liquidRounding)
+        if (!root.isPinned && root._liquidMixNeeded)
             appearRoundAnim.restart();
         else
             root._roundMix = 0;
@@ -299,6 +273,10 @@ Item {
     readonly property int pBottom: wrapper?.pBottom ?? Config.backgrounds.paddings.bottom ?? 0
     readonly property int windowRounding: wrapper?.windowRounding ?? Config.backgrounds.rounding ?? 0
     readonly property bool liquidRounding: Config.backgrounds.liquidRounding ?? false
+    // Content blur is an independent consumer of the liquid mix — it needs the
+    // mix animated (and the C++ boost computed) even with liquidRounding off.
+    readonly property bool liquidContentBlur: Config.backgrounds.liquidContentBlur ?? false
+    readonly property bool _liquidMixNeeded: liquidRounding || liquidContentBlur
     readonly property real _maxRounding: Math.min(paintedWidth, paintedHeight) / 2
     readonly property int effectiveRounding: {
         const base = Math.min(windowRounding, _maxRounding);
@@ -952,9 +930,11 @@ Item {
         // Per-panel deform attenuation, keyed on the STABLE target size (not the
         // animating size) so a will-be-large panel is tamed all through its appear.
         deformAtten: Liquid.deformSizeScale(root.lastTargetWidth, root.lastTargetHeight)
-        // Speed-keyed rounding (corners ride toward the capsule while the rect
-        // moves) — same toggle as the appear/collapse rounding morph.
-        speedRounding: root.liquidRounding ? Liquid.roundingSpeed : 0
+        // Speed-keyed rounding: compute the motion boost whenever ANY liquid
+        // consumer needs it (rounding bloom or content blur), but let it
+        // reshape the visible corners only with liquidRounding on.
+        speedRounding: root._liquidMixNeeded ? Liquid.roundingSpeed : 0
+        speedRoundingApply: root.liquidRounding
         zoneIndex: root.manager ? root.manager.zoneForRail(root.railRef ? root.railRef.railIndex : -1) : -1
         sticks: root.sticks
     }
@@ -1637,21 +1617,6 @@ Item {
         height: root.paintedHeight
         z: root.arrivalSeq + 0.5
 
-        // Time-based blur on the content (appear & collapse). Applied HERE
-        // (contentRoot is at paintedWidth = on-screen size, content already
-        // size-fitted by scalingRoot's Scale below) so the blur radius is in
-        // SCREEN px — NOT scaled away with the content the way it would be if
-        // captured before the Scale. Layer only switches on while actually
-        // blurring → no steady-state GPU cost.
-        layer.enabled: root._blurAmt > 0.01
-        layer.smooth: true
-        layer.effect: MultiEffect {
-            blurEnabled: true
-            blur: root._blurAmt
-            blurMax: Liquid.appearBlurMax
-            autoPaddingEnabled: true
-        }
-
         // Mirror the SDF blob's velocity deform onto the content so it stretches
         // WITH the background instead of staying rectangular. bgRect.deformMatrix
         // is the centred deform in the blob's local px space (same paintedWidth ×
@@ -1674,13 +1639,17 @@ Item {
                 origin.y: scalingRoot.height / 2
             }
 
-            // Liquid content squeeze: press the content grid into the animated
-            // rounded contour (vertex warp over a GridMesh). Applied HERE — in
+            // Liquid content effects: squeeze (vertex warp over a GridMesh
+            // pressing the grid into the animated rounded contour) + blur
+            // (13-tap Poisson in the fragment stage). Applied HERE — in
             // pre-Scale/pre-deform space — so the size-fit Scale and the SDF
             // deform (which also shapes the blob contour) compose on top and
-            // content + contour stay in step. Layer only exists while warping.
-            layer.enabled: root._warpMix > 0.01
+            // content + contour stay in step. Layer only exists while active.
+            layer.enabled: root._warpMix > 0.01 || root._blurPx > 0.1
             layer.smooth: true
+            // Mipmaps feed the blur's mip-bias prefilter (kills tap grain).
+            // Only generated while the layer exists, so zero cost at rest.
+            layer.mipmap: root.liquidContentBlur
             layer.effect: ShaderEffect {
                 mesh: GridMesh {
                     resolution: Qt.size(24, 24)
@@ -1700,6 +1669,9 @@ Item {
                 property real invertMode: (Config.backgrounds.liquidContentWarpInvert ?? false) ? 1.0 : 0.0
                 property real edgeStrength: Config.backgrounds.liquidContentWarpEdge ?? 1.0
                 property real pinchStrength: Config.backgrounds.liquidContentWarpPinch ?? 0.6
+                property real blurPx: root._blurPx
+                property real blurSpread: Config.backgrounds.liquidContentBlurSpread ?? 1.0
+                property real blurSoftness: Config.backgrounds.liquidContentBlurSoftness ?? 1.0
             }
 
             Item {
@@ -1774,12 +1746,11 @@ Item {
         if (root.dying) {
             root._startCollapse();
         } else if (!root.isPinned) {
-            // Real open → materialise blur + droplet rounding. Pinned panels
-            // (bar) are skipped: they re-instantiate on any sibling rail change
-            // and must not flash.
-            if (Liquid.appearBlurMax > 0)
-                appearBlurAnim.start();
-            if (root.liquidRounding)
+            // Real open → droplet rounding (+ shader content blur/squeeze on
+            // the same mix, hence the wider gate). Pinned panels (bar) are
+            // skipped: they re-instantiate on any sibling rail change and must
+            // not flash.
+            if (root._liquidMixNeeded)
                 appearRoundAnim.start();
         }
     }

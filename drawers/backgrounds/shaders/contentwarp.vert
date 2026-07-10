@@ -30,6 +30,11 @@ layout(std140, binding = 0) uniform buf {
     // pinchStrength scales the central dip depth relative to R/minHalf.
     float edgeStrength;
     float pinchStrength;
+    // Liquid content blur (fragment stage) — in the UBO here only because
+    // both stages must declare the identical block.
+    float blurPx;
+    float blurSpread;
+    float blurSoftness;
 };
 
 void main() {

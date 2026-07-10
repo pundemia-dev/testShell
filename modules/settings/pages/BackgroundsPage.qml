@@ -124,6 +124,41 @@ Flickable {
             }
 
             SettingRow {
+                label: qsTr("Liquid content blur")
+                description: qsTr("Frost the content while panels move or open/close, resolving sharp at rest.")
+                StyledSwitch {
+                    checked: Config.backgrounds.liquidContentBlur
+                    onToggled: Config.backgrounds.liquidContentBlur = checked
+                }
+            }
+
+            SettingRow {
+                label: qsTr("Blur strength")
+                description: qsTr("Peak blur radius at full liquid mix.")
+                visible: Config.backgrounds.liquidContentBlur
+
+                RowLayout {
+                    spacing: Appearance.spacing.medium
+
+                    StyledText {
+                        text: Math.round(blurSlider.value) + " px"
+                        color: Colours.palette.on_surface_variant
+                        Layout.preferredWidth: implicitWidth
+                    }
+
+                    StyledSlider {
+                        id: blurSlider
+                        Layout.preferredWidth: 180
+                        from: 0
+                        to: 48
+                        stepSize: 1
+                        value: Config.backgrounds.liquidContentBlurMax
+                        onInteraction: v => Config.backgrounds.liquidContentBlurMax = v
+                    }
+                }
+            }
+
+            SettingRow {
                 label: qsTr("Capsule neck")
                 description: qsTr("Fatness of the join when panels stick together (1 = thin).")
                 hintText: qsTr("Multiplier on the SDF smoothing radius between two sticking panels. >1 widens the join into a capsule neck.")
