@@ -20,12 +20,13 @@ void BlobRect::updatePolish() {
         float totalDelta = std::abs(m_dm00 - 1.0f) + std::abs(m_dm01) + std::abs(m_dm11 - 1.0f);
         float totalVel = std::abs(m_dmVel00) + std::abs(m_dmVel01) + std::abs(m_dmVel11);
 
-        if (totalDelta < 0.004f && totalVel < 0.05f) {
+        if (totalDelta < 0.004f && totalVel < 0.05f && m_roundBoost < 0.005f) {
             // Snap to rest, no visible deformation
             m_dm00 = 1.0f;
             m_dm01 = 0.0f;
             m_dm11 = 1.0f;
             m_dmVel00 = m_dmVel01 = m_dmVel11 = 0.0f;
+            m_roundBoost = 0.0f;
             m_deformMatrix = QMatrix4x4();
             emit rawDeformMatrixChanged();
             updateCenteredDeformMatrix();
@@ -71,6 +72,21 @@ void BlobRect::updatePhysics() {
         if (speed < 5.0f)
             return;
         m_physicsActive = true;
+    }
+
+    // Speed-keyed rounding boost: 0..1 mix toward the capsule radius, applied
+    // in cornerRadii. Asymmetric lowpass — fast attack so the bloom shows early
+    // in the move, slower release so the corners settle back gently as the
+    // panel decelerates into place.
+    if (m_speedRounding > 0.0) {
+        const float target = std::min(1.0f, speed * static_cast<float>(m_speedRounding));
+        const float tau = target > m_roundBoost ? 0.04f : 0.12f;
+        const float a = 1.0f - std::exp(-dt / tau);
+        m_roundBoost += (target - m_roundBoost) * a;
+        if (m_roundBoost < 0.005f)
+            m_roundBoost = 0.0f;
+    } else {
+        m_roundBoost = 0.0f;
     }
 
     // Compute target deformation matrix from velocity
@@ -199,6 +215,12 @@ void BlobRect::cornerRadii(float out[4]) const {
     out[1] = std::min(m_bottomRightRadius >= 0 ? static_cast<float>(m_bottomRightRadius) : base, maxR);
     out[2] = std::min(m_bottomLeftRadius >= 0 ? static_cast<float>(m_bottomLeftRadius) : base, maxR);
     out[3] = std::min(m_topLeftRadius >= 0 ? static_cast<float>(m_topLeftRadius) : base, maxR);
+    // Speed-keyed rounding: lift every corner toward the capsule radius while
+    // the rect is in motion (m_roundBoost 0..1 from updatePhysics).
+    if (m_roundBoost > 0.0f) {
+        for (int i = 0; i < 4; ++i)
+            out[i] += (maxR - out[i]) * m_roundBoost;
+    }
 }
 
 bool BlobRect::isExcluded(const BlobShape* other) const {
@@ -264,7 +286,8 @@ void BlobRect::checkAtRest(float speed) {
     constexpr float kEpsilon = 0.002f;
     const bool atRest = std::abs(m_dm00 - 1.0f) < kEpsilon && std::abs(m_dm01) < kEpsilon &&
                         std::abs(m_dm11 - 1.0f) < kEpsilon && std::abs(m_dmVel00) < kEpsilon &&
-                        std::abs(m_dmVel01) < kEpsilon && std::abs(m_dmVel11) < kEpsilon && speed < 5.0f;
+                        std::abs(m_dmVel01) < kEpsilon && std::abs(m_dmVel11) < kEpsilon && speed < 5.0f &&
+                        m_roundBoost < 0.005f;
 
     if (atRest) {
         m_dm00 = 1.0f;
@@ -273,6 +296,7 @@ void BlobRect::checkAtRest(float speed) {
         m_dmVel00 = 0.0f;
         m_dmVel01 = 0.0f;
         m_dmVel11 = 0.0f;
+        m_roundBoost = 0.0f;
         m_deformMatrix = QMatrix4x4(); // identity
         emit rawDeformMatrixChanged();
         updateCenteredDeformMatrix();

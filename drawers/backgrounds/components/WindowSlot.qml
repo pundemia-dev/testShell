@@ -944,6 +944,9 @@ Item {
         // Per-panel deform attenuation, keyed on the STABLE target size (not the
         // animating size) so a will-be-large panel is tamed all through its appear.
         deformAtten: Liquid.deformSizeScale(root.lastTargetWidth, root.lastTargetHeight)
+        // Speed-keyed rounding (corners ride toward the capsule while the rect
+        // moves) — same toggle as the appear/collapse rounding morph.
+        speedRounding: root.liquidRounding ? Liquid.roundingSpeed : 0
         zoneIndex: root.manager ? root.manager.zoneForRail(root.railRef ? root.railRef.railIndex : -1) : -1
         sticks: root.sticks
     }

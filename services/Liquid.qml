@@ -86,4 +86,13 @@ Singleton {
     //   • appearBlurDuration — ms for the blur to clear (appear) / build (collapse).
     property int appearBlurMax: 16
     property int appearBlurDuration: 300
+
+    // 5 ── Speed-keyed rounding (BlobRect.speedRounding) ───────────────────────
+    // While a panel MOVES, its corner radii ride toward the full capsule and
+    // settle back as it decelerates — the speed bell of any spring/eased motion
+    // gives the "roundest mid-path" profile for free. Value = rounding mix per
+    // px/s of centre speed (full capsule reached at 1/value px/s). Gated by
+    // Config.backgrounds.liquidRounding in WindowSlot; the smoothing (fast
+    // attack / slower release) lives in the C++ physics next to the deform.
+    property real roundingSpeed: 0.0012
 }

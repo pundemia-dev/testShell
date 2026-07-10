@@ -18,6 +18,12 @@ class BlobRect : public BlobShape {
     // cap-saturated corner-appear. Keyed in QML on the panel's STABLE target size
     // (not the animating size), so the grow-through-small-sizes is attenuated too.
     Q_PROPERTY(qreal deformAtten READ deformAtten WRITE setDeformAtten NOTIFY deformAttenChanged)
+    // Speed-keyed rounding: while the rect moves, its corner radii ride toward
+    // the full capsule (min(w,h)/2) and settle back as it decelerates. Value =
+    // rounding mix per px/s of centre speed (full capsule at 1/value px/s);
+    // 0 disables. The speed bell of any easing/spring motion yields the
+    // "rounder mid-path, settled at the ends" profile automatically.
+    Q_PROPERTY(qreal speedRounding READ speedRounding WRITE setSpeedRounding NOTIFY speedRoundingChanged)
     Q_PROPERTY(QQmlListProperty<BlobRect> exclude READ exclude NOTIFY excludeChanged)
     Q_PROPERTY(qreal topLeftRadius READ topLeftRadius WRITE setTopLeftRadius NOTIFY topLeftRadiusChanged)
     Q_PROPERTY(qreal topRightRadius READ topRightRadius WRITE setTopRightRadius NOTIFY topRightRadiusChanged)
@@ -69,6 +75,15 @@ public:
         }
     }
 
+    qreal speedRounding() const { return m_speedRounding; }
+
+    void setSpeedRounding(qreal v) {
+        if (!qFuzzyCompare(m_speedRounding, v)) {
+            m_speedRounding = v;
+            emit speedRoundingChanged();
+        }
+    }
+
     QQmlListProperty<BlobRect> exclude();
 
     bool isExcluded(const BlobShape* other) const override;
@@ -103,6 +118,7 @@ signals:
     void dampingChanged();
     void deformScaleChanged();
     void deformAttenChanged();
+    void speedRoundingChanged();
     void excludeChanged();
     void topLeftRadiusChanged();
     void topRightRadiusChanged();
@@ -139,6 +155,10 @@ private:
     qreal m_damping = 16.0;
     qreal m_deformScale = 0.0005;
     qreal m_deformAtten = 1.0;
+    qreal m_speedRounding = 0.0;
+    // Smoothed 0..1 mix toward the capsule radius, driven by centre speed in
+    // updatePhysics; read by cornerRadii.
+    float m_roundBoost = 0.0f;
 
     qreal m_topLeftRadius = -1;
     qreal m_topRightRadius = -1;
