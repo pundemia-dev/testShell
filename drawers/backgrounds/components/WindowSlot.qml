@@ -35,11 +35,13 @@ Item {
     required property var manager
 
     // ── Close animation (dying) ──────────────────────────────────────
-    // Set by the manager via the Rail delegate. While true, the slot collapses
-    // its size to 0 (mirror of the appear) and, once collapsed, asks the manager
-    // to finalise the real removal. `deathRect` is the slot's last painted rect,
-    // used to seed the collapse start size if this delegate was (re)created after
-    // the dying flag flipped and the live target hasn't resolved yet.
+    // Bound from manager.dyingState via the Rail delegate. While true, the slot
+    // collapses its size to 0 (mirror of the appear) and, once collapsed, asks
+    // the manager to finalise the real removal. The flip reaches this delegate
+    // in place (rail entries are identity-stable, so the Repeater doesn't
+    // recreate it). `deathRect` is the slot's last painted rect, used to seed
+    // the collapse start size in the safety path where the delegate WAS created
+    // already-dying (e.g. the whole Rail re-instantiated mid-collapse).
     property bool dying: false
     property var deathRect: null
     property bool _collapseStarted: false
@@ -173,12 +175,13 @@ Item {
         root._finalized = false;
         // Seed the start size from the LARGEST known size. deathRect is the
         // authoritative last-painted rect; targetWrapperWidth/Height can't be
-        // trusted alone here because a freshly-recreated dying delegate (the
-        // Repeater regenerates on the dying-flag flip) may not have laid out its
-        // content yet — targetWrapperWidth then resolves to just pLeft+pRight (a
-        // small POSITIVE value), which a naive `> 0` check would accept, seeding
-        // the collapse from a paddings-sized box and slamming effectiveRounding
-        // to ~0 for the whole shrink. Max over all three avoids that.
+        // trusted alone here because a delegate created already-dying (safety
+        // path: the whole Rail re-instantiated mid-collapse) may not have laid
+        // out its content yet — targetWrapperWidth then resolves to just
+        // pLeft+pRight (a small POSITIVE value), which a naive `> 0` check
+        // would accept, seeding the collapse from a paddings-sized box and
+        // slamming effectiveRounding to ~0 for the whole shrink. Max over all
+        // three avoids that.
         const startW = Math.max(root.deathRect ? root.deathRect.w : 0,
                                 root.targetWrapperWidth, root._rawWidth);
         const startH = Math.max(root.deathRect ? root.deathRect.h : 0,
@@ -232,9 +235,9 @@ Item {
             return;
         root._finalized = true;
         finalizeTimer.stop();
-        // Defer the splice — it reassigns the manager's rails, which regenerates
-        // this rail's Repeater and destroys this very delegate. Doing that from
-        // inside the delegate's own call stack is asking for trouble.
+        // Defer the splice — it removes this entry from the rail model, which
+        // destroys this very delegate. Doing that from inside the delegate's
+        // own call stack is asking for trouble.
         const seq = root.arrivalSeq;
         const mgr = root.manager;
         Qt.callLater(() => {
@@ -1771,15 +1774,16 @@ Item {
         BlurManager.addRegion(blurNeckBottom);
         BlurManager.addRegion(blurNeckLeft);
         BlurManager.addRegion(blurNeckRight);
-        // Delegate (re)created already dying — the dying flag flip regenerated
-        // the Repeater, so onDyingChanged won't fire. Kick off the collapse here.
+        // Delegate created already dying (safety path — normally the flip
+        // reaches a live delegate), so onDyingChanged won't fire. Kick off
+        // the collapse here.
         if (root.dying) {
             root._startCollapse();
         } else if (!root.isPinned) {
             // Real open → droplet rounding (+ shader content blur/squeeze on
-            // the same mix, hence the wider gate). Pinned panels (bar) are
-            // skipped: they re-instantiate on any sibling rail change and must
-            // not flash.
+            // the same mix, hence the wider gate). Pinned panels (bar) skip
+            // the droplet by design — they appear at startup, not as an
+            // interactive open.
             if (root._liquidMixNeeded)
                 appearRoundAnim.start();
         }

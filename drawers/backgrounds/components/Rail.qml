@@ -1,25 +1,27 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Caelestia.Blobs
 
 // One rail = one anchor position. Renders its slice of manager.rails as
 // WindowSlots, sorted pinned (by seq) → push (by seq) → overlay (by seq).
 // Position math + L-step lives in WindowSlot.qml.
 //
-// Why TWO repeaters (pinned / dynamic) instead of one:
-//   A QML Repeater driven by a JS-array model destroys + recreates EVERY
-//   delegate whenever the model array is reassigned. The manager reassigns
-//   `rails` on every requestBackground/removeBackground, so a single repeater
-//   would tear down the pinned bar segment each time a popout (a dynamic,
-//   non-pinned slot sharing this rail) opens or closes — re-seeding its size
-//   (visible "resize from zero") and destroying its content, including any
-//   PopoutHandle hover chain (which makes popouts flicker/close). Splitting
-//   pinned from dynamic, and only reassigning each model when ITS entry set
-//   actually changes (identity-stable memo), keeps the pinned delegates alive
-//   across dynamic add/remove. The layerIdx/prevSlot math is unified across
-//   both repeaters so the position chain (pinned = layer 1, dynamic stacks
-//   above) is identical to the single-repeater behaviour.
+// The Repeaters run on ScriptModels, NOT raw JS arrays: a Repeater on a JS
+// array destroys + recreates EVERY delegate whenever the array is reassigned
+// (which happens on each requestBackground/finalizeRemoval), while ScriptModel
+// diffs the new array against the old one BY ELEMENT IDENTITY and only
+// inserts/removes/moves the rows that actually changed. The manager keeps each
+// rail entry object identity-stable for its whole life — dying state lives
+// out-of-band in manager.dyingState — so opening or closing one bg touches
+// exactly one delegate and never rebuilds its rail siblings.
+//
+// Why TWO repeaters (pinned / dynamic) instead of one: the pinned block (bar
+// segments) must occupy layers 1..P with dynamic slots stacked above at P+1..,
+// regardless of arrival interleaving. The layerIdx/prevSlot math is unified
+// across both repeaters so the position chain is identical to a single-
+// repeater ordering.
 Item {
     id: rail
 
@@ -51,55 +53,26 @@ Item {
         return pinned.concat(push, overlay);
     }
 
-    // Memoised split models. Each is only reassigned when its own entry set
-    // changes (by arrivalSeq + dying flag + order) — so a change confined to
-    // the other group preserves this one's array identity, and its Repeater
-    // keeps its existing delegates instead of resetting them.
-    property var _pinnedModel: []
-    property var _dynamicModel: []
-
-    function _sameEntries(a, b) {
-        if (a.length !== b.length)
-            return false;
-        for (let i = 0; i < a.length; i++) {
-            if (a[i].arrivalSeq !== b[i].arrivalSeq)
-                return false;
-            if ((a[i].dying ?? false) !== (b[i].dying ?? false))
-                return false;
-            // deathRect identity matters only for a freshly-dying entry; the
-            // dying-flag check above already catches the transition.
-        }
-        return true;
-    }
-
-    function _resync() {
-        const sw = sortedWindows;
-        const pinned = sw.filter(e => e.wrapper && e.wrapper.pinned);
-        const dynamic = sw.filter(e => !(e.wrapper && e.wrapper.pinned));
-        if (!_sameEntries(pinned, _pinnedModel))
-            _pinnedModel = pinned;
-        if (!_sameEntries(dynamic, _dynamicModel))
-            _dynamicModel = dynamic;
-    }
-
-    onSortedWindowsChanged: _resync()
-    Component.onCompleted: _resync()
-
     Component {
         id: slotDelegate
         WindowSlot {
+            // ScriptModel transiently nulls modelData while removing a row —
+            // guard every read (the toasts list hit the same thing).
             required property var modelData
             required property int index
 
             anchor: rail.anchor
-            wrapper: modelData.wrapper
-            arrivalSeq: modelData.arrivalSeq
-            dying: modelData.dying ?? false
-            deathRect: modelData.deathRect ?? null
+            wrapper: modelData?.wrapper ?? null
+            arrivalSeq: modelData?.arrivalSeq ?? -1
+            // Dying state is out-of-band (seq-keyed map) so the flip reaches
+            // this live delegate as a plain property change instead of a
+            // model-row replacement.
+            dying: rail.manager.dyingState[arrivalSeq] !== undefined
+            deathRect: rail.manager.dyingState[arrivalSeq]?.deathRect ?? null
             // Unified layer index: pinned slots occupy layers 1..P (their own
             // repeater index), dynamic slots stack directly above the pinned
             // block at P+1.. . prevSlot() below resolves across both repeaters.
-            layerIdx: (modelData.wrapper && modelData.wrapper.pinned)
+            layerIdx: (modelData?.wrapper && modelData.wrapper.pinned)
                       ? (index + 1)
                       : (pinnedRepeater.count + index + 1)
             railRef: rail
@@ -118,12 +91,16 @@ Item {
 
     Repeater {
         id: pinnedRepeater
-        model: rail._pinnedModel
+        model: ScriptModel {
+            values: rail.sortedWindows.filter(e => e.wrapper && e.wrapper.pinned)
+        }
         delegate: slotDelegate
     }
     Repeater {
         id: dynamicRepeater
-        model: rail._dynamicModel
+        model: ScriptModel {
+            values: rail.sortedWindows.filter(e => !(e.wrapper && e.wrapper.pinned))
+        }
         delegate: slotDelegate
     }
 

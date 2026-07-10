@@ -79,17 +79,23 @@ Item {
     readonly property bool touchLeft: _sides.left ?? false
 
     // ── Edge-nearest bgs in this zone's rail ─────────────────────────
-    // Explicit dependencies on manager.rails AND manager.slotRects so QML
-    // re-evaluates whenever either changes (functions don't auto-track
-    // their property reads — we anchor them here).
+    // Explicit dependencies on manager.rails, manager.dyingState AND
+    // manager.slotRects so QML re-evaluates whenever any changes (functions
+    // don't auto-track their property reads — we anchor them here).
+    // dyingState matters because removeBackground now flips only that map,
+    // not the rails array, and dying entries must drop out of these queries
+    // the moment the collapse starts.
     readonly property var _railsRef: manager.rails
+    readonly property var _dyingRef: manager.dyingState
     readonly property var _slotRectsRef: manager.slotRects
     readonly property var _entries: {
         void _railsRef;
+        void _dyingRef;
         return manager.zoneEdgeNearestEntries(zoneIdx);
     }
     readonly property var _topmost: {
         void _railsRef;
+        void _dyingRef;
         return manager.zoneTopmostEntry(zoneIdx);
     }
     readonly property bool _hasEntries: _entries.length > 0

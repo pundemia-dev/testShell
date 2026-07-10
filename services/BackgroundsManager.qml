@@ -8,19 +8,29 @@ import Quickshell
 // per-anchor Rail instances.
 //
 // Lifecycle (close-anim latching):
-//   requestBackground(wrapper)  → append to rails[anchor]; if a dying entry
-//                                 for this wrapper exists, REVIVE it (clear the
-//                                 dying flag) so its in-flight collapse reverses
-//                                 into a re-open instead of finishing.
-//   removeBackground(wrapper)   → DON'T splice. Mark the entry `dying:true` and
-//                                 stash its last painted rect (`deathRect`). The
-//                                 WindowSlot delegate stays alive and collapses
-//                                 its size to 0 (mirror of the appear); siblings
-//                                 on the same rail re-pack smoothly because they
-//                                 track prevSlot.paintedWidth as it shrinks.
+//   requestBackground(wrapper)  → append to rails[anchor]; if the wrapper's
+//                                 entry is dying, REVIVE it (clear its
+//                                 dyingState) so its in-flight collapse
+//                                 reverses into a re-open instead of finishing.
+//   removeBackground(wrapper)   → DON'T splice and DON'T touch `rails` at all.
+//                                 Record the entry in `dyingState` (keyed by
+//                                 arrivalSeq, stashing the last painted rect).
+//                                 The WindowSlot delegate stays alive and
+//                                 collapses its size to 0 (mirror of the
+//                                 appear); siblings on the same rail re-pack
+//                                 smoothly because they track
+//                                 prevSlot.paintedWidth as it shrinks.
 //   finalizeRemoval(arrivalSeq) → called by the slot once collapsed; now the
 //                                 real splice happens, the Repeater destroys the
 //                                 delegate, BlobRect deregisters.
+//
+// Entry objects ({ wrapper, arrivalSeq }) are IDENTITY-STABLE: created once in
+// requestBackground and never replaced or mutated until the finalize splice.
+// Rail.qml feeds them to ScriptModels, which diff by element identity — so an
+// open/close/dying change touches exactly one delegate and never rebuilds the
+// rail's siblings. All transient per-entry state (dying, deathRect, painted
+// rect, hover) lives out-of-band in seq-keyed maps.
+//
 // Dying entries are excluded from layout-affecting queries (reserved-edge,
 // zone interaction targets) so a closing panel releases its exclusion and stops
 // catching interaction the moment it starts collapsing.
@@ -30,6 +40,17 @@ QtObject {
     // 9 rails, one per anchor position. Each entry: { wrapper, arrivalSeq }.
     property var rails: [[], [], [], [], [], [], [], [], []]
     property int _seq: 0
+
+    // Per-arrivalSeq dying state: arrivalSeq → { deathRect: {x,y,w,h} | null }.
+    // Kept OUTSIDE the rail entries so flipping an entry into/out of dying
+    // never changes its object identity (see lifecycle note above). deathRect
+    // is the slot's last painted rect, seeding the collapse start size if the
+    // delegate was created after the flag flipped.
+    property var dyingState: ({})
+
+    function isDying(arrivalSeq) {
+        return dyingState[arrivalSeq] !== undefined;
+    }
 
     // Per-arrivalSeq painted geometry of each WindowSlot. Written by
     // WindowSlot via setSlotRect on every x/y/paintedWidth/paintedHeight
@@ -159,18 +180,15 @@ QtObject {
     function requestBackground(wrapper /*, isolate, excludeBarArea */) {
         if (!wrapper) return -1;
         const i = determineRailIndex(wrapper);
-        const idx = rails[i].findIndex(e => e.wrapper === wrapper);
-        if (idx >= 0) {
-            const existing = rails[i][idx];
-            // Re-requested while still collapsing → revive: drop the dying flag
-            // (new entry object so the delegate's modelData binding re-evaluates)
-            // and keep the same arrivalSeq so subscriptions stay valid.
-            if (existing.dying) {
-                const newRail = rails[i].slice();
-                newRail[idx] = { wrapper: wrapper, arrivalSeq: existing.arrivalSeq };
-                const newRails = rails.slice();
-                newRails[i] = newRail;
-                rails = newRails;
+        const existing = rails[i].find(e => e.wrapper === wrapper);
+        if (existing) {
+            // Re-requested while still collapsing → revive: clear the dying
+            // state (the entry object itself never changed, so the delegate
+            // survives) and keep the same arrivalSeq so subscriptions stay valid.
+            if (isDying(existing.arrivalSeq)) {
+                const updated = Object.assign({}, dyingState);
+                delete updated[existing.arrivalSeq];
+                dyingState = updated;
             }
             return existing.arrivalSeq;
         }
@@ -193,7 +211,7 @@ QtObject {
         const target = determineRailIndex(wrapper);
         let curRail = -1, curIdx = -1;
         for (let i = 0; i < 9; i++) {
-            const idx = rails[i].findIndex(e => e.wrapper === wrapper && !e.dying);
+            const idx = rails[i].findIndex(e => e.wrapper === wrapper && !isDying(e.arrivalSeq));
             if (idx >= 0) { curRail = i; curIdx = idx; break; }
         }
         if (curRail < 0) return;            // not registered → nothing to move
@@ -203,32 +221,27 @@ QtObject {
         const fromRail = rails[curRail].slice();
         fromRail.splice(curIdx, 1);
         newRails[curRail] = fromRail;
-        newRails[target] = [...rails[target], { wrapper: wrapper, arrivalSeq: entry.arrivalSeq }];
+        // Same entry object — identity-stable across the move.
+        newRails[target] = [...rails[target], entry];
         rails = newRails;
     }
 
     // Latch the wrapper's slot into a dying state instead of splicing it out.
-    // The WindowSlot delegate collapses to 0 then calls finalizeRemoval.
+    // Only `dyingState` changes — `rails` (and the entry object) stay untouched,
+    // so no delegate is created or destroyed here. The WindowSlot collapses to 0
+    // then calls finalizeRemoval.
     function removeBackground(wrapper) {
         if (!wrapper) return;
         for (let i = 0; i < 9; i++) {
-            const idx = rails[i].findIndex(e => e.wrapper === wrapper);
-            if (idx >= 0) {
-                if (rails[i][idx].dying) return; // already collapsing
-                const seq = rails[i][idx].arrivalSeq;
-                const r = slotRects[seq] ?? null;
-                const newRail = rails[i].slice();
-                newRail[idx] = {
-                    wrapper: wrapper,
-                    arrivalSeq: seq,
-                    dying: true,
-                    // Last painted rect — lets a freshly (re)created delegate seed
-                    // its collapse start size even before the live target resolves.
+            const entry = rails[i].find(e => e.wrapper === wrapper);
+            if (entry) {
+                if (isDying(entry.arrivalSeq)) return; // already collapsing
+                const r = slotRects[entry.arrivalSeq] ?? null;
+                const updated = Object.assign({}, dyingState);
+                updated[entry.arrivalSeq] = {
                     deathRect: r ? { x: r.x, y: r.y, w: r.w, h: r.h } : null
                 };
-                const newRails = rails.slice();
-                newRails[i] = newRail;
-                rails = newRails;
+                dyingState = updated;
                 return;
             }
         }
@@ -238,18 +251,21 @@ QtObject {
     // the real splice. No-op if the entry was revived (no longer dying) or is
     // already gone, so a late call is harmless.
     function finalizeRemoval(arrivalSeq) {
+        if (!isDying(arrivalSeq)) return; // revived — keep it
         for (let i = 0; i < 9; i++) {
             const idx = rails[i].findIndex(e => e.arrivalSeq === arrivalSeq);
             if (idx >= 0) {
-                if (!rails[i][idx].dying) return; // revived — keep it
                 const newRail = rails[i].slice();
                 newRail.splice(idx, 1);
                 const newRails = rails.slice();
                 newRails[i] = newRail;
                 rails = newRails;
-                return;
+                break;
             }
         }
+        const updated = Object.assign({}, dyingState);
+        delete updated[arrivalSeq];
+        dyingState = updated;
     }
 
     // Aggregated layer-shell exclusion per side. Cached as readonly properties
@@ -269,10 +285,14 @@ QtObject {
     }
 
     function _computeReservedEdge(side) {
+        // Read `dyingState` up front so the reservedX property bindings pick it
+        // up as a dependency alongside `rails` — removeBackground now flips
+        // only the map, not the rails array.
+        const dying = dyingState;
         let sum = 0;
         for (let i = 0; i < 9; i++) {
             for (const entry of rails[i]) {
-                if (entry.dying) continue; // collapsing → release its exclusion now
+                if (dying[entry.arrivalSeq] !== undefined) continue; // collapsing → release its exclusion now
                 const w = entry.wrapper;
                 if (!w || !w.pinned || !w.reservesSpace) continue;
                 // A wrapper only reserves a STRIP on `side` if it has a real
@@ -361,12 +381,13 @@ QtObject {
         const rail = rails[r];
         if (!rail || rail.length === 0) return [];
 
-        const pinned = rail.filter(e => e.wrapper && !e.dying && e.wrapper.pinned)
+        const dying = dyingState;
+        const pinned = rail.filter(e => e.wrapper && dying[e.arrivalSeq] === undefined && e.wrapper.pinned)
                            .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        const push = rail.filter(e => e.wrapper && !e.dying && !e.wrapper.pinned
+        const push = rail.filter(e => e.wrapper && dying[e.arrivalSeq] === undefined && !e.wrapper.pinned
                                        && (e.wrapper.mode ?? "push") !== "overlay")
                          .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
-        const overlay = rail.filter(e => e.wrapper && !e.dying && !e.wrapper.pinned
+        const overlay = rail.filter(e => e.wrapper && dying[e.arrivalSeq] === undefined && !e.wrapper.pinned
                                           && e.wrapper.mode === "overlay")
                             .sort((a, b) => a.arrivalSeq - b.arrivalSeq);
 
