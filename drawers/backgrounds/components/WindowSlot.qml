@@ -153,13 +153,18 @@ Item {
             return;
         root._collapseStarted = true;
         root._finalized = false;
-        // Seed the start size from the live target, falling back to the captured
-        // death rect (delegate may have been recreated by the Repeater after the
-        // dying flip, before its content/target resolved). Snapped without spring.
-        const startW = root.targetWrapperWidth > 0 ? root.targetWrapperWidth
-                     : (root.deathRect ? root.deathRect.w : root._rawWidth);
-        const startH = root.targetWrapperHeight > 0 ? root.targetWrapperHeight
-                     : (root.deathRect ? root.deathRect.h : root._rawHeight);
+        // Seed the start size from the LARGEST known size. deathRect is the
+        // authoritative last-painted rect; targetWrapperWidth/Height can't be
+        // trusted alone here because a freshly-recreated dying delegate (the
+        // Repeater regenerates on the dying-flag flip) may not have laid out its
+        // content yet — targetWrapperWidth then resolves to just pLeft+pRight (a
+        // small POSITIVE value), which a naive `> 0` check would accept, seeding
+        // the collapse from a paddings-sized box and slamming effectiveRounding
+        // to ~0 for the whole shrink. Max over all three avoids that.
+        const startW = Math.max(root.deathRect ? root.deathRect.w : 0,
+                                root.targetWrapperWidth, root._rawWidth);
+        const startH = Math.max(root.deathRect ? root.deathRect.h : 0,
+                                root.targetWrapperHeight, root._rawHeight);
         root._sizeNoAnim = true;
         root._rawWidth = startW;
         root._rawHeight = startH;

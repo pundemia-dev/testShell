@@ -65,6 +65,24 @@ void BlobShape::componentComplete() {
         registerWithGroup();
 }
 
+void BlobShape::itemChange(ItemChange change, const ItemChangeData& value) {
+    QQuickItem::itemChange(change, value);
+    if (change != ItemSceneChange)
+        return;
+    // A Repeater releases replaced delegates via setParentItem(nullptr) +
+    // deleteLater, so the destructor-only unregister leaves a full-size twin
+    // registered in the group for a frame. The CPU corner-radii precompute then
+    // sees every corner of the replacement rect inside that twin and crushes
+    // all four radii to minR — a visible square-corner flash. Leave the group
+    // the moment we leave the scene instead; re-register if re-adopted.
+    if (!value.window) {
+        if (m_group)
+            unregisterFromGroup();
+    } else if (m_group && isComponentComplete()) {
+        registerWithGroup();
+    }
+}
+
 void BlobShape::geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry) {
     QQuickItem::geometryChange(newGeometry, oldGeometry);
     updateCenteredDeformMatrix();
