@@ -138,51 +138,43 @@ Item {
     // first frame of the delegate's life.
     property int _rawWidth: 0
     property int _rawHeight: 0
-    // Pre-completion target arrivals snap (parity with the old declared
-    // binding, whose initial evaluation was never animated — startup bar
-    // segments, fast fully-sized content); anything later springs.
+    // No size writes before Component.onCompleted. Content loads (and often
+    // fully lays out) INSIDE this delegate's finalization — Loader loads at
+    // its componentComplete, while the SpringAnimations (created earlier in
+    // the document) complete LAST, in reverse creation order. Any spring
+    // started in that window is silently deferred (running=true, no job) —
+    // the size freezes and the content gets scaled to a stale bg. So the
+    // first drive happens in onCompleted (guaranteed after every
+    // componentComplete); late-settling content springs from these handlers.
     property bool _sizeReady: false
     onTargetWrapperWidthChanged: {
-        console.log(`WSDBG seq=${latchedSeq} targetW=${targetWrapperWidth} t=${Date.now() % 100000}`); // TEMP DEBUG
-        if (dying)
-            return;
-        if (!_sizeReady) {
-            sprW.stop();
-            _rawWidth = targetWrapperWidth;
-        } else {
+        if (!dying && _sizeReady)
             _driveWidth(targetWrapperWidth);
-        }
     }
     onTargetWrapperHeightChanged: {
-        if (dying)
-            return;
-        if (!_sizeReady) {
-            sprH.stop();
-            _rawHeight = targetWrapperHeight;
-        } else {
+        if (!dying && _sizeReady)
             _driveHeight(targetWrapperHeight);
-        }
     }
     readonly property int paintedWidth: Math.max(0, _rawWidth)
     readonly property int paintedHeight: Math.max(0, _rawHeight)
 
-    // Spring _rawWidth/_rawHeight toward v. SpringAnimation live-tracks `to`
-    // while running, so retargets mid-flight keep their velocity.
+    // Spring _rawWidth/_rawHeight toward v. A standalone SpringAnimation
+    // captures `to` when it starts and does NOT track later changes — a
+    // mid-flight retarget MUST restart, or the spring settles on the stale
+    // target (bg stuck ≠ content size → the content gets scaled to the bg).
     function _driveWidth(v) {
+        if (sprW.running && sprW.to === v)
+            return; // already flying there
         sprW.to = v;
-        if (!sprW.running)
-            sprW.restart();
+        sprW.restart();
     }
     function _driveHeight(v) {
+        if (sprH.running && sprH.to === v)
+            return;
         sprH.to = v;
-        if (!sprH.running)
-            sprH.restart();
+        sprH.restart();
     }
 
-    // TEMP DEBUG (remove after verifying the appear spring)
-    on_RawWidthChanged: console.log(`WSDBG seq=${latchedSeq} rawW=${_rawWidth} t=${Date.now() % 100000}`)
-    onContentLoaderChanged: console.log(`WSDBG seq=${latchedSeq} contentLoader=${contentLoader} t=${Date.now() % 100000}`)
-    on_CollapseStartedChanged: console.log(`WSDBG seq=${latchedSeq} collapseStarted=${_collapseStarted} t=${Date.now() % 100000}`)
 
     // ── Liquid rounding morph (Config.backgrounds.liquidRounding) ───────
     // Time-based corner morph parallel to appear/collapse (not size-keyed):
@@ -236,8 +228,6 @@ Item {
         spring: Liquid.sizeSpring
         damping: Liquid.sizeDamping
         epsilon: Liquid.sizeEpsilon
-        // TEMP DEBUG
-        onRunningChanged: console.log(`WSDBG seq=${root.latchedSeq} sprW running=${running} to=${to}`)
     }
     SpringAnimation {
         id: sprH
@@ -256,7 +246,6 @@ Item {
     // shrinking paintedWidth via prevSlot. When the collapse reaches 0 we ask the
     // manager to perform the real splice.
     onDyingChanged: {
-        console.log(`WSDBG seq=${latchedSeq} dying=${dying} t=${Date.now() % 100000}`); // TEMP DEBUG
         if (root.dying)
             root._startCollapse();
         else
@@ -2014,14 +2003,24 @@ Item {
         // makes it a no-op beyond seeding _prevActiveSeq + contentLoader
         // (already pointed at the donor loader by its own onCompleted).
         root.latchedSeq = root.arrivalSeq;
-        // From here on, size changes animate. Fallback sync in case the
-        // initial target evaluation never fired the change handlers.
+        // First size drive. Everything in this delegate has completed by
+        // now, so the springs are guaranteed startable. Pinned surfaces
+        // (bar segments at startup) snap into place; anything else with a
+        // known size springs from zero — that's the appear. Content that
+        // hasn't laid out yet springs later from the target handlers.
         root._sizeReady = true;
         if (!root.dying) {
-            if (root._rawWidth === 0 && root.targetWrapperWidth > 0 && !sprW.running)
+            if (root.isPinned) {
+                sprW.stop();
+                sprH.stop();
                 root._rawWidth = root.targetWrapperWidth;
-            if (root._rawHeight === 0 && root.targetWrapperHeight > 0 && !sprH.running)
                 root._rawHeight = root.targetWrapperHeight;
+            } else {
+                if (root.targetWrapperWidth > 0)
+                    root._driveWidth(root.targetWrapperWidth);
+                if (root.targetWrapperHeight > 0)
+                    root._driveHeight(root.targetWrapperHeight);
+            }
         }
         // Delegate created already dying (safety path — normally the flip
         // reaches a live delegate), so onDyingChanged won't fire. Kick off
