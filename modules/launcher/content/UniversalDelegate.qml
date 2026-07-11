@@ -79,8 +79,11 @@ StyledRect {
         }
 
         onEntered: {
+            // Пока список прокручивается, строки сами проезжают под курсором —
+            // не воровать выделение (это дёргало currentIndex → onSelected →
+            // перезагрузку правой панели на каждый кадр прокрутки).
             let lv = root.list?.listView;
-            if (lv)
+            if (lv && !lv.moving && !lv.flicking)
                 lv.currentIndex = root.index;
         }
     }
