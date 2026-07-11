@@ -121,9 +121,11 @@ Item {
         property string mode: Config.osd.mode
         property bool sticks: Config.osd.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.osd.reservesSpace
         property int layer: Config.osd.layer
         property var windowRounding: Config.osd.rounding
+        property var sizeSpring: Config.osd.sizeSpring
+        property var sizeDamping: Config.osd.sizeDamping
 
         property Component content: OsdContent {
             monitor: root.monitor

@@ -139,9 +139,11 @@ Item {
         property string mode: Config.launcher.mode
         property bool sticks: Config.launcher.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.launcher.reservesSpace
         property int layer: Config.launcher.layer
         property var windowRounding: Config.launcher.rounding
+        property var sizeSpring: Config.launcher.sizeSpring
+        property var sizeDamping: Config.launcher.sizeDamping
 
         property Component content: FlexboxLayout {
                     id: flexLayout

@@ -39,9 +39,17 @@ JsonObject {
 
     // Stacking depth on the anchor rail.
     property int layer: 0
+    // For mode "replace": position the borrowed bg INSIDE the reserved edge
+    // strip (on the donor's spot, edge-flush like pinned) instead of being
+    // inset past it.
+    property bool reservesSpace: false
 
     // Rounding: a number, or null to follow Config.backgrounds.rounding.
     property var rounding: null
+    // Size-spring override for the bg open/close/resize animation:
+    // numbers, or null to follow the global Liquid defaults.
+    property var sizeSpring: null
+    property var sizeDamping: null
 
     // Default auto-dismiss timeout (ms) when a caller passes none / <=0.
     property int defaultTimeout: 5000

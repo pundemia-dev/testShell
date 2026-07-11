@@ -51,9 +51,11 @@ Item {
         property string mode: Config.notifs.mode
         property bool sticks: Config.notifs.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.notifs.reservesSpace
         property int layer: Config.notifs.layer
         property var windowRounding: Config.notifs.rounding
+        property var sizeSpring: Config.notifs.sizeSpring
+        property var sizeDamping: Config.notifs.sizeDamping
 
         property Component content: NotificationList {}
     }

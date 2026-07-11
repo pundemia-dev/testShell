@@ -83,10 +83,12 @@ QtObject {
     // Stacking semantics
     property string mode: "push"        // "push" | "overlay" | "replace"
     property bool pinned: false         // visually fixed at layer 1
-    property bool reservesSpace: false  // → wlr-layer-shell exclusion zone
+    property bool reservesSpace: false  // pinned: → wlr exclusion zone; replace: land inside the reserved strip (edge-flush)
     property bool sticks: true          // false → no SDF merge, clean floating contour
     property int layer: 0               // chain depth on the rail (see below)
     property int windowRounding: -1
+    property var sizeSpring: null       // open/close/resize spring override (null = Liquid.sizeSpring)
+    property var sizeDamping: null      // (null = Liquid.sizeDamping)
 
     property Component content: null
 }
@@ -113,8 +115,12 @@ the chain slot at depth `layer` (clamped; empty rail → fallback: the wrapper
 opens its own bg, positioned like an overlay) — and pushes the wrapper onto
 `borrowState[donorSeq].stack`. The donor's WindowSlot then reads every
 wrapper-derived input from the stack top (`activeWrapper`) and **morphs** to
-the borrower's anchors/margins/size (animated x/y + the usual size springs);
-`removeBackground` pops the stack and the bg flies home. Multiple borrowers
+the borrower's anchors/margins/size. Position is never animated directly —
+donor and borrower share the rail (and thus the anchored edge), so the
+transition is the size springs retargeting while the anchor formulas keep
+the panel glued to that edge (it scales from the shared side, like a normal
+open/close); `removeBackground` pops the stack and the bg scales back the
+same way. Multiple borrowers
 stack LIFO on one donor. While borrowed: the donor's content stays loaded but
 hidden (state preserved), its chain place and wlr exclusion stay frozen at the
 home footprint (siblings and niri windows don't move), live geometry/hover are

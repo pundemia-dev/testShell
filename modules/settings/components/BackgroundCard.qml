@@ -18,7 +18,10 @@ import QtQuick.Layouts
 //   vCenterOffset     int (may be negative)
 //   mode              "push" | "overlay" | "replace"
 //   layer             int
+//   reservesSpace     bool (replace: land inside the reserved edge strip)
 //   rounding          number | null (null = follow Config.backgrounds.rounding)
+//   sizeSpring        number | null (null = follow Liquid.sizeSpring; no UI row, see note below)
+//   sizeDamping       number | null (null = follow Liquid.sizeDamping; no UI row, see note below)
 ColumnLayout {
     id: root
 
@@ -190,6 +193,24 @@ ColumnLayout {
                 onValueModified: v => root.cfg.layer = v
             }
         }
+
+        SettingRow {
+            label: qsTr("Reserved space")
+            description: qsTr("For Replace: land the borrowed background inside the reserved edge strip (on the donor's spot), instead of being inset past it.")
+            StyledSwitch {
+                checked: root.cfg.reservesSpace
+                onToggled: root.cfg.reservesSpace = checked
+            }
+        }
+
+        // NOTE: per-module size-spring rows (sizeSpring/sizeDamping) were
+        // removed from this card by request, but the plumbing stays: the
+        // config fields, wrapper contract bindings and WindowSlot support
+        // all work — the values are editable via shell.json. To restore the
+        // UI, re-add two ValueSelector rows here bound to cfg.sizeSpring
+        // (Global null / 2 / 4 / 7, custom 0.5-20 step 0.5, fallback 4) and
+        // cfg.sizeDamping (Global null / 0.15 / 0.26 / 0.45, custom 0.05-1
+        // step 0.01, fallback 0.26), mirroring the Rounding row's pattern.
 
         SettingRow {
             label: qsTr("Rounding")

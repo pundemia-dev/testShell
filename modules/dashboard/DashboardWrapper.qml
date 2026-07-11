@@ -165,9 +165,11 @@ Item {
         property string mode: Config.dashboard.mode
         property bool sticks: Config.dashboard.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.dashboard.reservesSpace
         property int layer: Config.dashboard.layer
         property var windowRounding: Config.dashboard.rounding
+        property var sizeSpring: Config.dashboard.sizeSpring
+        property var sizeDamping: Config.dashboard.sizeDamping
         // Content
         property Component content: DashboardContent {
             registry: root.registry

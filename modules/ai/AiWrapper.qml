@@ -170,9 +170,11 @@ Item {
         property string mode: Config.ai.mode
         property bool sticks: Config.ai.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.ai.reservesSpace
         property int layer: Config.ai.layer
         property var windowRounding: Config.ai.rounding
+        property var sizeSpring: Config.ai.sizeSpring
+        property var sizeDamping: Config.ai.sizeDamping
 
         property Component content: AiContent {
             registry: root.registry

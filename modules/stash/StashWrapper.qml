@@ -281,9 +281,11 @@ Item {
         property string mode: Config.stash.mode
         property bool sticks: Config.stash.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.stash.reservesSpace
         property int layer: Config.stash.layer
         property var windowRounding: Config.stash.rounding
+        property var sizeSpring: Config.stash.sizeSpring
+        property var sizeDamping: Config.stash.sizeDamping
         // Content
         property Component content: StashContent {
             stash: root

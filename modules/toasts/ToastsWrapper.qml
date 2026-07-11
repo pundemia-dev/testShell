@@ -55,9 +55,11 @@ Item {
         property string mode: Config.toasts.mode
         property bool sticks: Config.toasts.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.toasts.reservesSpace
         property int layer: Config.toasts.layer
         property var windowRounding: Config.toasts.rounding
+        property var sizeSpring: Config.toasts.sizeSpring
+        property var sizeDamping: Config.toasts.sizeDamping
 
         property Component content: ToastsContent {}
     }

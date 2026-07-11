@@ -109,9 +109,11 @@ Item {
         property string mode: Config.session.mode
         property bool sticks: Config.session.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.session.reservesSpace
         property int layer: Config.session.layer
         property var windowRounding: Config.session.rounding
+        property var sizeSpring: Config.session.sizeSpring
+        property var sizeDamping: Config.session.sizeDamping
         // Content
         property Component content: SessionContent {
             registry: root.registry

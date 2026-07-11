@@ -160,9 +160,11 @@ Item {
         property string mode: Config.quicksettings.mode
         property bool sticks: Config.quicksettings.sticks
         property bool pinned: false
-        property bool reservesSpace: false
+        property bool reservesSpace: Config.quicksettings.reservesSpace
         property int layer: Config.quicksettings.layer
         property var windowRounding: Config.quicksettings.rounding
+        property var sizeSpring: Config.quicksettings.sizeSpring
+        property var sizeDamping: Config.quicksettings.sizeDamping
         // Content
         property Component content: QuicksettingsContent {
             registry: root.registry

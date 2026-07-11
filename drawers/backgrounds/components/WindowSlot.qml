@@ -221,20 +221,26 @@ Item {
     // deform engine on the BlobRect below, driven by the centre velocity this
     // motion generates (resize from an edge moves the centre toward that edge, so
     // the stretch direction encodes the expansion origin). See services/Liquid.qml.
+    // Per-module spring feel: wrapper contract may override the globals
+    // (null → Liquid defaults). Read from the ACTIVE wrapper so a borrowed
+    // bg flies with the borrower's spring.
+    readonly property real _sizeSpring: activeWrapper?.sizeSpring ?? Liquid.sizeSpring
+    readonly property real _sizeDamping: activeWrapper?.sizeDamping ?? Liquid.sizeDamping
+
     SpringAnimation {
         id: sprW
         target: root
         property: "_rawWidth"
-        spring: Liquid.sizeSpring
-        damping: Liquid.sizeDamping
+        spring: root._sizeSpring
+        damping: root._sizeDamping
         epsilon: Liquid.sizeEpsilon
     }
     SpringAnimation {
         id: sprH
         target: root
         property: "_rawHeight"
-        spring: Liquid.sizeSpring
-        damping: Liquid.sizeDamping
+        spring: root._sizeSpring
+        damping: root._sizeDamping
         epsilon: Liquid.sizeEpsilon
     }
 
@@ -403,11 +409,18 @@ Item {
     // so they also get edge=0 — otherwise mode:"overlay" would actually
     // behave as "push offset by reserved area".
     // A borrowed slot flies as the borrower's panel: push-style insets
-    // (respect exclusion zones) regardless of the donor's own pinned/mode.
-    readonly property int edgeLeft: (!borrowed && (isPinned || isOverlay)) ? 0 : left_area
-    readonly property int edgeRight: (!borrowed && (isPinned || isOverlay)) ? 0 : right_area
-    readonly property int edgeTop: (!borrowed && (isPinned || isOverlay)) ? 0 : top_area
-    readonly property int edgeBottom: (!borrowed && (isPinned || isOverlay)) ? 0 : bottom_area
+    // (respect exclusion zones) by default, or edge-flush (like pinned) when
+    // the borrower sets reservesSpace — that's how a replace panel lands ON
+    // the reserved strip (e.g. on the bar element it borrowed from) instead
+    // of being inset past it. The donor's frozen exclusion keeps the strip
+    // reserved either way.
+    readonly property bool _edgeFlush: borrowed
+        ? (activeWrapper?.reservesSpace ?? false)
+        : (isPinned || isOverlay)
+    readonly property int edgeLeft: _edgeFlush ? 0 : left_area
+    readonly property int edgeRight: _edgeFlush ? 0 : right_area
+    readonly property int edgeTop: _edgeFlush ? 0 : top_area
+    readonly property int edgeBottom: _edgeFlush ? 0 : bottom_area
 
     // ── Previous sibling on rail ─────────────────────────────────────
     readonly property var prevSlot: railRef ? railRef.prevSlot(layerIdx - 1) : null
@@ -556,15 +569,16 @@ Item {
     width: paintedWidth
     height: paintedHeight
 
-    // ── Borrow morph (position) ──────────────────────────────────────
-    // x/y are normally unanimated — chain re-packs already ride the
-    // neighbours' size springs, so a permanent position Behavior would
-    // double-animate them. A borrow transition (stack top changed: borrow,
-    // return, or hand-off between borrowers) re-anchors the slot in one
-    // step instead, so the springs are enabled for one flight window. The
-    // SDF velocity deform + repolish already ride x/y changes, so the
-    // flight gets the liquid stretch for free.
-    property bool _posAnimActive: false
+    // ── Borrow morph ─────────────────────────────────────────────────
+    // x/y are NEVER animated directly — position always comes from the
+    // anchor formulas each frame. The donor is by construction on the
+    // borrower's rail, so both share the anchored edge: a borrow transition
+    // is just the size springs retargeting while the formulas keep the
+    // panel glued to that edge — it "scales from the shared side" like any
+    // normal open/close. (Dedicated x/y springs were tried and removed:
+    // they detach the position from the formulas, so the glued edge lags
+    // the size spring — the panel visibly shrinks toward the WRONG side,
+    // then jerks back to its spot.)
     property int _prevActiveSeq: -1
     // activeSeq derives from latchedSeq + borrowState only, so this fires
     // exactly once at completion (the latch, prev < 0 → no-op) and then on
@@ -575,8 +589,6 @@ Item {
         _syncContentLoader();
         if (prev < 0)
             return; // initial latch, not a borrow transition
-        _posAnimActive = true;
-        posAnimOffTimer.restart();
         // Re-key the published geometry/hover to the new active seq. Stale
         // borrower keys are dropped; the donor's own key is refreshed by
         // _publishSlotRect (frozen homeRect while borrowed).
@@ -589,27 +601,6 @@ Item {
             _publishSlotRect();
             manager.setSlotHover(activeSeq, _slotHovered);
             manager.setSlotDragOver(activeSeq, _slotDragOver);
-        }
-    }
-    Timer {
-        id: posAnimOffTimer
-        interval: Appearance.anim.durations.extraLarge
-        onTriggered: root._posAnimActive = false
-    }
-    Behavior on x {
-        enabled: root._posAnimActive
-        SpringAnimation {
-            spring: Liquid.sizeSpring
-            damping: Liquid.sizeDamping
-            epsilon: Liquid.sizeEpsilon
-        }
-    }
-    Behavior on y {
-        enabled: root._posAnimActive
-        SpringAnimation {
-            spring: Liquid.sizeSpring
-            damping: Liquid.sizeDamping
-            epsilon: Liquid.sizeEpsilon
         }
     }
     // WindowSlot itself is a logical geometry holder; visible fragments
