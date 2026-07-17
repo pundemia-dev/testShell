@@ -4,15 +4,30 @@ import qs.components
 import qs.services
 import qs.config
 
-RowLayout {
+Item {
     id: root
 
     required property var lock
 
-    spacing: Appearance.spacing.largeIncreased * 2
+    Center {
+        id: centerCol
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+
+        width: Math.max(implicitWidth, centerWidth)
+
+        lock: root.lock
+    }
 
     ColumnLayout {
-        Layout.fillWidth: true
+        anchors.left: parent.left
+        anchors.right: centerCol.left
+        anchors.rightMargin: Appearance.spacing.largeIncreased * 2
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+
         spacing: Appearance.spacing.medium
 
         WeatherInfo {
@@ -32,12 +47,13 @@ RowLayout {
         }
     }
 
-    Center {
-        lock: root.lock
-    }
-
     ColumnLayout {
-        Layout.fillWidth: true
+        anchors.left: centerCol.right
+        anchors.right: parent.right
+        anchors.leftMargin: Appearance.spacing.largeIncreased * 2
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+
         spacing: Appearance.spacing.medium
 
         Resources {
