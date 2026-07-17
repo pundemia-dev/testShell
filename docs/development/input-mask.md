@@ -95,6 +95,11 @@ Resync rules (driven by the envelope's `HoverHandler` and `DropArea`):
   when a MouseArea grabs a press during the click that triggered the
   resize, leaving `_envHovered` momentarily false and snapping the
   mask out from under a still-engaged cursor).
+- Exception: on `mode:"replace"` borrow hand-off (`activeSeq` switch),
+  holdover enters a temporary **snap mode**: display rects follow the
+  live targets directly (no union growth) until the next real
+  hover/drag engagement on the new wrapper. This avoids carrying the old
+  borrower footprint through the donor's return morph.
 - When the cursor enters the new target rect specifically (detected
   via `HoverHandler.point.position` / `DropArea.onPositionChanged`,
   mapped to window-coords): collapse that display to a **buffered**

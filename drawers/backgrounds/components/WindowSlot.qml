@@ -589,6 +589,13 @@ Item {
         _syncContentLoader();
         if (prev < 0)
             return; // initial latch, not a borrow transition
+        // A replace borrow hand-off is not a resize-under-cursor case: old
+        // union holdover must be dropped and disabled until a fresh cursor
+        // engagement, otherwise the previous wrapper footprint can keep
+        // blocking clicks while the donor morphs back.
+        _holdoverSeqSwitchSnap = true;
+        _snapDisplaysToTarget();
+        InputManager.refresh();
         // Re-key the published geometry/hover to the new active seq. Stale
         // borrower keys are dropped; the donor's own key is refreshed by
         // _publishSlotRect (frozen homeRect while borrowed).
@@ -643,6 +650,11 @@ Item {
     readonly property rect _slotTargetRect: Qt.rect(root.x, root.y, root.paintedWidth, root.paintedHeight)
     property rect _slotDisplayRect: Qt.rect(0, 0, 0, 0)
     property rect _envelopeDisplayRect: Qt.rect(0, 0, 0, 0)
+    // During a replace borrow hand-off (activeSeq switch), resize-union
+    // holdover must not carry old wrapper bounds through the return morph.
+    // Keep displays snapped to live targets until the next real cursor/drag
+    // engagement, then restore normal union semantics.
+    property bool _holdoverSeqSwitchSnap: false
 
     function _rectUnion(a, b) {
         // Empty rect contributes nothing — otherwise (0,0,0,0) would be
@@ -680,6 +692,10 @@ Item {
     // _resyncDisplays to take the snap branch and shrink the mask out from
     // under a still-engaged cursor.
     function _resyncDisplays() {
+        if (_holdoverSeqSwitchSnap) {
+            _snapDisplaysToTarget();
+            return;
+        }
         _slotDisplayRect = _rectUnion(_slotDisplayRect, _slotTargetRect);
         _envelopeDisplayRect = _rectUnion(_envelopeDisplayRect, _slotEnvelopeRect);
     }
@@ -1026,6 +1042,8 @@ Item {
         HoverHandler {
             id: envHover
             onHoveredChanged: {
+                if (hovered)
+                    root._holdoverSeqSwitchSnap = false;
                 root._envHovered = hovered;
                 if (!hovered && !root._envDragOver)
                     root._snapDisplaysToTarget();
@@ -1040,6 +1058,8 @@ Item {
             anchors.fill: parent
             keys: ["text/uri-list"]
             onContainsDragChanged: {
+                if (containsDrag)
+                    root._holdoverSeqSwitchSnap = false;
                 root._envDragOver = containsDrag;
                 if (!containsDrag && !root._envHovered)
                     root._snapDisplaysToTarget();
