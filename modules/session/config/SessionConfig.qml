@@ -29,6 +29,7 @@ JsonObject {
     // Overlay = covers underlying window; push = displaces siblings on rail.
     property string mode: "push"
     property bool sticks: true
+    property TriggerData trigger: TriggerData {}
 
     // Stack orientation override: "auto" derives it from the anchor edge
     // (horizontal when anchored top/bottom or dead-centre, else vertical);
@@ -77,5 +78,13 @@ JsonObject {
         property var right: "all"
         property var top: "all"
         property var bottom: "all"
+    }
+
+    component TriggerData: JsonObject {
+        property bool enabled: false
+        property bool hover: true
+        property bool drop: false
+        property bool slide: false
+        property int layer: 0
     }
 }

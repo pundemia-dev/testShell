@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import qs.config
 import qs.services
 import qs.components
+import qs.components.misc
 import Quickshell
 import Quickshell.Io
 import QtQuick
@@ -30,7 +31,7 @@ Item {
     //   _slotDragOver    — drag (file/text) is over the bg or its bridges
     //                      (kept separate so incomingDrag can use it).
     // _anyHovered = OR of all four. The moment it goes false, we hide.
-    property int _interactionRail: -1
+    readonly property int _interactionRail: manager.determineRailIndex(content)
     property int _arrivalSeq: -1
     readonly property bool _stripHovered: _interactionRail >= 0
         ? (InteractionManager.stripHovered[_interactionRail] ?? false)
@@ -196,28 +197,7 @@ Item {
     Component.onCompleted: {
         VisibilitiesManager.addVisibility(root.screen, "stash", Config.stash.shortcut,
                                           false, false, "Toggle Stash");
-
-        // Register with InteractionManager on the rail derived from the
-        // wrapper's anchors. Hover at layer 0 opens the panel; drop also
-        // opens it (and incomingDrag tracks stripDragOver automatically).
-        _interactionRail = manager.determineRailIndex(content);
-        if (_interactionRail >= 0) {
-            InteractionManager.registerHover(_interactionRail, 0, "stash", () => {
-                VisibilitiesManager.setVisibility(root.screen, "stash", true);
-            });
-            InteractionManager.registerDrop(_interactionRail, "stash", () => {
-                VisibilitiesManager.setVisibility(root.screen, "stash", true);
-            });
-        }
-
         refreshStash();
-    }
-
-    Component.onDestruction: {
-        if (_interactionRail >= 0) {
-            InteractionManager.unregisterHover(_interactionRail, "stash");
-            InteractionManager.unregisterDrop(_interactionRail, "stash");
-        }
     }
 
     Connections {
@@ -236,6 +216,16 @@ Item {
         target: LocalSend
         function onRequestArrived() {
             VisibilitiesManager.setVisibility(root.screen, "stash", true);
+        }
+
+        BorderTriggerBinding {
+            manager: root.manager
+            content: root.content
+            screen: root.screen
+            moduleName: "stash"
+            trigger: Config.stash.trigger
+            moduleVisible: root.stashVisible
+            moduleEnabled: Config.stash.enabled
         }
         // Accepted files are mirrored into the stash dir by the receive
         // server; pull them into the tray as soon as each one lands.

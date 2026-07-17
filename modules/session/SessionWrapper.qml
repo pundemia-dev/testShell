@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import qs.config
 import qs.services
+import qs.components.misc
 import qs.modules.session.content
 import Quickshell
 import QtQuick
@@ -58,6 +59,16 @@ Item {
         function onActiveChanged() {
             IpcManager.setManifests("session", root.registry.active);
         }
+    }
+
+    BorderTriggerBinding {
+        manager: root.manager
+        content: root.content
+        screen: root.screen
+        moduleName: "session"
+        trigger: Config.session.trigger
+        moduleVisible: root.sessionVisible
+        moduleEnabled: Config.session.enabled
     }
 
     // IPC `open <id>` → сразу выполнить действие по id на активном экране.

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import qs.config
 import qs.services
+import qs.components.misc
 import Quickshell
 import QtQuick
 import "content"
@@ -22,7 +23,7 @@ Item {
     property bool qsVisible: false
 
     // ── Focus-driven auto-hide (mirrors DashboardWrapper) ───────────
-    property int _interactionRail: -1
+    readonly property int _interactionRail: manager.determineRailIndex(content)
     property int _arrivalSeq: -1
     readonly property bool _stripHovered: _interactionRail >= 0
         ? (InteractionManager.stripHovered[_interactionRail] ?? false)
@@ -80,19 +81,6 @@ Item {
         VisibilitiesManager.addVisibility(root.screen, "quicksettings", "",
                                           false, false, "Toggle Quicksettings");
         IpcManager.register("quicksettings", root.registry.active);
-
-        _interactionRail = manager.determineRailIndex(content);
-        if (_interactionRail >= 0) {
-            InteractionManager.registerHover(_interactionRail, 0, "quicksettings", () => {
-                if (Config.quicksettings.enabled)
-                    VisibilitiesManager.setVisibility(root.screen, "quicksettings", true);
-            });
-        }
-    }
-
-    Component.onDestruction: {
-        if (_interactionRail >= 0)
-            InteractionManager.unregisterHover(_interactionRail, "quicksettings");
     }
 
     Connections {
@@ -109,6 +97,16 @@ Item {
         function onActiveChanged() {
             IpcManager.setManifests("quicksettings", root.registry.active);
         }
+    }
+
+    BorderTriggerBinding {
+        manager: root.manager
+        content: root.content
+        screen: root.screen
+        moduleName: "quicksettings"
+        trigger: Config.quicksettings.trigger
+        moduleVisible: root.qsVisible
+        moduleEnabled: Config.quicksettings.enabled
     }
 
     // IPC `open <id>` → выбрать вкладку на видимом (активном) экране.

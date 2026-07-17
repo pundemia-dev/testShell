@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import qs.config
 import qs.services
+import qs.components.misc
 import Quickshell
 import QtQuick
 import "content"
@@ -26,7 +27,7 @@ Item {
     readonly property bool serverWarm: Ai.serverReady
 
     // ── Hover state (mirrors DashboardWrapper) ────────────────────────
-    property int _interactionRail: -1
+    readonly property int _interactionRail: manager.determineRailIndex(content)
     property int _arrivalSeq: -1
 
     readonly property bool _stripHovered: _interactionRail >= 0 ? (InteractionManager.stripHovered[_interactionRail] ?? false) : false
@@ -95,17 +96,6 @@ Item {
         // Shortcut пустой — таргет "ai" держит IpcManager (toggle/open/list).
         VisibilitiesManager.addVisibility(root.screen, "ai", "", false, false, "Toggle AI");
         IpcManager.register("ai", root.registry.active);
-        _interactionRail = manager.determineRailIndex(content);
-        if (_interactionRail >= 0) {
-            InteractionManager.registerHover(_interactionRail, 0, "ai", () => {
-                VisibilitiesManager.setVisibility(root.screen, "ai", true);
-            });
-        }
-    }
-
-    Component.onDestruction: {
-        if (_interactionRail >= 0)
-            InteractionManager.unregisterHover(_interactionRail, "ai");
     }
 
     Connections {
@@ -144,6 +134,15 @@ Item {
     function _edge(g, side) {
         const v = g[side];
         return v === "all" ? g.all : v;
+    }
+
+    BorderTriggerBinding {
+        manager: root.manager
+        content: root.content
+        screen: root.screen
+        moduleName: "ai"
+        trigger: Config.ai.trigger
+        moduleVisible: root.aiVisible
     }
 
     // ── Rails contract ────────────────────────────────────────────────

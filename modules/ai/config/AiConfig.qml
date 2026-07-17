@@ -26,6 +26,7 @@ JsonObject {
     // Overlay = covers underlying window; push = displaces siblings on rail.
     property string mode: "push"
     property bool sticks: true
+    property TriggerData trigger: TriggerData {}
 
     // ── Background geometry (edited via BackgroundCard) ───────────────
     // Margins / paddings: each side is a number, "all" (inherit the group's
@@ -65,6 +66,14 @@ JsonObject {
         property var right: "all"
         property var top: "all"
         property var bottom: "all"
+    }
+
+    component TriggerData: JsonObject {
+        property bool enabled: true
+        property bool hover: true
+        property bool drop: false
+        property bool slide: false
+        property int layer: 0
     }
 
     // ── Translator page ───────────────────────────────────────────────────

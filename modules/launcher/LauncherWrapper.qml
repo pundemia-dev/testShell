@@ -5,6 +5,7 @@ import qs.services
 import Quickshell
 import QtQuick
 import qs.components
+import qs.components.misc
 import QtQuick.Layouts
 import qs.components.controls
 import qs.components.containers
@@ -92,6 +93,15 @@ Item {
                 moduleManager.escapeCurrentState()
             }
         }
+    }
+
+    BorderTriggerBinding {
+        manager: root.manager
+        content: root.content
+        screen: root.screen
+        moduleName: "launcher"
+        trigger: Config.launcher.trigger
+        moduleVisible: root.launcherVisible
     }
 
     ModuleManager {

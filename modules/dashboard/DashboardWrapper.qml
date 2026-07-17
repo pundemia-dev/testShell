@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import qs.config
 import qs.services
+import qs.components.misc
 import Quickshell
 import QtQuick
 import "content"
@@ -23,7 +24,7 @@ Item {
     property bool dashVisible: false
 
     // ── Focus-driven auto-hide (mirrors StashWrapper) ───────────────
-    property int _interactionRail: -1
+    readonly property int _interactionRail: manager.determineRailIndex(content)
     property int _arrivalSeq: -1
     readonly property bool _stripHovered: _interactionRail >= 0
         ? (InteractionManager.stripHovered[_interactionRail] ?? false)
@@ -85,19 +86,6 @@ Item {
         VisibilitiesManager.addVisibility(root.screen, "dashboard", "",
                                           false, false, "Toggle Dashboard");
         IpcManager.register("dashboard", root.registry.active);
-
-        _interactionRail = manager.determineRailIndex(content);
-        if (_interactionRail >= 0) {
-            InteractionManager.registerHover(_interactionRail, 0, "dashboard", () => {
-                if (Config.dashboard.enabled)
-                    VisibilitiesManager.setVisibility(root.screen, "dashboard", true);
-            });
-        }
-    }
-
-    Component.onDestruction: {
-        if (_interactionRail >= 0)
-            InteractionManager.unregisterHover(_interactionRail, "dashboard");
     }
 
     Connections {
@@ -114,6 +102,16 @@ Item {
         function onActiveChanged() {
             IpcManager.setManifests("dashboard", root.registry.active);
         }
+    }
+
+    BorderTriggerBinding {
+        manager: root.manager
+        content: root.content
+        screen: root.screen
+        moduleName: "dashboard"
+        trigger: Config.dashboard.trigger
+        moduleVisible: root.dashVisible
+        moduleEnabled: Config.dashboard.enabled
     }
 
     // IPC `open <id>` → выбрать вкладку на видимом (активном) экране.
